@@ -1,5 +1,33 @@
 {
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-sonnet-5-5"
+  },
   "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(corepack:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git tag:*)",
+      "Bash(git switch:*)",
+      "PowerShell(pnpm:*)",
+      "PowerShell(npm:*)",
+      "PowerShell(npx:*)",
+      "PowerShell(node:*)",
+      "PowerShell(git add:*)",
+      "PowerShell(git commit:*)",
+      "PowerShell(git status:*)",
+      "PowerShell(git diff:*)",
+      "PowerShell(git log:*)",
+      "PowerShell(git tag:*)",
+      "PowerShell(git switch:*)"
+    ],
     "deny": [
       "Bash(git push:*)",
       "PowerShell(git push:*)",
@@ -23,8 +51,6 @@
       "PowerShell(iwr:*)",
       "PowerShell(irm:*)",
       "PowerShell(Start-BitsTransfer:*)",
-      "WebFetch",
-      "WebSearch",
       "Artifact",
       "RemoteTrigger",
       "mcp__plugin_vercel_vercel",

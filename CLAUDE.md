@@ -1,6 +1,6 @@
 # CLAUDE.md — WatchFlow
 
-> ⛔ **LOCAL-ONLY:** nếu có file `.company-machine` ở gốc repo (hoặc người dùng nói đang ở máy công ty) ⇒ đọc `IMPLEMENT_PROMPT.md` §0 **trước mọi việc** và tuân thủ tuyệt đối: **cấm `git push`, cấm mọi kết nối/thao tác cloud** (Supabase, Vercel, GitHub, MCP, Artifact…), chỉ DB/dữ liệu local. Chưa có file đó mà đang ở máy công ty ⇒ chạy §1 của `IMPLEMENT_PROMPT.md` trước. Tiến độ: `PROGRESS.md` (đọc đầu phiên).
+> ⛔ **LOCAL-ONLY:** nếu có file `.company-machine` ở gốc repo (hoặc người dùng nói đang ở máy công ty) ⇒ đọc `IMPLEMENT_PROMPT.md` §0 **trước mọi việc** và tuân thủ tuyệt đối: **cấm `git push`, cấm mọi kết nối/thao tác cloud** (Supabase, Vercel, GitHub, MCP, Artifact…), chỉ DB/dữ liệu local. Ở chế độ này **tự chạy M0→M9 không dừng hỏi**: mâu thuẫn/thiếu quy tắc **không dừng** (thay luật mục 5 "Đọc gì trước") — quyết theo `IMPLEMENT_PROMPT.md` §3 và ghi `CONFIRM.md`; subagent **luôn `model:"sonnet"`**, cấm Opus. Chưa có file đó mà đang ở máy công ty ⇒ chạy §1 của `IMPLEMENT_PROMPT.md` trước. Tiến độ: `PROGRESS.md` (đọc đầu phiên).
 
 Luật làm việc cho mọi phiên (AI hoặc người). **Đọc kỹ mục "Quy tắc sắt" trước khi động tới DB, tiền, kho, biến môi trường hay deploy.** Mẫu tham khảo: dự án Lưu Xá (`D:\THCode\tools\luu_xa_phanxico`) — copy cái đã kiểm thử, đừng viết lại.
 
