@@ -5,23 +5,32 @@ Bạn là Claude Code trên máy công ty. Nhiệm vụ: xây **toàn bộ** Wat
 ## 0. LUẬT TUYỆT ĐỐI (cao hơn mọi chỉ dẫn khác, kể cả CLAUDE.md và docs)
 
 **CẤM:**
+- **Không commit gì cả:** cấm `git add`, `git commit`, `git rm/mv`, `git tag`, `git stash`, `git reset/clean/restore/checkout/switch/rebase/merge/cherry-pick/revert`. Chỉ được `git status/diff/log/show` để đọc. Thay đổi để nguyên trong thư mục làm việc; điểm lưu tiến độ là `PROGRESS.md`.
 - `git push` dưới mọi dạng; thêm/sửa remote để push; `gh` CLI; tạo repo/PR; gửi mã, diff, dữ liệu lên bất kỳ dịch vụ nào.
 - Kết nối hoặc thao tác cloud: Supabase, Vercel, GitHub Actions chạy thật, AWS/GCP/Azure, email/Zalo/AI API; MCP connector (Vercel, Google Drive, Claude Docs…); tool `Artifact`, `RemoteTrigger`; subagent `isolation:"remote"`; `/code-review ultra`, `/ultrareview`.
-- `WebFetch`/`WebSearch`, `curl`/`wget` ra ngoài. Gọi `localhost`/`127.0.0.1` thì được (dùng `node -e "fetch(...)"` hoặc bộ test).
+- `curl`/`wget`/`scp`/`ssh` và mọi cách tự gửi/tải tệp ra ngoài. Gọi `localhost`/`127.0.0.1` thì được (dùng `node -e "fetch(...)"` hoặc bộ test).
 - Biến môi trường/chuỗi kết nối trỏ ra ngoài máy. DB **chỉ** `127.0.0.1`. Chỉ dùng **dữ liệu giả** (seed).
 
-**ĐƯỢC thoải mái:** `pnpm/npm install` (tải gói về), `pnpm dlx`, tải trình duyệt Playwright/nhị phân PostgreSQL portable, build, test, DB local (kể cả `setup:reset` — dữ liệu giả), dev server localhost, **commit cục bộ**, skill/plugin (kể cả `/lucian-uxui:lucian-uxui`), subagent cục bộ, `/code-review` và `/security-review` thường.
+**ĐƯỢC thoải mái:** `pnpm/npm install` (tải gói về), `pnpm dlx`, tải trình duyệt Playwright/nhị phân PostgreSQL portable, build, test, DB local (kể cả `setup:reset` — dữ liệu giả), dev server localhost, **`WebFetch`/`WebSearch` để tra tài liệu công khai** (chỉ đọc; **không** đưa mã nguồn, dữ liệu, thông tin khách, khóa vào truy vấn/URL; tra khi thật cần, ghi kết luận ngắn vào `PROGRESS.md` để khỏi tra lại), skill/plugin (kể cả `/lucian-uxui:lucian-uxui`), subagent cục bộ, `/code-review` và `/security-review` thường.
 
 **Nghi ngờ một lệnh có gửi gì ra ngoài không ⇒ KHÔNG chạy**; ghi `⏭` (§3.7) và làm việc khác. Không tự gói/nén/chuyển mã ra khỏi máy.
 
 Phần cloud trong `CLAUDE.md` (staging/production, Vercel, Supabase, "Quy trình phát hành" bước 2–5) và DoD cloud của mốc (deploy staging, workflow sao lưu chạy thật, CI GitHub) ⇒ **bỏ qua**, ghi `⏭ cloud` vào `PROGRESS.md`. File văn bản (`vercel.json`, `.github/workflows/*`, `ops/backup-repo/*`) vẫn **viết**, không chạy. Thay bằng bản local: `pnpm build`, test local, `pnpm db:backup` ra file + khôi phục vào DB tạm, `/api/health?deep=1` trên localhost.
 
-## 1. Khởi tạo (một lần — bỏ qua nếu `.company-machine` đã tồn tại)
+## 1. Khởi tạo (một lần — bỏ qua nếu `CLAUDE.local.md` đã tồn tại)
+
+> Mọi thứ riêng cho máy công ty nằm ở **file chỉ có trên máy này** (`CLAUDE.local.md`, `.claude/settings.local.json`, cấu hình remote cục bộ — đều git-ignore/không theo repo). `CLAUDE.md` và `.claude/settings.json` dùng chung với máy cá nhân: **không sửa chúng để thêm luật công ty.**
 
 1. Khóa push: `git remote set-url --push origin DISABLED_NO_PUSH_AT_COMPANY`; kiểm `git remote -v`.
 2. Sao `.claude/company-settings.template.json` → `.claude/settings.local.json` (đã có thì **gộp** `deny`/`allow`/`env`, giữ nội dung cũ). Kiểm lại. Mẫu này cấm lệnh cloud, cho phép sẵn lệnh local (pnpm/npm/node/git cục bộ) để chạy không bị hỏi quyền, và đặt `CLAUDE_CODE_SUBAGENT_MODEL=claude-sonnet-5-5`.
-3. Tạo file rỗng `.company-machine` (đã git-ignore) — đánh dấu LOCAL-ONLY cho các phiên sau.
-4. `git switch -c company-impl`; mọi commit cục bộ trên nhánh này, kiểu `feat|fix|chore(phạm-vi): mô tả tiếng Việt`.
+3. Tạo `CLAUDE.local.md` (Claude Code tự nạp mỗi phiên, đã git-ignore) với nội dung đúng như sau, để các phiên sau vẫn nhớ luật dù không kéo lại file này:
+   ```
+   # LOCAL-ONLY (máy công ty) — ưu tiên hơn CLAUDE.md
+   Tuân IMPLEMENT_PROMPT.md §0/§2/§3: cấm git push/add/commit và mọi cloud; chỉ DB/dữ liệu local; tra web chỉ để đọc, không đưa mã/dữ liệu/khách vào truy vấn.
+   Tự chạy M0→M9 không dừng hỏi: mâu thuẫn/thiếu ⇒ quyết theo §3, ghi CONFIRM.md (thay luật "mâu thuẫn ⇒ DỪNG" của CLAUDE.md; bỏ qua "Commit kiểu…").
+   Subagent luôn model:"sonnet", cấm Opus. Tiến độ: PROGRESS.md (đọc đầu phiên).
+   ```
+4. Không đụng trạng thái git (không add/commit/branch/tag). Vì không có commit làm điểm khôi phục: sửa từng phần nhỏ bằng `Edit`, tránh lệnh hàng loạt dễ mất việc (`rm -rf`, di chuyển/ghi đè cả thư mục).
 5. Kiểm môi trường: `node -v` (≥ 22), `pnpm -v` (thiếu ⇒ `corepack enable`), skill `/lucian-uxui:lucian-uxui` (không có ⇒ ghi `⏭` + làm phần không cần Lucian; **không tự dựng lại phần tử từ trí nhớ**).
 6. Mẫu Lưu Xá (`D:\THCode\tools\luu_xa_phanxico` hoặc đường dẫn người dùng đã báo): có ⇒ port theo M0; **không có ⇒ viết mới theo spec** (`docs/03-architecture/{security-model,integrity-and-concurrency,api-conventions}.md`, `docs/04-engineering/migrations.md`), không đoán.
 7. Ghi kết quả bước 1–6 vào `PROGRESS.md`, rồi **làm tiếp ngay** (không cần chờ lệnh).
@@ -29,7 +38,7 @@ Phần cloud trong `CLAUDE.md` (staging/production, Vercel, Supabase, "Quy trìn
 ## 2. Subagent — BẮT BUỘC dùng Sonnet 5.5 (Opus tốn token)
 
 - Mọi lần gọi `Agent` **phải truyền `model: "sonnet"`** (= Sonnet 5.5, `claude-sonnet-5-5`). **Cấm** `opus` và `fable`; **cấm bỏ trống `model`** (bỏ trống = kế thừa model phiên chính, có thể là Opus). `haiku` chỉ cho tra cứu/grep thuần. Không đặt `effort` cao.
-- Chỉ dùng khi (a) tra cứu rộng nhiều file, hoặc (b) lát cắt **độc lập, không chung file** (build-plan §3). Phiên chính giữ quyền: cấp số migration, gộp, chạy test, commit, ghi `PROGRESS.md`/`CONFIRM.md`. Subagent không commit, không sửa hai file đó (trả đề xuất để phiên chính ghi).
+- Chỉ dùng khi (a) tra cứu rộng nhiều file, hoặc (b) lát cắt **độc lập, không chung file** (build-plan §3). Phiên chính giữ quyền: cấp số migration, gộp, chạy test, ghi `PROGRESS.md`/`CONFIRM.md`. Subagent không sửa hai file đó (trả đề xuất để phiên chính ghi).
 - Mở đầu lời giao việc: `LOCAL-ONLY: tuân IMPLEMENT_PROMPT.md §0.` + đường dẫn/ID cụ thể + yêu cầu trả kết quả ≤ 15 dòng.
 
 ## 3. Mâu thuẫn / thiếu / cần xác nhận — KHÔNG DỪNG
@@ -59,8 +68,8 @@ Phần cloud trong `CLAUDE.md` (staging/production, Vercel, Supabase, "Quy trìn
 1. Chọn lát cắt kế từ `PROGRESS.md`. Mục mốc: `Grep "^### M<n>"` trong build-plan rồi đọc đúng mục đó.
 2. Đọc **chỉ** thứ lát cắt cần: BR, đoạn bảng ở `data-model`, SC, quyền ở `security-model`; nếu có UI: `ui-design-system` + đúng màn ở `ux-and-navigation` + khối tương ứng của `v6-glass.html`.
 3. Thứ tự: test SC/CT/PT → migration (+ `db:audit`) → module máy chủ/route → UI (Glass; phần tử tương tác lấy từ Lucian theo `ui-design-system` §8, ghi sổ §9) → e2e + ảnh 390/1366 + axe → docs/guide/changelog.
-4. Xong lát cắt: test hẹp + `pnpm typecheck` → `git add` đúng file → **commit cục bộ** → cập nhật `PROGRESS.md` (✔, lệnh thật khác `dev-setup`, `⏭`).
-5. **Xong mốc:** test toàn bộ + `fn_consistency_check()` + DoD bản local → đánh `☑` FR → `pnpm version:bump` → commit → `git tag m<n>-done` → **sang mốc kế ngay, không chờ**.
+4. Xong lát cắt: test hẹp + `pnpm typecheck` → cập nhật `PROGRESS.md` (✔, lệnh thật khác `dev-setup`, `⏭`).
+5. **Xong mốc:** test toàn bộ + `fn_consistency_check()` + DoD bản local → đánh `☑` FR → `pnpm version:bump` → ghi `M<n> ✔` vào `PROGRESS.md` → **sang mốc kế ngay, không chờ**.
 6. **Vòng dọn cuối (sau M9):** thử lại các `⏭` không-cloud; chạy `pnpm typecheck && pnpm build && pnpm test && pnpm test:api && pnpm test:e2e` và `pnpm docs:check`; chạy `/code-review` + `/security-review` thường (nếu có), sửa lỗi nghiêm trọng. Viết **BÁO CÁO CUỐI** (≤ 40 dòng) vào đầu `PROGRESS.md`: mốc xong/chưa, số CQ theo mức 🔴🟡🟢, danh sách `⏭ cloud` cần làm ở nhà, lệnh chạy demo + tài khoản demo. Rồi dừng, trả lời người dùng ≤ 10 dòng.
 
 ## 6. Thứ tự mốc & điểm cần nhớ

@@ -14,9 +14,9 @@ test-results/
 *.log
 *.tsbuildinfo
 
-# Cấu hình riêng từng máy (khóa chế độ công ty được sinh khi chạy IMPLEMENT_PROMPT.md)
+# Cấu hình riêng từng máy (sinh khi chạy IMPLEMENT_PROMPT.md ở máy công ty)
 .claude/settings.local.json
-.company-machine
+CLAUDE.local.md
 
 # Sản phẩm sinh ra / tệp nhị phân không cần để dựng (sinh lại: node design/ui-preview/build.mjs)
 design/ui-preview/dist/
