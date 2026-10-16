@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push:*)",
+      "PowerShell(git push:*)",
+      "Bash(gh:*)",
+      "PowerShell(gh:*)",
+      "Bash(vercel:*)",
+      "PowerShell(vercel:*)",
+      "Bash(npx vercel:*)",
+      "Bash(pnpm dlx vercel:*)",
+      "Bash(supabase:*)",
+      "PowerShell(supabase:*)",
+      "Bash(npx supabase:*)",
+      "Bash(pnpm dlx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(scp:*)",
+      "Bash(ssh:*)",
+      "Bash(ftp:*)",
+      "PowerShell(Invoke-WebRequest:*)",
+      "PowerShell(Invoke-RestMethod:*)",
+      "PowerShell(iwr:*)",
+      "PowerShell(irm:*)",
+      "PowerShell(Start-BitsTransfer:*)",
+      "WebFetch",
+      "WebSearch",
+      "Artifact",
+      "RemoteTrigger",
+      "mcp__plugin_vercel_vercel",
+      "mcp__claude_ai_Google_Drive",
+      "mcp__claude_ai_Claude_Docs"
+    ]
+  }
+}

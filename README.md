@@ -7,6 +7,7 @@ Web app quản lý cửa hàng đồng hồ: nhập hàng, kho theo từng chi�
 | Công nghệ | Next.js (App Router) + TypeScript + Tailwind · PostgreSQL trên Supabase (RLS) · Vercel |
 | Trạng thái | **Giai đoạn thiết kế** — bộ docs v0.2 (2026-10-16, đã cập nhật theo phản hồi khách vòng 1), chưa có mã nguồn |
 | Bắt đầu đọc | [`docs/README.md`](docs/README.md) (bản đồ tài liệu) · [`CLAUDE.md`](CLAUDE.md) (luật làm việc cho AI/dev) |
+| Triển khai bằng Claude Code | [`IMPLEMENT_PROMPT.md`](IMPLEMENT_PROMPT.md) (kéo vào phiên đầu tiên; chế độ LOCAL-ONLY ở máy công ty) · [`PROGRESS.md`](PROGRESS.md) (tiến độ) |
 | Kế hoạch xây dựng | [`docs/04-engineering/build-plan.md`](docs/04-engineering/build-plan.md) |
 | Giao diện | [`docs/03-architecture/ui-design-system.md`](docs/03-architecture/ui-design-system.md) · mẫu chọn: [`design/ui-preview/v6-glass.html`](design/ui-preview/v6-glass.html) |
 | Phản hồi khách | [`docs/01-product/customer-feedback-01.md`](docs/01-product/customer-feedback-01.md) |
