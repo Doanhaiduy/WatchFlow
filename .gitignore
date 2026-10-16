@@ -1,0 +1,30 @@
+# Bí mật & cấu hình môi trường (KHÔNG bao giờ commit)
+.env
+.env.*
+!.env.example
+
+# Dữ liệu & cache cục bộ
+.local/
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.log
+*.tsbuildinfo
+
+# Cấu hình riêng từng máy (khóa chế độ công ty được sinh khi chạy IMPLEMENT_PROMPT.md)
+.claude/settings.local.json
+.company-machine
+
+# Sản phẩm sinh ra / tệp nhị phân không cần để dựng (sinh lại: node design/ui-preview/build.mjs)
+design/ui-preview/dist/
+*.xlsx
+~$*
+
+# Hệ điều hành / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

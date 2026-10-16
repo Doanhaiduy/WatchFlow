@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WatchFlow · Mẫu 1 — Horologe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F1E7;--paper:#FFFCF5;--ink:#1B2620;--mute:#74796F;--forest:#1F4D3A;--forest2:#2B6A50;--gold:#B58A3C;--gold2:#D9B766;
+  --line:#E3D9C2;--line2:#CFC2A4;--ok:#2E7D5B;--bad:#A63D2F;--hold:#B0741A;--info:#3F6A78;--check:#6B4E8E;--repair:#2F6A8F;--sold:#8A8E86;
+  --serif:'Cormorant Garamond','Times New Roman',serif;--sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;margin:0;font-variant-numeric:lining-nums!important}
+html{background:var(--bg)}
+body{font:400 14.5px/1.5 var(--sans);color:var(--ink);background:var(--bg);min-height:100vh;-webkit-font-smoothing:antialiased}
+html.framed body::before{content:'';position:fixed;top:0;left:0;right:0;height:var(--safe-top);background:var(--bg);z-index:60}
+button{background:none;border:0}
+a{color:inherit;text-decoration:none}
+.serif,h1,h2,h3,h4{font-family:var(--serif);font-weight:600;letter-spacing:.005em;font-variant-numeric:lining-nums}
+.num{font-family:var(--serif);font-variant-numeric:lining-nums tabular-nums;font-weight:700}
+.eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:600}
+
+/* ----- masthead ----- */
+.mast{background:var(--bg);position:sticky;top:0;z-index:40;padding-top:var(--safe-top);border-bottom:1px solid var(--line2)}
+.mast-top{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px}
+.ib{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;position:relative;color:var(--ink)}
+.ib .dot{position:absolute;top:9px;right:10px;width:7px;height:7px;background:var(--gold);border-radius:50%;border:1.5px solid var(--bg)}
+.logo{font:600 25px/1 var(--serif);letter-spacing:.14em;text-transform:uppercase;text-align:center}
+.logo em{font-style:normal;color:var(--gold);margin-left:.06em}
+.logo small{display:none}
+.dateline{display:flex;justify-content:center;gap:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);padding:0 16px 9px}
+.topnav,.mast-l,.mast-r2{display:none}
+
+/* ----- tab bar mobile ----- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--paper);border-top:1px solid var(--line2);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(8px + var(--safe-bottom));align-items:end}
+.tabbar a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);position:relative;font-weight:500}
+.tabbar a.on{color:var(--forest);font-weight:700}
+.tabbar a.on::before{content:'';position:absolute;top:-7px;width:22px;height:2px;background:var(--gold)}
+.tabbar a.fab{margin-top:-24px}
+.tabbar a.fab span.c{width:56px;height:56px;border-radius:50%;background:var(--forest);color:#F3E3B8;display:grid;place-items:center;box-shadow:0 0 0 4px var(--paper),0 0 0 5px var(--gold2),0 10px 22px rgba(31,77,58,.35)}
+.tabbar a.fab.on::before{display:none}
+.tabbar a.fab{color:var(--forest);font-weight:700}
+
+main{padding:20px 16px calc(104px + var(--safe-bottom));max-width:1240px;margin:0 auto}
+
+/* ----- TOC sheet ----- */
+.toc{position:fixed;inset:0;z-index:80;background:var(--paper);transform:translateY(-102%);transition:transform .35s cubic-bezier(.2,.8,.2,1);overflow:auto;padding:calc(18px + var(--safe-top)) 24px 40px}
+.toc.open{transform:none}
+.toc h2{font-size:34px;margin:18px 0 4px}
+.toc .x{position:absolute;top:calc(10px + var(--safe-top));right:12px}
+.toc ol{list-style:none;padding:0;margin-top:18px;border-top:1px solid var(--line2)}
+.toc li a{display:flex;align-items:baseline;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);font-size:16px}
+.toc li a i{font:600 15px var(--serif);font-style:italic;color:var(--gold);min-width:28px}
+.toc li a span{flex:1}
+.toc li a small{color:var(--mute);font-size:11px;letter-spacing:.1em}
+
+/* ----- section heads ----- */
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line2);position:relative}
+.sh::after{content:'';position:absolute;left:0;bottom:-1px;width:36px;height:2px;background:var(--gold)}
+.sh h3{font-size:24px}
+.sh a,.sh button{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--forest);font-weight:600;cursor:pointer}
+.pghead{margin-bottom:18px}
+.pghead h1{font-size:38px;line-height:1.05;margin:6px 0 4px}
+.pghead p{color:var(--mute);max-width:56ch}
+.pghead .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border:1px solid var(--forest);color:var(--forest);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;border-radius:2px;background:transparent;cursor:pointer}
+.btn.fill{background:var(--forest);color:#F6E9C6}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn.sm{height:34px;padding:0 12px;font-size:10.5px}
+.btn.block{width:100%}
+
+/* ----- chips ----- */
+.wf-chip{display:inline-block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:2px 7px;border:1px solid currentColor;border-radius:2px;vertical-align:middle;white-space:nowrap;line-height:1.5}
+[data-tone=ok]{--tc:var(--ok)}[data-tone=bad]{--tc:var(--bad)}[data-tone=hold]{--tc:var(--hold)}[data-tone=info]{--tc:var(--info)}[data-tone=check]{--tc:var(--check)}[data-tone=repair]{--tc:var(--repair)}[data-tone=sold],[data-tone=draft]{--tc:var(--sold)}
+.wf-chip{color:var(--tc)}
+
+/* ----- filter text tabs ----- */
+.g-chips,.tabs{display:flex;gap:22px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);margin-bottom:14px}
+.g-chips::-webkit-scrollbar,.tabs::-webkit-scrollbar{display:none}
+.g-chip,.tabs button{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);padding:10px 0;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600;cursor:pointer}
+.g-chip.on,.tabs button.on{color:var(--forest);border-color:var(--gold)}
+.tabs button b{font-weight:500;color:var(--gold);margin-left:4px}
+
+/* ----- generic pages ----- */
+.g-kpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line2);border-bottom:1px solid var(--line2);margin-bottom:18px}
+.g-kpi{padding:12px 10px;border-left:1px solid var(--line)}.g-kpi:first-child{border:0;padding-left:0}
+.g-kpi span{display:block;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);line-height:1.35;min-height:26px}
+.g-kpi b{font:700 22px/1.15 var(--serif);display:block;margin-top:4px}
+.g-kpi em{font-style:normal;font-size:11px;color:var(--mute)}
+.g-list{border-top:1px solid var(--line2)}
+.g-item{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.g-ico{width:38px;height:38px;border:1px solid var(--tc,var(--line2));color:var(--tc,var(--ink));border-radius:50%;display:grid;place-items:center;flex:none;background:var(--paper)}
+.g-av{font:700 14px var(--serif)}
+.g-main{flex:1;min-width:0}.g-t{font-weight:600;line-height:1.35}.g-s{font-size:12.5px;color:var(--mute);margin-top:2px}
+.g-end{text-align:right;flex:none;max-width:42%}.g-amt{font:700 18px var(--serif);font-variant-numeric:lining-nums}.g-sub{font-size:11.5px;color:var(--mute)}
+[data-neg]{color:var(--bad);font-weight:600}
+.g-bar{height:3px;background:var(--line);margin-top:8px;max-width:180px}.g-bar i{display:block;height:100%;background:var(--tc)}
+.g-thumb{width:64px;flex:none}.g-thumb .wf-img{aspect-ratio:1;background:radial-gradient(circle at 50% 40%,#fffdf6,#ece1c8);border:1px solid var(--line)}
+.g-btns{display:flex;gap:6px;margin-top:8px;justify-content:flex-end}
+.g-btn{font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border:1px solid var(--forest);background:var(--forest);color:#F6E9C6;font-weight:600;border-radius:2px}.g-btn.ghost{background:transparent;color:var(--forest)}
+.g-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:18px;height:46px;background:var(--forest);color:#F6E9C6;letter-spacing:.14em;text-transform:uppercase;font-size:11.5px;font-weight:600;border-radius:2px}
+.g-block{margin-bottom:26px}.g-h{font:600 22px var(--serif);margin-bottom:8px}
+.g-res{align-items:flex-start}
+
+/* ----- home ----- */
+.hello h1{font-size:34px;line-height:1.1;max-width:20ch;margin:8px 0 20px}
+.hello h1 em{color:var(--forest);font-style:italic}
+.home-grid{display:grid;gap:30px;grid-template-columns:minmax(0,1fr)}.home-grid>*{min-width:0}
+.hero{background:var(--forest);color:#F4EAD0;padding:22px 20px 18px;position:relative;border-radius:2px;outline:1px solid var(--gold2);outline-offset:-7px}
+.hero .eyebrow{color:var(--gold2)}
+.hero .big{font:700 44px/1 var(--serif);letter-spacing:-.01em;margin:10px 0 4px;color:#FFF7E0;font-variant-numeric:lining-nums}
+.hero .big small{font-size:22px;margin-left:4px;color:var(--gold2)}
+.hero .delta{font-size:12.5px;color:#BFD9C8}.hero .delta b{color:#9BE0B5}
+.hero .ch{height:110px;margin:12px -4px 8px;color:#fff}
+.hero .stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid rgba(217,183,102,.4);padding-top:12px;gap:8px}
+.hero .stats span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#A9C4B3;display:block}
+.hero .stats b{font:700 21px var(--serif);color:#FFF7E0}
+.hero .stats i{font-style:normal;font-size:11px;color:var(--gold2);display:block}
+.dl{border-top:1px solid var(--line2)}
+.dl div{display:flex;align-items:baseline;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
+.dl dt{color:var(--mute);font-size:13px}
+.dl .lead{flex:1;border-bottom:1px dotted var(--line2);transform:translateY(-3px)}
+.dl dd{font:700 20px var(--serif);margin:0}
+.dl dd small{font:500 12px var(--sans);color:var(--mute);margin-left:3px}
+.scroller{display:flex;gap:14px;overflow-x:auto;margin:0 -16px;padding:2px 16px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.wcard{flex:none;width:158px;scroll-snap-align:start;cursor:pointer;display:block}
+.wcard .ph{aspect-ratio:200/250;background:radial-gradient(circle at 50% 38%,#fffdf6 0,#f2e9d4 55%,#e7dbbf);position:relative;border:1px solid var(--line);overflow:hidden}
+.wcard .ph .wf-img{position:absolute;inset:6% 6% 4%}
+.wcard .st{position:absolute;top:8px;left:8px;z-index:2}.wcard .st .wf-chip{background:var(--paper);font-size:8.5px;padding:1px 6px}
+.wcard .brand{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-top:10px}
+.wcard .md{font:600 17px/1.15 var(--serif);margin:2px 0 4px;min-height:39px}
+.wcard .meta{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--mute)}
+.wcard .price{font:700 18px var(--serif);color:var(--ink);font-variant-numeric:lining-nums}
+.task{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.task .n{width:34px;height:34px;border-radius:50%;border:1px solid var(--tc);color:var(--tc);font:700 17px var(--serif);display:grid;place-items:center;flex:none}
+.task .tx{flex:1;min-width:0}.task .tx b{font-weight:600;display:block}.task .tx span{font-size:12px;color:var(--mute)}
+.rl li{list-style:none;display:flex;gap:10px;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.rl{padding:0;border-top:1px solid var(--line2)}
+.rl .l b{display:block;font-weight:600}.rl .l span{font-size:12px;color:var(--mute)}
+.rl .r{text-align:right}.rl .r b{font:700 18px var(--serif);display:block}
+.legend{display:flex;gap:16px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+.panel{background:var(--paper);border:1px solid var(--line);padding:16px}
+
+/* ----- stock ----- */
+.searchrow{display:flex;gap:10px;margin-bottom:6px}
+.field{flex:1;display:flex;align-items:center;gap:10px;border-bottom:1.5px solid var(--forest);padding:8px 2px;color:var(--mute)}
+.field input{flex:1;border:0;background:none;font:400 16px var(--sans);outline:0;color:var(--ink);min-width:0}
+.field input::placeholder{color:var(--mute)}
+.wgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px 14px}
+.wgrid .wcard{width:auto}
+.vsw{display:none}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);text-align:left;padding:10px 8px;border-bottom:1px solid var(--line2);font-weight:600}
+.tbl td{padding:11px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr[data-go]{cursor:pointer}.tbl tr[data-go]:hover{background:rgba(181,138,60,.07)}
+.tbl .r{text-align:right}.tbl .nm{display:flex;gap:12px;align-items:center}.tbl .nm .wf-img{width:38px;aspect-ratio:1;background:#efe6d0}
+.tbl .nm b{display:block;font-weight:600}.tbl .nm small{color:var(--mute);font-size:12px}
+.more-row{text-align:center;margin-top:22px;color:var(--mute);font-size:12px}
+
+/* ----- unit ----- */
+.unit{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.unit .photo{background:radial-gradient(circle at 50% 40%,#fffdf6,#efe5ce 60%,#e4d7b8);border:1px solid var(--line);aspect-ratio:1/1;position:relative;overflow:hidden}
+.unit .photo .wf-img{position:absolute;inset:3% 20%}
+.unit .photo .st{position:absolute;top:12px;left:12px}
+.unit .photo .qr{position:absolute;right:12px;bottom:12px;width:52px;height:52px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink)}
+.unit h1{font-size:36px;line-height:1.05;margin:4px 0 6px}
+.unit .sub{color:var(--mute);font-size:13px}
+.unit .pr{font:700 38px var(--serif);margin:12px 0 2px;font-variant-numeric:lining-nums}
+.unit .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 22px}
+.kv div{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv div span{color:var(--mute)}.kv div b{font-weight:600;text-align:right}
+.kv{border-top:1px solid var(--line2)}
+.lock{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--mute);margin-top:12px;padding:10px 12px;background:rgba(181,138,60,.09);border-left:2px solid var(--gold)}
+.tl{padding:0;border-left:1px solid var(--line2);margin-left:6px}
+.tl li{list-style:none;position:relative;padding:0 0 18px 20px}
+.tl li::before{content:'';position:absolute;left:-5px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--paper);border:2px solid var(--gold)}
+.tl li b{display:block;font-weight:600}.tl li span{font-size:12px;color:var(--mute)}
+
+/* ----- POS ----- */
+.pos{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.prow{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.prow .wf-img{width:56px;aspect-ratio:1;background:radial-gradient(circle at 50% 40%,#fffdf6,#ece1c8);border:1px solid var(--line);flex:none}
+.prow .tx{flex:1;min-width:0}.prow .tx b{display:block;font:600 17px/1.2 var(--serif)}.prow .tx span{font-size:12px;color:var(--mute)}
+.prow .pp{font:700 17px var(--serif);text-align:right;margin-right:6px}
+.add{width:38px;height:38px;border:1px solid var(--forest);color:var(--forest);display:grid;place-items:center;border-radius:2px;flex:none}
+.add.in{background:var(--forest);color:#F6E9C6}
+.cartbar{position:fixed;left:12px;right:12px;bottom:calc(86px + var(--safe-bottom));z-index:45;background:var(--forest);color:#F6E9C6;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;box-shadow:0 12px 30px rgba(31,77,58,.35);outline:1px solid var(--gold2);outline-offset:-4px}
+.cartbar .t{flex:1}.cartbar .t small{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2)}.cartbar .t b{font:700 22px var(--serif)}
+.cartbar .btn{border-color:var(--gold2);color:var(--gold2);height:40px}
+.cart{position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--paper);max-height:92vh;overflow:auto;transform:translateY(105%);transition:transform .35s cubic-bezier(.2,.8,.2,1);padding:18px 18px calc(22px + var(--safe-bottom));border-top:2px solid var(--gold)}
+.cart.open{transform:none}
+.scrim{position:fixed;inset:0;background:rgba(27,38,32,.45);z-index:85;opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.open{opacity:1;pointer-events:auto}
+.cart h3{font-size:26px;margin-bottom:2px}
+.cl{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.cl .tx{flex:1;min-width:0}.cl .tx b{display:block;font:600 16px/1.2 var(--serif)}.cl .tx span{font-size:11.5px;color:var(--mute)}
+.qty{display:flex;align-items:center;border:1px solid var(--line2);height:30px}.qty button{width:28px;height:28px;display:grid;place-items:center}.qty span{min-width:22px;text-align:center;font-size:13px}
+.cl .p{font:700 16px var(--serif);min-width:78px;text-align:right}
+.cl .rm{color:var(--mute);padding:4px}
+.sum div{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;color:var(--mute)}
+.sum div b{color:var(--ink);font-weight:600}.sum .tot{border-top:1px solid var(--line2);margin-top:6px;padding-top:12px;color:var(--ink)}
+.sum .tot b{font:700 32px var(--serif);color:var(--forest)}
+.pills{display:flex;gap:8px;margin:12px 0}
+.pills button{flex:1;height:40px;border:1px solid var(--line2);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--mute);border-radius:2px}
+.pills button.on{border-color:var(--forest);background:var(--forest);color:#F6E9C6}
+.recv{display:flex;align-items:center;gap:10px;border:1px solid var(--line2);padding:8px 12px;margin-bottom:8px}
+.recv label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.recv input{flex:1;border:0;background:none;text-align:right;font:700 24px var(--serif);outline:0;color:var(--ink);min-width:0}
+.calc{display:flex;justify-content:space-between;font-size:13px;padding:2px 2px 12px}
+.calc b{font-weight:700}.calc .ok{color:var(--ok)}.calc .bad{color:var(--bad)}
+.cust{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.cust span{color:var(--mute);font-size:12px}
+.xbtn{position:absolute;top:12px;right:12px}
+
+/* ----- repair ----- */
+.rc{border:1px solid var(--line);background:var(--paper);padding:16px;display:flex;flex-direction:column;gap:6px}
+.rc .top{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.rc h4{font-size:21px;line-height:1.15}.rc p{color:var(--mute);font-size:13px}
+.rc .ft{display:flex;justify-content:space-between;align-items:flex-end;border-top:1px dotted var(--line2);margin-top:6px;padding-top:10px;font-size:12px;color:var(--mute)}
+.rc .ft b{font:700 18px var(--serif);color:var(--ink);display:block;text-align:right}
+.rgrid{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+.steps{display:flex;gap:0;margin:6px 0 18px}
+.steps button{flex:1;text-align:center;padding:8px 0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);border-bottom:2px solid var(--line)}
+.steps button.on{color:var(--forest);border-color:var(--gold);font-weight:700}
+.fld{display:block;margin-bottom:14px}.fld span{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+.fld input,.fld textarea{width:100%;border:0;border-bottom:1.5px solid var(--line2);background:none;font:400 16px var(--sans);padding:8px 0;outline:0;color:var(--ink)}
+.sheetmid{position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--paper);max-height:92vh;overflow:auto;transform:translateY(105%);transition:transform .35s cubic-bezier(.2,.8,.2,1);padding:22px 20px calc(24px + var(--safe-bottom));border-top:2px solid var(--gold)}
+.sheetmid.open{transform:none}.sheetmid h3{font-size:28px}
+
+/* ----- cash ----- */
+.funds{display:grid;gap:12px;margin-bottom:22px}
+.fund{background:var(--paper);border:1px solid var(--line);padding:16px;display:flex;justify-content:space-between;align-items:flex-end}
+.fund span{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);display:block}
+.fund b{font:700 28px var(--serif);display:block}.fund small{color:var(--mute);font-size:12px}
+.fund.total{background:var(--forest);color:#F4EAD0;border:0;outline:1px solid var(--gold2);outline-offset:-5px}.fund.total span,.fund.total small{color:var(--gold2)}.fund.total b{color:#FFF7E0;font-size:34px}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:22px}
+.quick button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border:1px solid var(--line2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--forest);background:var(--paper)}
+.lg{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.lg .d{font-size:11px;color:var(--mute);min-width:42px;line-height:1.3}
+.lg .tx{flex:1;min-width:0}.lg .tx b{font-weight:600;display:block}.lg .tx span{font-size:12px;color:var(--mute)}
+.lg .a{font:700 18px var(--serif)}.lg .a.in{color:var(--ok)}.lg .a.out{color:var(--bad)}
+.debtrow{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+
+/* ----- report ----- */
+.rp-top{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.rp-list a{display:flex;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.rp-list i{font:italic 600 15px var(--serif);color:var(--gold);min-width:28px}.rp-list span{flex:1}.rp-list small{color:var(--mute);font-size:11px}
+
+/* ================= DESKTOP ================= */
+@media(min-width:900px){
+  body{font-size:15px}
+  .tabbar,.cartbar,.mast-top .ib.m{display:none}
+  .mast{padding-top:0}
+  .mast-top{max-width:1240px;margin:0 auto;padding:20px 32px 4px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center}
+  .mast-l{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute)}
+  .mast-l b{color:var(--ink);display:block;letter-spacing:.2em}
+  .logo{font-size:44px;letter-spacing:.2em}
+  .logo small{display:block;font:500 10px var(--sans);letter-spacing:.34em;color:var(--mute);margin-top:6px}
+  .mast-r2{display:flex;justify-content:flex-end;align-items:center;gap:14px}
+  .mast-r2 .who{display:flex;align-items:center;gap:10px;font-size:12.5px;line-height:1.25;text-align:right}
+  .mast-r2 .who i{width:38px;height:38px;border-radius:50%;background:var(--forest);color:var(--gold2);display:grid;place-items:center;font:700 16px var(--serif);font-style:normal}
+  .mast-r2 .who small{color:var(--mute);display:block;font-size:11px}
+  .mast-top>.ib{display:none}.mast-top>.mast-r{display:none}
+  .dateline{display:none}
+  .topnav{display:flex;justify-content:center;gap:34px;border-top:3px double var(--line2);margin:14px auto 0;max-width:1240px;padding:0 32px;position:relative}
+  .topnav a,.topnav>button{font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;padding:15px 0;color:var(--mute);font-weight:600;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .topnav a:hover,.topnav>button:hover{color:var(--ink)}
+  .topnav a.on{color:var(--forest);border-color:var(--gold)}
+  .moremenu{position:absolute;top:100%;right:32px;background:var(--paper);border:1px solid var(--line2);box-shadow:0 20px 40px rgba(27,38,32,.14);min-width:240px;padding:8px 0;display:none;z-index:70}
+  .moremenu.open{display:block}
+  .moremenu a{display:flex;gap:12px;align-items:center;padding:11px 20px;font-size:14px;color:var(--ink);letter-spacing:0;text-transform:none}
+  .moremenu a:hover{background:rgba(181,138,60,.1)}
+  main{padding:34px 32px 80px}
+  .hello h1{font-size:50px;max-width:26ch}
+  .home-grid{grid-template-columns:repeat(12,minmax(0,1fr));gap:40px 32px}
+  .hero{grid-column:1/9;grid-row:1;padding:30px 32px 24px}
+  .hero .big{font-size:68px}
+  .hero .ch{height:170px}
+  .hero .stats b{font-size:28px}
+  .stockbox{grid-column:9/13;grid-row:1}
+  .tasks{grid-column:1/5;grid-row:2}.orders{grid-column:5/9;grid-row:2}.repairs{grid-column:9/13;grid-row:2}
+  .fresh{grid-column:1/13;grid-row:3}.barsec{grid-column:1/13;grid-row:4}
+  .scroller{margin:0;padding:2px 0 8px;display:grid;grid-template-columns:repeat(6,1fr);gap:20px;overflow:visible}
+  .wcard{width:auto}
+  .pghead{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid var(--line2);padding-bottom:20px;margin-bottom:26px}
+  .pghead h1{font-size:54px}.pghead .acts{margin:0}
+  .wgrid{grid-template-columns:repeat(4,1fr);gap:34px 26px}
+  .vsw{display:flex;gap:4px;margin-left:auto}
+  .vsw button{width:38px;height:38px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--mute)}.vsw button.on{background:var(--forest);color:var(--gold2);border-color:var(--forest)}
+  .g-kpi b{font-size:32px}.g-kpi span{font-size:10.5px;min-height:0}.g-kpi{padding:16px 24px}
+  .g-item{padding:16px 6px}.g-amt{font-size:21px}
+  .unit{grid-template-columns:1.05fr 1fr;gap:56px;align-items:start}
+  .unit h1{font-size:52px}.unit .pr{font-size:48px}
+  .unit .acts{grid-template-columns:repeat(4,auto);justify-content:start}
+  .pos{grid-template-columns:minmax(0,1fr) 410px;gap:44px;align-items:start}
+  .cart{position:sticky;top:150px;transform:none;max-height:none;overflow:visible;border:1px solid var(--line);border-top:2px solid var(--gold);z-index:1;padding:24px;left:auto;right:auto;bottom:auto}
+  .scrim,.cart .xbtn{display:none}
+  .rgrid{grid-template-columns:repeat(2,1fr)}
+  .funds{grid-template-columns:1.3fr 1fr 1fr 1fr}
+  .rp-top{grid-template-columns:1.6fr 1fr;gap:40px}
+  .sheetmid{left:50%;right:auto;bottom:auto;top:50%;width:560px;transform:translate(-50%,-46%);opacity:0;pointer-events:none;border:1px solid var(--line2);transition:.3s}
+  .sheetmid.open{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+  .toc{display:none}
+  .g-grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 48px}
+}
+</style>
+<script src="assets/shared.js"></script>
+</head>
+<body>
+<header class="mast">
+  <div class="mast-top">
+    <button class="ib m" data-open="#toc" aria-label="Mục lục"><script>document.write(WF.icon('menu',22))</script></button>
+    <div class="mast-l"><b>Minh Châu Watch</b>Thứ Sáu, 16.10.2026</div>
+    <div class="logo">Watch<em>Flow</em><small>Quản lý cửa hàng đồng hồ</small></div>
+    <div class="mast-r"><button class="ib" data-toast="3 thông báo mới"><span class="dot"></span><script>document.write(WF.icon('bell',21))</script></button></div>
+    <div class="mast-r2"><button class="ib" data-toast="Quét QR để tra cứu nhanh"><script>document.write(WF.icon('scan',20))</script></button><button class="ib" data-toast="3 thông báo mới"><span class="dot"></span><script>document.write(WF.icon('bell',20))</script></button><div class="who"><span>Anh Minh<small>Chủ cửa hàng</small></span><i>M</i></div></div>
+  </div>
+  <div class="dateline"><span>Thứ Sáu · 16.10.2026</span><span>·</span><span>Minh Châu Watch</span></div>
+  <nav class="topnav" id="topnav"></nav>
+</header>
+<main id="view"></main>
+<nav class="tabbar" id="tabbar"></nav>
+<div class="toc" id="toc"></div>
+
+<script>
+(function(){
+  var $=WF.$, ic=WF.icon, vnd=WF.vnd, k=WF.kpi, S=WF.series;
+  var mobileTabs=[['home','Tổng quan','dash'],['stock','Đồng hồ','watch'],['pos','Bán','cart'],['repair','Sửa chữa','wrench'],['cash','Thu chi','wallet']];
+  var topIds=['home','stock','pos','repair','cash','buy','cust','report'], moreIds=['reserve','returns','parts','stocktake','collab','admin'];
+  $('#tabbar').innerHTML=mobileTabs.map(function(t){return '<a data-go="'+t[0]+'" class="'+(t[0]==='pos'?'fab':'')+'">'+(t[0]==='pos'?'<span class="c">'+ic(t[2],24,1.7)+'</span>':ic(t[2],22,1.6))+'<span>'+t[1]+'</span></a>';}).join('');
+  $('#topnav').innerHTML=topIds.map(function(id){return '<a data-go="'+id+'">'+WF.title[id].replace(' & công nợ','')+'</a>';}).join('')+'<button data-toggle="#moremenu">Thêm '+ic('chevD',14)+'</button><div class="moremenu" id="moremenu">'+moreIds.map(function(id){return '<a data-go="'+id+'">'+ic(WF.module$(id).ic,18,1.5)+WF.title[id]+'</a>';}).join('')+'</div>';
+  var roman=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV'];
+  $('#toc').innerHTML='<button class="ib x" data-close="#toc">'+ic('x',24)+'</button><p class="eyebrow">WatchFlow</p><h2>Mục lục</h2><ol>'+WF.modules.map(function(m,i){return '<li><a data-go="'+m.id+'"><i>'+roman[i]+'.</i><span>'+m.label+'</span>'+ic('chevR',16,1.5)+'</a></li>';}).join('')+'</ol>';
+
+  function head(title,sub,acts){return '<div class="pghead"><div><p class="eyebrow">'+(sub||'')+'</p><h1>'+title+'</h1></div>'+(acts?'<div class="acts">'+acts+'</div>':'')+'</div>';}
+  function sh(t,link,go){return '<div class="sh"><h3>'+t+'</h3>'+(link?'<a data-go="'+go+'">'+link+'</a>':'')+'</div>';}
+  function stChip(s){var m=WF.statusMeta[s];return WF.chip(m.label,m.tone);}
+  function card(w){return '<a class="wcard" data-go="unit" data-id="'+w.id+'" data-cat="'+w.st+' '+w.cg+'"><div class="ph"><span class="st">'+stChip(w.st)+'</span>'+WF.img(w)+'</div><div class="brand">'+w.brand+'</div><div class="md">'+w.model+'</div><div class="meta"><span>'+w.id+' · '+w.cond+'</span></div><div class="price">'+vnd(w.price)+'</div></a>';}
+  function costParts(w){var ship=120000,insp=80000,rep=w.cg==='refurb'?1650000:0,base=w.cost-ship-insp-rep;return {base:base,ship:ship,insp:insp,rep:rep};}
+
+  var screens={
+    home:function(){
+      var fresh=WF.watches.filter(function(w){return w.st==='in_stock';}).sort(function(a,b){return a.since<b.since?1:-1;}).slice(0,6);
+      return '<div class="hello"><p class="eyebrow">Bản tin hôm nay</p><h1>Chào anh Minh — hôm nay đã bán <em>3 chiếc</em>, thu <em>33,4 triệu</em>.</h1></div>'+
+      '<div class="home-grid">'+
+      '<article class="hero"><p class="eyebrow">Doanh thu tháng 10</p><div class="big">'+WF.num(k.revMonth)+'<small>₫</small></div><div class="delta"><b>▲ '+k.revDelta.toString().replace('.',',')+'%</b> so với tháng 9 · hôm nay '+WF.short(k.revToday)+'</div><div class="ch">'+WF.chart.area([S.rev16],{w:400,h:120,colors:['#E2C27A'],gridColor:'#ffffff',fillOp:.3,sw:2})+'</div><div class="stats"><div><span>Lãi gộp</span><b>'+WF.short(k.profit)+'</b><i>biên '+String(k.margin).replace('.',',')+'%</i></div><div><span>Thực thu</span><b>'+WF.short(k.cashIn)+'</b><i>tiền đã vào quỹ</i></div><div><span>Thực chi</span><b>'+WF.short(k.cashOut)+'</b><i>nhập hàng, chi phí</i></div></div></article>'+
+      '<section class="stockbox">'+sh('Kho hàng','Chi tiết','stock')+'<dl class="dl"><div><dt>Đồng hồ tồn kho</dt><span class="lead"></span><dd>'+k.stockCount+'<small>chiếc</small></dd></div><div><dt>Sẵn sàng bán</dt><span class="lead"></span><dd>'+k.stockReady+'<small>chiếc</small></dd></div><div><dt>Giá trị tồn (giá vốn)</dt><span class="lead"></span><dd>'+WF.short(k.stockValue)+'</dd></div><div><dt>Đã bán tháng này</dt><span class="lead"></span><dd>'+k.sold+'<small>chiếc</small></dd></div><div><dt>Cọc đang giữ</dt><span class="lead"></span><dd>'+WF.short(k.deposit)+'</dd></div></dl></section>'+
+      '<section class="fresh">'+sh('Mới nhập kho','Xem kho','stock')+'<div class="scroller">'+fresh.map(card).join('')+'</div></section>'+
+      '<section class="tasks">'+sh('Việc cần xử lý')+WF.tasks.slice(0,5).map(function(t){return '<div class="task" data-go="'+t.go+'" data-tone="'+t.tone+'"><span class="n">'+t.n+'</span><div class="tx"><b>'+t.title+'</b><span>'+t.sub+'</span></div>'+ic('chevR',16,1.5)+'</div>';}).join('')+'</section>'+
+      '<section class="orders">'+sh('Đơn hàng mới nhất','Tất cả','sales')+'<ul class="rl">'+WF.sales.slice(0,4).map(function(s){var st=WF.saleState[s.state];return '<li><div class="l"><b>'+s.cust+'</b><span>'+s.code+' · '+s.time+'</span></div><div class="r"><b>'+WF.short(s.total)+'</b>'+WF.chip(st[0],st[1])+'</div></li>';}).join('')+'</ul></section>'+
+      '<section class="repairs">'+sh('Đang sửa chữa','Tất cả','repair')+'<ul class="rl">'+WF.repairs.filter(function(r){return r.st!=='delivered';}).slice(0,4).map(function(r){var m=WF.repairMeta[r.st];return '<li><div class="l"><b>'+r.watch+'</b><span>'+r.code+' · '+r.tech+' · hẹn '+r.due+'</span></div><div class="r">'+WF.chip(m.label,m.tone)+'</div></li>';}).join('')+'</ul></section>'+
+      '<section class="barsec">'+sh('Doanh thu & lãi gộp — 12 tháng')+'<div class="legend"><span><i style="background:#1F4D3A"></i>Doanh thu (triệu)</span><span><i style="background:#C9A25A"></i>Lãi gộp</span></div><div class="panel">'+WF.chart.bars(S.rev12.map(function(v,i){return [v,S.profit12[i]];}),{colors:['#1F4D3A','#C9A25A'],labels:S.months12,h:150,r:2,gap:8,hl:11})+'</div></section>'+
+      '</div>';
+    },
+    stock:function(){
+      var list=WF.watches.filter(function(w){return w.st!=='sold';});
+      var chips=[['all','Tất cả','87'],['in_stock','Sẵn sàng bán','68'],['reserved','Đã giữ','6'],['in_repair','Đang sửa','8'],['inspecting','Chờ kiểm tra','5']];
+      return head('Kho đồng hồ','87 chiếc · quản lý từng serial','<button class="btn" data-toast="Mở camera quét tem QR">'+ic('scan',16)+' Quét QR</button><button class="btn fill" data-toast="Nhập nhanh một chiếc (phiếu nhập 1 dòng)">'+ic('plus',16)+' Nhập hàng</button>')+
+      '<div class="searchrow"><label class="field">'+ic('search',20)+'<input data-search="#wl" placeholder="Tên, thương hiệu, mã nội bộ, serial…"></label><div class="vsw" data-tabs><button class="on" data-tab="grid" title="Lưới">'+ic('grid',18)+'</button><button data-tab="table" title="Bảng">'+ic('list',18)+'</button></div></div>'+
+      '<div class="g-chips" data-chips data-target="#stockfilter">'+chips.map(function(c,i){return '<button class="g-chip'+(i?'':' on')+'" data-f="'+c[0]+'">'+c[1]+' <b style="color:var(--gold);font-weight:500">'+c[2]+'</b></button>';}).join('')+'</div>'+
+      '<div data-tabs id="wl2wrap"><div id="wl2"></div></div>'+
+      '<p class="more-row">Hiển thị '+list.length+' trên 87 chiếc · cuộn để xem thêm</p>';
+    },
+    unit:function(p){
+      var w=WF.watch$(p.id||'DH-0225'), c=costParts(w), profit=w.price-w.cost, m=WF.statusMeta[w.st];
+      var rep=WF.repairs.filter(function(r){return r.watch.indexOf(w.model.split(' ')[0])>-1;}).slice(0,2);
+      var hist=[[w.since.split('-').reverse().slice(0,2).join('/'),'Nhập kho','Phiếu nhập · Bạn Tuấn'],['—','Dán tem QR '+w.id,'Vị trí: '+w.loc]];
+      if(w.st==='reserved')hist.push(['12/10','Giữ hàng — đã thu cọc','Chị Lan']);if(w.st==='in_repair')hist.push(['10/10','Sửa nội bộ SC-0414','Thợ Sơn']);if(w.st==='inspecting')hist.push(['16/10','Chờ kiểm tra','Bạn Tuấn']);if(w.st==='in_stock')hist.push(['—','Sẵn sàng bán','Giá niêm yết '+WF.short(w.price)]);
+      return '<div class="unit" data-tabs><div><div class="photo"><span class="st">'+stChip(w.st)+'</span>'+WF.img(w)+'<span class="qr">'+ic('qr',30,1.4)+'</span></div></div>'+
+      '<div><p class="eyebrow">'+w.brand+' · '+w.id+'</p><h1>'+w.model+'</h1><p class="sub">'+w.cond+' · '+w.size+' · '+w.mov+'</p><div class="pr">'+vnd(w.price)+'</div><p class="sub">Giá niêm yết đã gồm thuế · '+w.wr+'</p>'+
+      '<div class="acts"><button class="btn fill" data-sell="'+w.id+'">'+ic('cart',16)+' Bán</button><button class="btn" data-toast="Tạo giữ hàng — thu cọc tối thiểu 10%">'+ic('tag',16)+' Giữ hàng</button><button class="btn" data-toast="In tem QR 50×30mm">'+ic('print',16)+' In tem QR</button><button class="btn" data-toast="Chuyển vị trí kho">'+ic('pin',16)+' Chuyển vị trí</button></div>'+
+      '<div class="tabs"><button class="on" data-tab="a">Thông tin</button><button data-tab="b">Giá vốn</button><button data-tab="c">Lịch sử</button><button data-tab="d">Sửa chữa</button></div>'+
+      '<div data-pane="a" class="on kv"><div><span>Thương hiệu</span><b>'+w.brand+'</b></div><div><span>Số serial</span><b>'+w.serial+'</b></div><div><span>Tình trạng</span><b>'+w.cond+'</b></div><div><span>Bộ máy</span><b>'+w.mov+'</b></div><div><span>Kích thước vỏ</span><b>'+w.size+'</b></div><div><span>Vị trí kho</span><b>'+w.loc+'</b></div><div><span>Phụ kiện</span><b>Hộp · Sổ bảo hành · Thẻ</b></div><div><span>Ngày nhập kho</span><b>'+w.since.split('-').reverse().join('/')+'</b></div></div>'+
+      '<div data-pane="b"><div class="kv"><div><span>Giá nhập</span><b>'+vnd(c.base)+'</b></div><div><span>Vận chuyển</span><b>'+vnd(c.ship)+'</b></div><div><span>Kiểm định</span><b>'+vnd(c.insp)+'</b></div>'+(c.rep?'<div><span>Sửa chữa trước bán (vốn hóa)</span><b>'+vnd(c.rep)+'</b></div>':'')+'<div><span>Giá vốn</span><b style="font:700 20px var(--serif)">'+vnd(w.cost)+'</b></div><div><span>Giá bán niêm yết</span><b>'+vnd(w.price)+'</b></div><div><span>Lãi gộp dự kiến</span><b style="color:var(--ok)">'+vnd(profit)+' · '+(profit/w.price*100).toFixed(1).replace('.',',')+'%</b></div></div><p class="lock">'+ic('lock',16)+' Giá vốn chỉ hiển thị với người có quyền xem giá vốn.</p></div>'+
+      '<div data-pane="c"><ul class="tl">'+hist.map(function(h){return '<li><b>'+h[1]+'</b><span>'+h[0]+' · '+h[2]+'</span></li>';}).join('')+'</ul></div>'+
+      '<div data-pane="d">'+(rep.length?rep.map(function(r){var mm=WF.repairMeta[r.st];return '<div class="g-item"><div class="g-main"><div class="g-t">'+r.code+' '+WF.chip(mm.label,mm.tone)+'</div><div class="g-s">'+r.issue+'</div></div></div>';}).join(''):'<p class="g-s" style="padding:14px 0">Chưa có phiếu sửa chữa / bảo hành cho chiếc này.</p>')+'</div>'+
+      '</div></div>';
+    },
+    pos:function(){
+      var list=WF.watches.filter(function(w){return w.st==='in_stock';});
+      return head('Bán hàng','Phiếu bán HD-1016-004 · nháp tự lưu')+
+      '<div class="pos"><div><div class="searchrow"><label class="field">'+ic('search',20)+'<input data-search="#pl" placeholder="Tìm tên, mã, serial hoặc quét QR…"></label><button class="ib" data-toast="Mở camera quét QR" style="border:1px solid var(--forest);border-radius:2px;color:var(--forest)">'+ic('scan',20)+'</button></div>'+
+      '<div class="g-chips" data-chips data-target="#pl"><button class="g-chip on" data-f="all">Tất cả</button><button class="g-chip" data-f="new">Mới</button><button class="g-chip" data-f="used">Cũ</button><button class="g-chip" data-f="refurb">Đã sửa</button></div>'+
+      '<div id="pl">'+list.map(function(w){return '<div class="prow" data-cat="'+w.cg+'">'+WF.img(w,{crop:'head'})+'<div class="tx"><b>'+w.brand+' '+w.model+'</b><span>'+w.id+' · '+w.cond+' · '+w.loc+'</span></div><div class="pp">'+WF.short(w.price)+'</div><button class="add" data-add="'+w.id+'" aria-label="Thêm vào phiếu">'+ic('plus',18)+'</button></div>';}).join('')+'<p class="g-s" style="margin:16px 0 4px">Phụ kiện bán lẻ</p>'+WF.accessories.map(function(a){return '<div class="prow" data-cat="acc"><div class="g-ico" style="width:56px;height:56px;border-radius:0">'+ic(a.ic,22)+'</div><div class="tx"><b>'+a.name+'</b><span>'+a.id+'</span></div><div class="pp">'+WF.short(a.price)+'</div><button class="add" data-add="'+a.id+'">'+ic('plus',18)+'</button></div>';}).join('')+'</div></div>'+
+      '<aside class="cart" id="cart"></aside></div><div class="cartbar" id="cartbar"></div><div class="scrim" id="scrim" data-close="#cart"></div>';
+    },
+    repair:function(){
+      var chips=[['all','Tất cả'],['repairing','Đang sửa'],['waiting_parts','Chờ linh kiện'],['inspecting','Kiểm tra'],['completed','Chờ giao']];
+      return head('Sửa chữa','Phiếu nhận · thợ · báo giá','<button class="btn fill" data-open="#recv">'+ic('plus',16)+' Nhận máy mới</button>')+
+      '<div class="g-kpis"><div class="g-kpi"><span>Đang xử lý</span><b>5</b><em>1 chưa gán thợ</em></div><div class="g-kpi"><span>Chờ khách lấy</span><b>1</b><em>quá 3 ngày</em></div><div class="g-kpi"><span>Doanh thu sửa T10</span><b>'+WF.short(8460000)+'</b><em>tiền công + linh kiện</em></div></div>'+
+      '<div class="g-chips" data-chips data-target="#rl">'+chips.map(function(c,i){return '<button class="g-chip'+(i?'':' on')+'" data-f="'+c[0]+'">'+c[1]+'</button>';}).join('')+'</div>'+
+      '<div class="rgrid" id="rl">'+WF.repairs.filter(function(r){return r.st!=='delivered';}).map(function(r){var m=WF.repairMeta[r.st];return '<article class="rc" data-cat="'+r.st+'"><div class="top"><span>'+r.code+(r.internal?' · nội bộ':'')+'</span>'+WF.chip(m.label,m.tone)+'</div><h4>'+r.watch+'</h4><p>'+r.cust+' — '+r.issue+'</p><div class="ft"><span>Thợ: '+r.tech+'<br>Hẹn trả '+r.due+(r.late?' · '+WF.chip('Chưa lấy','bad'):'')+'</span><span>'+(r.deposit?'Cọc '+WF.short(r.deposit)+'<br>':'')+'<b>'+(r.quote?vnd(r.quote):'Chưa báo giá')+'</b></span></div></article>';}).join('')+'</div>'+
+      '<div class="sheetmid" id="recv" data-tabs><h3>Nhận máy sửa</h3><div class="steps"><button class="on" data-tab="1">1 Khách</button><button data-tab="2">2 Máy</button><button data-tab="3">3 Tình trạng</button><button data-tab="4">4 Cọc</button></div>'+
+      '<div data-pane="1" class="on"><label class="fld"><span>Số điện thoại / tên khách</span><input placeholder="0912 345 678" value="Phạm Thị Thu"></label><label class="fld"><span>Tên khách</span><input value="Phạm Thị Thu"></label><button class="btn fill block" data-tab="2">Tiếp tục</button></div>'+
+      '<div data-pane="2"><label class="fld"><span>Thương hiệu · model</span><input value="Casio Edifice EFB-530"></label><label class="fld"><span>Số serial (nếu có)</span><input placeholder="Có thể bỏ trống"></label><button class="btn block" data-toast="Chụp ảnh hiện trạng">'+ic('camera',16)+' Chụp ảnh hiện trạng</button><br><button class="btn fill block" data-tab="3">Tiếp tục</button></div>'+
+      '<div data-pane="3"><label class="fld"><span>Khách mô tả lỗi</span><textarea rows="3">Đứt dây kim loại, kính trầy nhẹ</textarea></label><button class="btn fill block" data-tab="4">Tiếp tục</button></div>'+
+      '<div data-pane="4"><label class="fld"><span>Tiền cọc (không bắt buộc)</span><input value="200.000"></label><button class="btn fill block" data-close="#recv" data-toast="Đã nhận máy — in phiếu SC-0416">Nhận máy &amp; in phiếu</button></div><br><button class="btn block" data-close="#recv">Đóng</button></div><div class="scrim" id="scrim2" data-close="#recv"></div>';
+    },
+    cash:function(){
+      var tot=WF.funds.reduce(function(s,f){return s+f.bal;},0);
+      return head('Thu chi & công nợ','Quỹ · sổ quỹ · công nợ','<button class="btn fill" data-toast="Phiếu thu">'+ic('plus',16)+' Thu</button><button class="btn" data-toast="Phiếu chi">'+ic('minus',16)+' Chi</button>')+
+      '<div data-tabs><div class="tabs"><button class="on" data-tab="a">Tổng quan quỹ</button><button data-tab="b">Sổ quỹ</button><button data-tab="c">Công nợ</button></div>'+
+      '<div data-pane="a" class="on"><div class="funds"><div class="fund total"><div><span>Tổng tiền các quỹ</span><b>'+vnd(tot)+'</b><small>Thực thu hôm nay '+WF.short(33400000)+' · thực chi '+WF.short(1850000)+'</small></div></div>'+WF.funds.map(function(f){return '<div class="fund"><div><span>'+f.sub+'</span><b>'+WF.short(f.bal)+'</b><small>'+f.name+'</small></div>'+ic(f.ic,24,1.4)+'</div>';}).join('')+'</div>'+
+      '<div class="quick"><button data-toast="Phiếu thu">'+ic('arrowDR',20)+'Thu</button><button data-toast="Phiếu chi">'+ic('arrowUR',20)+'Chi</button><button data-toast="Chuyển quỹ">'+ic('swap',20)+'Chuyển quỹ</button><button data-toast="Chốt ngày">'+ic('check',20)+'Chốt ngày</button></div>'+
+      sh('Doanh thu ≠ thực thu')+'<div class="rp-top"><div class="panel"><div class="legend"><span><i style="background:#1F4D3A"></i>Thực thu</span><span><i style="background:#C9A25A"></i>Thực chi</span></div>'+WF.chart.bars(S.rev16.slice(-8).map(function(v,i){return [v*.85,v*.3];}),{colors:['#1F4D3A','#C9A25A'],labels:['9','10','11','12','13','14','15','16'],h:110,r:2})+'</div><p class="g-s">Doanh thu tính từ chứng từ (phiếu bán, phiếu sửa đã giao). Sổ quỹ chỉ cho biết tiền đi đâu — hai con số này không bao giờ lẫn vào nhau.</p></div></div>'+
+      '<div data-pane="b">'+WF.ledger.map(function(l){return '<div class="lg"><div class="d">'+l.d+'<br>'+l.t+'</div><div class="tx"><b>'+l.title+'</b><span>'+l.fund+'</span></div><div class="a '+l.dir+'">'+(l.dir==='in'?'+':'−')+WF.short(l.amt)+'</div></div>';}).join('')+'</div>'+
+      '<div data-pane="c" data-tabs><div class="tabs"><button class="on" data-tab="k">Khách nợ <b>'+WF.short(k.debtIn)+'</b></button><button data-tab="n">Nợ nhà cung cấp <b>'+WF.short(k.debtOut)+'</b></button></div>'+
+      ['customers','suppliers'].map(function(kind,ix){return '<div data-pane="'+(ix?'n':'k')+'" class="'+(ix?'':'on')+'">'+WF.debts[kind].map(function(d){return '<div class="debtrow"><div class="g-ico g-av" data-tone="'+(d.left<5?'bad':'hold')+'">'+WF.initials(d.name)+'</div><div class="g-main"><div class="g-t">'+d.name+'</div><div class="g-s">'+d.ref+' · hạn '+d.due+' · '+(d.left<5?'<span data-neg>còn '+d.left+' ngày</span>':'còn '+d.left+' ngày')+'</div></div><div class="g-end"><div class="g-amt">'+WF.short(d.amt)+'</div><button class="g-btn" data-toast="'+(ix?'Trả nợ NCC':'Thu nợ — phân bổ vào phiếu')+'">'+(ix?'Trả':'Thu nợ')+'</button></div></div>';}).join('')+'</div>';}).join('')+'</div></div>';
+    },
+    report:function(){
+      return head('Báo cáo','Doanh thu · lãi gộp · tồn kho · công nợ','<button class="btn" data-toast="Xuất Excel">'+ic('download',16)+' Excel</button><button class="btn" data-toast="Xuất PDF">'+ic('file',16)+' PDF</button>')+
+      '<div class="g-chips"><button class="g-chip">Hôm nay</button><button class="g-chip">7 ngày</button><button class="g-chip on">Tháng này</button><button class="g-chip">Quý</button><button class="g-chip">Năm</button></div>'+
+      '<div class="rp-top"><div><div class="sh"><h3>R1 · Doanh thu & lãi gộp</h3></div><div class="legend"><span><i style="background:#1F4D3A"></i>Doanh thu</span><span><i style="background:#C9A25A"></i>Lãi gộp</span></div><div class="panel" style="height:230px;color:var(--ink)">'+WF.chart.area([S.rev16,S.profit16],{w:500,h:200,colors:['#1F4D3A','#C9A25A'],ch:'200px'})+'</div>'+
+      '<table class="tbl" style="margin-top:18px"><tr><th>Tuần</th><th class="r">Số phiếu</th><th class="r">Doanh thu</th><th class="r">Lãi gộp</th></tr><tr><td>1–7/10</td><td class="r">9</td><td class="r">155,3 tr</td><td class="r">37,7 tr</td></tr><tr><td>8–14/10</td><td class="r">11</td><td class="r">215,7 tr</td><td class="r">52,5 tr</td></tr><tr><td>15–16/10</td><td class="r">4</td><td class="r">115,3 tr</td><td class="r">28,2 tr</td></tr><tr><td><b>Tổng</b></td><td class="r"><b>24</b></td><td class="r"><b>'+vnd(k.revMonth)+'</b></td><td class="r"><b>'+vnd(k.profit)+'</b></td></tr></table></div>'+
+      '<div><div class="sh"><h3>Danh mục báo cáo</h3></div><div class="rp-list">'+[['R1','Doanh thu'],['R2','Lợi nhuận gộp'],['R3','Nhập & xuất hàng'],['R4','Tồn kho theo giá vốn'],['R5','Hàng tồn lâu ngày'],['R6','Công nợ khách & NCC'],['R7','Doanh thu sửa & tiền công thợ'],['R8','Thu chi & số dư'],['R9','Hoa hồng CTV'],['R10','Hao hụt kiểm kê']].map(function(r){return '<a data-toast="Mở báo cáo '+r[1]+'"><i>'+r[0]+'</i><span>'+r[1]+'</span>'+ic('chevR',15,1.5)+'</a>';}).join('')+'</div></div></div>';
+    }
+  };
+  var gen={buy:['Nhập hàng','Phiếu nhập · thu mua · thu cũ đổi mới','purchases','<button class="btn fill" data-toast="Tạo phiếu nhập mới">'+ic('plus',16)+' Phiếu nhập</button>'],cust:['Khách hàng','Lịch sử mua · công nợ · bảo hành','customers','<button class="btn fill" data-toast="Thêm khách hàng">'+ic('plus',16)+' Thêm khách</button>'],reserve:['Giữ hàng & đặt cọc','Cọc không phải doanh thu','reserve',''],returns:['Đổi trả','Trong 7 ngày · hoàn tiền có kiểm soát','returns',''],parts:['Linh kiện','Tồn · giá vốn bình quân · cảnh báo','parts','<button class="btn fill" data-toast="Nhập linh kiện">'+ic('plus',16)+' Nhập linh kiện</button>'],stocktake:['Kiểm kê','Đối chiếu tồn thực tế','stocktake',''],collab:['Cộng tác viên','Bán hộ ăn hoa hồng','collab',''],admin:['Quản trị','Người dùng · phân quyền · sao lưu · nhật ký','admin',''],sales:['Phiếu bán hàng','Lịch sử hóa đơn nội bộ','sales','<button class="btn fill" data-go="pos">'+ic('plus',16)+' Bán hàng</button>']};
+  Object.keys(gen).forEach(function(id){var g=gen[id];screens[id]=function(){return head(g[0],g[1],g[3])+'<div class="'+(id==='admin'?'g-grid2':'')+'">'+WF.pages[g[2]]()+'</div>';};});
+
+  /* stock table + grid share one render so filters work for both */
+  function fillStock(){
+    var el=$('#wl2'); if(!el) return; var list=WF.watches.filter(function(w){return w.st!=='sold';});
+    el.innerHTML='<div class="g-grid-holder" id="wl">'+
+      '<div data-pane="grid" class="on"><div class="wgrid" id="wlg">'+list.map(card).join('')+'</div></div>'+
+      '<div data-pane="table"><table class="tbl"><thead><tr><th>Đồng hồ</th><th>Tình trạng</th><th>Vị trí</th><th>Trạng thái</th><th class="r">Giá bán</th></tr></thead><tbody id="wlt">'+list.map(function(w){return '<tr data-go="unit" data-id="'+w.id+'" data-cat="'+w.st+' '+w.cg+'"><td><div class="nm">'+WF.img(w,{crop:'head'})+'<div><b>'+w.brand+' '+w.model+'</b><small>'+w.id+' · '+w.serial.split(' · ')[0]+'</small></div></div></td><td>'+w.cond+'</td><td>'+w.loc+'</td><td>'+stChip(w.st)+'</td><td class="r num">'+vnd(w.price)+'</td></tr>';}).join('')+'</tbody></table></div></div>';
+  }
+  /* stock chips filter both; search targets #wl whose children are panes → override */
+  document.addEventListener('click',function(e){
+    var c=e.target.closest('[data-chips][data-target="#stockfilter"] [data-f]'); if(!c) return; var f=c.dataset.f;
+    WF.$$('#wlg .wcard, #wlt tr').forEach(function(el){el.hidden=!(f==='all'||(el.dataset.cat||'').split(' ').indexOf(f)>-1);});
+  });
+  document.addEventListener('input',function(e){
+    var t=e.target.closest('[data-search="#wl"]'); if(!t) return; var q=WF.plain(t.value.trim());
+    WF.$$('#wlg .wcard, #wlt tr').forEach(function(el){el.hidden=q&&WF.plain(el.textContent).indexOf(q)<0;});
+  },true);
+  /* view switch (grid/table) is inside tabs container: move panes handling */
+  document.addEventListener('click',function(e){var b=e.target.closest('.vsw [data-tab]'); if(!b) return; WF.$$('#wl [data-pane]').forEach(function(p){p.classList.toggle('on',p.dataset.pane===b.dataset.tab);}); WF.$$('.vsw [data-tab]').forEach(function(x){x.classList.toggle('on',x===b);});});
+
+  /* POS cart rendering */
+  var pos={method:'cash',recv:null};
+  function renderCart(){
+    var cart=$('#cart'); if(!cart) return; var C=WF.cart, lines=C.lines(), t=C.total();
+    if(pos.recv===null||pos.recv>t&&pos.method==='bank') pos.recv=t;
+    cart.innerHTML='<button class="ib xbtn" data-close="#cart" aria-label="Đóng">'+ic('x',22)+'</button><p class="eyebrow">Phiếu bán hàng</p><h3>HD-1016-004</h3>'+
+      '<div class="cust" data-toast="Chọn / tạo nhanh khách hàng"><div>Khách hàng<br><span>Khách lẻ — chạm để chọn</span></div>'+ic('chevR',16,1.5)+'</div>'+
+      (lines.length?lines.map(function(l){return '<div class="cl"><div class="tx"><b>'+l.name+'</b><span>'+l.sub+'</span></div>'+(l.kind==='acc'?'<div class="qty"><button data-inc="'+l.id+'" data-d="-1">'+ic('minus',14)+'</button><span>'+l.q+'</span><button data-inc="'+l.id+'" data-d="1">'+ic('plus',14)+'</button></div>':'')+'<div class="p">'+WF.num(l.price*l.q)+'</div><button class="rm" data-rm="'+l.id+'" aria-label="Xóa">'+ic('x',16)+'</button></div>';}).join(''):'<p class="g-s" style="padding:26px 0;text-align:center">Chưa có món nào — chọn đồng hồ hoặc quét QR để thêm.</p>')+
+      '<div class="sum"><div><span>Tạm tính</span><b>'+vnd(C.sub())+'</b></div><div><span>Giảm giá <small>(tối đa 5% theo vai trò)</small></span><b>−'+WF.num(C.discount)+'</b></div><div data-toast="Thêm đồng hồ cũ của khách — thu cũ đổi mới"><span>Thu cũ đổi mới</span><b style="color:var(--forest)">+ Thêm máy cũ</b></div><div class="tot"><span>Tổng phải trả</span><b>'+vnd(t)+'</b></div></div>'+
+      '<div class="pills"><button data-method="cash" class="'+(pos.method==='cash'?'on':'')+'">Tiền mặt</button><button data-method="bank" class="'+(pos.method==='bank'?'on':'')+'">Chuyển khoản</button><button data-method="mix" class="'+(pos.method==='mix'?'on':'')+'">Kết hợp</button></div>'+
+      '<label class="recv"><label>Khách đưa</label><input id="recvIn" inputmode="numeric" value="'+WF.num(pos.recv)+'"></label><div class="calc" id="calc"></div>'+
+      '<button class="btn fill block" style="height:50px" '+(lines.length?'data-toast="Đã xác nhận phiếu — in phiếu bán 80mm"':'disabled style="opacity:.4;height:50px"')+'>Xác nhận &amp; in phiếu</button>';
+    updCalc();
+    var bar=$('#cartbar'); if(bar) bar.innerHTML='<div class="t"><small>'+C.count()+' món · phiếu nháp</small><b>'+vnd(t)+'</b></div><button class="btn" data-open="#cart">Xem phiếu</button>';
+    WF.$$('.add').forEach(function(b){b.classList.toggle('in',C.has(b.dataset.add));});
+    var s=$('#scrim'); if(s&&!$('#cart').classList.contains('open')) s.classList.remove('open');
+  }
+  function updCalc(){var r=WF.cart.calc(pos.recv||0),el=$('#calc'); if(!el) return; el.innerHTML=r.debt?'<span>Còn nợ khách (hẹn trả)</span><b class="bad">'+vnd(r.debt)+'</b>':'<span>Tiền thừa trả khách</span><b class="ok">'+vnd(r.change)+'</b>';}
+  document.addEventListener('click',function(e){
+    var m=e.target.closest('[data-method]'); if(m){pos.method=m.dataset.method; renderCart(); return;}
+    var sl=e.target.closest('[data-sell]'); if(sl){WF.cart.add(sl.dataset.sell); app.go('pos'); return;}
+    var o=e.target.closest('[data-open="#cart"]'); if(o){var s=$('#scrim'); if(s) s.classList.add('open');}
+    if(e.target.closest('[data-close="#cart"]')){var s2=$('#scrim'); if(s2) s2.classList.remove('open');}
+    var r=e.target.closest('[data-close="#recv"]'); if(r){var s3=$('#scrim2'); if(s3) s3.classList.remove('open');}
+    if(e.target.closest('[data-open="#recv"]')){var s4=$('#scrim2'); if(s4) s4.classList.add('open');}
+  });
+  document.addEventListener('input',function(e){if(e.target.id==='recvIn'){pos.recv=+e.target.value.replace(/\D/g,'')||0;updCalc();}});
+
+  var app=WF.app({view:'#view',screens:screens,home:'home',onRoute:function(id){
+    var key=id==='unit'?'stock':id==='sales'?'pos':id;
+    WF.$$('#tabbar a, #topnav a').forEach(function(a){a.classList.toggle('on',a.dataset.go===key);});
+    $('#toc').classList.remove('open'); var mm=$('#moremenu'); if(mm) mm.classList.remove('open');
+    if(id==='stock') fillStock();
+    if(id==='pos'){pos.recv=null; WF.cart.cb=renderCart; renderCart();} else WF.cart.cb=null;
+  }});
+  /* scrim (mobile) for sheets: overlay behaviour */
+  var st=document.createElement('style');st.textContent='#scrim2{display:block}.scrim.open{display:block}@media(min-width:900px){.scrim#scrim{display:none}}';document.head.appendChild(st);
+})();
+</script>
+</body>
+</html>

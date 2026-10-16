@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WatchFlow · Xem thử giao diện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#ECEBE7;--ink:#16161B;--mute:#6F6E78;--line:#E2E1DB;--card:#fff;--acc:#16161B}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font:400 14px/1.5 'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.hub{display:grid;grid-template-rows:auto auto minmax(0,1fr);height:100vh;height:100dvh}
+
+/* header */
+.top{display:flex;align-items:center;gap:12px;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.02em;font-size:17px}
+.logo i{width:32px;height:32px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center}
+.logo small{display:block;font-weight:500;font-size:11.5px;color:var(--mute);letter-spacing:0}
+.sp{flex:1}
+.seg{display:inline-flex;background:#F0EFEA;border-radius:12px;padding:3px}
+.seg button{padding:7px 14px;border-radius:9px;font-weight:600;font-size:13px;color:var(--mute);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.btn{height:38px;padding:0 14px;border-radius:11px;border:1px solid var(--line);background:#fff;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:#F7F6F2}.btn.dk{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ic{width:17px;height:17px;flex:none}
+
+/* tabs */
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:10px 18px;background:var(--card);border-bottom:1px solid var(--line);scrollbar-width:thin}
+.tab{flex:none;display:flex;gap:10px;align-items:center;padding:7px 14px 7px 7px;border-radius:14px;border:1.5px solid var(--line);background:#fff;text-align:left;min-width:190px;transition:.15s}
+.tab:hover{border-color:#BDBCB4}
+.tab.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.tab .n{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:15px;flex:none;position:relative}
+.tab .n::after{content:'';position:absolute;right:-3px;bottom:-3px;width:11px;height:11px;border-radius:50%;border:2px solid #fff;background:var(--sw2)}
+.tab b{display:block;font-size:13.5px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.tab span{display:block;font-size:11.5px;color:var(--mute);line-height:1.25}
+.tab .heart{margin-left:auto;color:#CFCDC4;display:grid;place-items:center}
+.tab.fav .heart{color:#E5484D}
+
+/* main */
+.main{display:grid;grid-template-columns:minmax(300px,340px) minmax(0,1fr);min-height:0}
+.info{background:var(--card);border-right:1px solid var(--line);overflow:auto;padding:22px 22px 28px}
+.info .num{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.info h2{font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1.1;margin:4px 0 6px}
+.info .tagline{color:var(--mute);font-size:14.5px}
+.sw{display:flex;gap:6px;margin:14px 0 4px}.sw i{width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,.1)}
+.info dl{margin-top:16px;display:grid;gap:14px}
+.info dt{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-bottom:2px}
+.info dd{font-size:13.5px;color:#2A2A32}
+.fav-btn{margin-top:20px;width:100%;height:46px;border-radius:13px;border:1.5px solid var(--ink);font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;background:#fff}
+.fav-btn.on{background:#FFE9EA;border-color:#E5484D;color:#C93A3F}
+.hint{margin-top:16px;padding:12px 14px;border-radius:12px;background:#F6F5F0;font-size:12.5px;color:#55545C}
+.stage{display:flex;flex-direction:column;min-width:0;min-height:0;background:radial-gradient(circle at 50% 0,#F5F4F0,var(--bg))}
+.quick{display:flex;gap:6px;overflow-x:auto;padding:10px 16px 0;scrollbar-width:none;justify-content:center;flex:none}
+.quick::-webkit-scrollbar{display:none}
+.quick button{flex:none;padding:6px 13px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12.5px;font-weight:600;color:var(--mute)}
+.quick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.area{flex:1;min-height:0;position:relative;display:grid;place-items:center;padding:14px;overflow:hidden}
+.dev{position:relative;transition:width .25s,height .25s}
+
+/* phone */
+.phone{position:absolute;left:0;top:0;width:418px;height:872px;border-radius:64px;background:#0B0B0E;padding:14px;transform-origin:0 0;box-shadow:0 0 0 2px #3B3B42,0 30px 70px rgba(0,0,0,.35),inset 0 0 0 2px #1d1d22}
+.phone .scr{position:relative;width:390px;height:844px;border-radius:50px;overflow:hidden;background:#fff}
+.phone iframe{width:390px;height:844px;border:0;display:block;background:#fff}
+.sbar{position:absolute;left:0;right:0;top:0;height:48px;z-index:5;pointer-events:none;display:flex;justify-content:space-between;align-items:center;padding:6px 34px 0 36px;font-weight:700;font-size:15.5px;color:#111}
+.sbar.light{color:#fff}
+.sbar svg{height:12px;width:auto;fill:currentColor}
+.sbar .r{display:flex;gap:6px;align-items:center}
+.island{position:absolute;left:50%;top:11px;width:120px;height:35px;border-radius:20px;background:#000;transform:translateX(-50%);z-index:6}
+.homebar{position:absolute;left:50%;bottom:7px;width:136px;height:5px;border-radius:3px;background:#111;transform:translateX(-50%);z-index:6;opacity:.85}
+.homebar.light{background:#fff}
+/* desktop window */
+.win{position:absolute;left:0;top:0;transform-origin:0 0;border-radius:14px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.12),0 30px 70px rgba(0,0,0,.25);overflow:hidden;display:flex;flex-direction:column}
+.win .bar{height:38px;flex:none;background:#F1F0EC;border-bottom:1px solid #DEDDD6;display:flex;align-items:center;gap:8px;padding:0 14px}
+.win .bar i{width:12px;height:12px;border-radius:50%;background:#FF5F57}.win .bar i:nth-child(2){background:#FEBC2E}.win .bar i:nth-child(3){background:#28C840}
+.win .url{margin:0 auto;width:min(420px,50%);height:24px;border-radius:7px;background:#fff;border:1px solid #E1E0DA;font-size:12px;color:#8A8993;display:flex;align-items:center;justify-content:center}
+.win iframe{border:0;display:block;width:100%;flex:1;background:#fff}
+.fullbleed{position:absolute;inset:0}
+.fullbleed iframe{width:100%;height:100%;border:0;background:#fff}
+
+/* favorites popover */
+.pop{position:fixed;right:16px;top:64px;z-index:50;width:320px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.2);padding:16px;display:none}
+.pop.open{display:block}
+.pop h4{font-size:15px;font-weight:700;margin-bottom:8px}
+.pop ul{list-style:none;padding:0;margin:0 0 12px}.pop li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-weight:600}.pop li i{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800}
+.pop p{color:var(--mute);font-size:13px;margin-bottom:10px}
+
+@media(max-width:860px){
+  .main{grid-template-columns:minmax(0,1fr)}
+  .info{display:none}
+  .top{padding:8px 12px;gap:8px}.logo small{display:none}.logo{font-size:15px}.btn.hide-s,.seg button .t{display:none}
+  .tabs{padding:8px 12px}.tab{min-width:150px}.tab span{display:none}
+  .area{padding:0}
+}
+</style>
+</head>
+<body>
+<div class="hub">
+  <header class="top">
+    <div class="logo"><i><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5.5"/><path d="M9 6.6 9.6 3h4.8l.6 3.6M9 17.4 9.6 21h4.8l.6-3.6M12 9.6V12l1.8 1.2"/></svg></i><div>WatchFlow<small>Bản xem thử giao diện · dữ liệu minh họa</small></div></div>
+    <div class="sp"></div>
+    <div class="seg" id="devSeg">
+      <button data-d="mobile" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg><span class="t">Điện thoại</span></button>
+      <button data-d="desktop"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="t">Máy tính</span></button>
+    </div>
+    <button class="btn hide-s" id="openFull"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>Mở riêng</button>
+    <button class="btn dk" id="favBtn"><svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20s-8-4.5-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.5 12 20 12 20Z"/></svg><span id="favN">Đã chọn 0</span></button>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="main">
+    <aside class="info" id="info"></aside>
+    <section class="stage">
+      <div class="quick" id="quick"></div>
+      <div class="area" id="area"><div class="dev" id="dev"></div></div>
+    </section>
+  </div>
+</div>
+<div class="pop" id="pop"></div>
+
+<script>
+(function(){
+  var D=[
+    {id:'v1',file:'v1-horologe.html',name:'Horologe',tag:'Sang trọng kiểu tạp chí',sw:['#F6F1E7','#1F4D3A','#B58A3C'],tone:'dark',
+     desc:'Cảm giác một boutique đồng hồ cao cấp: nền ngà, xanh rêu đậm, vàng champagne và chữ serif thanh lịch. Số liệu được trình bày như một bản tin buổi sáng cho chủ tiệm.',
+     style:'Ivory · xanh rêu · vàng champagne · chữ serif Cormorant, góc vuông, đường kẻ mảnh, không bóng đổ.',
+     mobile:'Thanh tab dưới với nút "Bán" tròn nổi ở giữa; số liệu dạng danh sách kẻ dòng; nút menu mở "Mục lục" toàn màn hình như tạp chí.',
+     desktop:'Không dùng sidebar: menu ngang dưới tên báo, lưới biên tập (editorial), bảng kẻ dòng, khung Phiếu bán cố định bên phải.',
+     fit:'Tiệm đồng hồ hiệu, đồng hồ cũ giá trị cao; chủ tiệm muốn giao diện "đẳng cấp" khi cho khách xem màn hình.'},
+    {id:'v2',file:'v2-clarity.html',name:'Clarity',tag:'Dashboard xanh dương quen thuộc',sw:['#F2F5FB','#2347D5','#12B76A'],tone:'light',
+     desc:'Bố cục dashboard chuẩn mực mà nhân viên nào cũng quen tay: sidebar bên trái, bảng dữ liệu rõ ràng, thẻ số liệu có biểu đồ nhỏ. Màu xanh dương tạo cảm giác tin cậy, gần với ảnh tham khảo số 5.',
+     style:'Xanh dương royal · nền trắng/xám xanh · font Inter · bo góc 20px · thẻ pastel xanh/vàng/hồng.',
+     mobile:'Header xanh với thẻ doanh thu nổi chồng lên, 4 ô số liệu pastel, hàng thao tác nhanh, thanh điều hướng dưới + bảng "Thêm".',
+     desktop:'Sidebar nhóm chức năng, thanh tìm kiếm ⌘K, 4 thẻ KPI có sparkline, biểu đồ lớn + donut cơ cấu tồn kho, bảng dữ liệu có phân trang.',
+     fit:'Cửa hàng muốn công cụ quản trị truyền thống, dễ đào tạo nhân viên, nhiều dữ liệu dạng bảng.'},
+    {id:'v3',file:'v3-bento.html',name:'Bento',tag:'Ô gạch pastel, thân thiện',sw:['#F3F1EC','#6B52F0','#C8F25C'],tone:'dark',
+     desc:'Mọi thứ là những "ô gạch" bo tròn nhiều màu pastel với con số khổng lồ — nhìn là hiểu ngay. Hiện đại, trẻ trung, rất hợp để xem nhanh trên điện thoại.',
+     style:'Nền be ấm + ô lilac / mint / đào / vàng chanh / xanh trời; font Plus Jakarta Sans đậm; không viền; nút xanh chanh.',
+     mobile:'Lưới 2 cột các ô so le, dock đen nổi (mục đang chọn bung chữ), nút "+" tạo nhanh, menu dạng ô màu như ảnh tham khảo số 1.',
+     desktop:'Thanh icon đen bên trái, màn hình tổng quan là một bức tranh ghép (mosaic) các ô lớn nhỏ; mỗi trang là tập hợp ô thay vì bảng.',
+     fit:'Chủ tiệm trẻ, thích giao diện sinh động; muốn nhìn con số trước, đi vào chi tiết sau.'},
+    {id:'v4',file:'v4-command.html',name:'Command',tag:'Chuyên nghiệp, dày thông tin',sw:['#FAFAF7','#14130F','#F25C05'],tone:'dark',
+     desc:'Dành cho người làm việc nhiều với dữ liệu: dày thông tin, số đơn sắc (monospace), chọn một dòng là hiện ngay chi tiết bên phải. Bảng lệnh Ctrl+K để làm gì cũng ≤ 3 chạm.',
+     style:'Trắng · đen · cam tín hiệu; IBM Plex Sans + Mono; viền mảnh 1px, bo 6–10px, trạng thái dạng chấm màu.',
+     mobile:'Không có thanh dưới: tab chữ cuộn ngang ở trên, danh sách dòng dày, nút "Lệnh nhanh" nổi mở bảng lệnh; chạm dòng mở chi tiết toàn màn hình.',
+     desktop:'3 khung: menu trái – bảng giữa – khung chi tiết phải (đồng hồ, phiếu bán, phiếu sửa); bảng lệnh ⌘K có tìm kiếm, phím tắt.',
+     fit:'Cửa hàng có kho lớn, nhiều giao dịch/ngày; nhân viên kho & kế toán cần tốc độ và độ chính xác.'},
+    {id:'v5',file:'v5-quay.html',name:'Quầy',tag:'POS làm trung tâm, màu teal',sw:['#E9F6EF','#0E9F83','#FFE4D2'],tone:'dark',
+     desc:'Lấy việc BÁN HÀNG làm trung tâm như một máy POS: nút Bán nổi giữa, lưới sản phẩm ảnh lớn, giỏ hàng + gợi ý tiền khách đưa. Màn hình chủ là lưới ô icon như ảnh tham khảo số 1.',
+     style:'Teal/xanh ngọc, gradient đào–mint nhẹ, font Lexend tròn, vùng chạm lớn 52–56px, nhãn trạng thái pastel.',
+     mobile:'Header gradient + dải số kính mờ, lưới 8 ô icon có huy hiệu số, thanh dưới có nút "Bán hàng" tròn nổi; giỏ hàng là bảng trượt.',
+     desktop:'Thanh icon + nhãn bên trái, màn Bán hàng là buồng lái 2 cột (lưới sản phẩm | giỏ hàng); Sửa chữa là bảng Kanban theo trạng thái.',
+     fit:'Cửa hàng bán lẻ đông khách tại quầy, nhân viên bán hàng là người dùng chính.'},
+    {id:'v6',file:'v6-glass.html',name:'Glass',tag:'Kính mờ, hiệu ứng nổi',sw:['#DDE7FF','#5B5BF0','#FFD8C8'],tone:'dark',
+     desc:'Giao diện "kính mờ" kiểu iOS mới: nền gradient dịu, các lớp mờ trong suốt, nút "+" phát sáng ở giữa như ảnh tham khảo số 2. Mềm mại, cao cấp nhưng vẫn dễ đọc.',
+     style:'Gradient trời–lilac–đào, kính mờ trắng, chàm #5B5BF0, font Be Vietnam Pro, tiêu đề lớn, danh sách bo nhóm kiểu iOS.',
+     mobile:'Tiêu đề lớn, thẻ ví gradient, biểu đồ có bong bóng giá trị, dock kính nổi với nút "+" phát sáng mở bảng tác vụ.',
+     desktop:'Sidebar dạng đảo nổi bên trái, thanh công cụ viên thuốc, cột tiện ích (việc cần làm theo giờ, quỹ tiền) bên phải.',
+     fit:'Chủ tiệm muốn gây ấn tượng với khách; trải nghiệm thiên về điện thoại, ít bảng biểu.'}
+  ];
+  var SCR=[['home','Tổng quan'],['stock','Đồng hồ'],['unit','Chi tiết'],['pos','Bán hàng'],['repair','Sửa chữa'],['cash','Thu chi'],['buy','Nhập hàng'],['cust','Khách hàng'],['report','Báo cáo'],['admin','Quản trị']];
+  var B=window.WF_BUNDLE||null;
+  var st={i:0,dev:'mobile',fav:{},route:'home'};
+  try{var sv=JSON.parse(localStorage.getItem('wf-hub')||'{}');if(sv.dev)st.dev=sv.dev;if(typeof sv.i==='number'&&D[sv.i])st.i=sv.i;if(sv.fav)st.fav=sv.fav;}catch(e){}
+  try{var qs=new URLSearchParams(location.search);if(qs.get('dev'))st.dev=qs.get('dev')==='desktop'?'desktop':'mobile';if(qs.get('i')&&D[+qs.get('i')-1])st.i=+qs.get('i')-1;}catch(e){}
+  function save(){try{localStorage.setItem('wf-hub',JSON.stringify({dev:st.dev,i:st.i,fav:st.fav}));}catch(e){}}
+  var $=function(s){return document.querySelector(s);};
+  var small=function(){return window.matchMedia('(max-width:700px)').matches;};
+  var heart='<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 20s-8-4.5-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.5 12 20 12 20Z"/></svg>';
+  function fg(c){var h=c.replace('#',''),n=parseInt(h,16),r=n>>16,g=(n>>8)&255,b=n&255;return (0.299*r+0.587*g+0.114*b)>150?'#16161B':'#fff';}
+
+  function renderTabs(){
+    $('#tabs').innerHTML=D.map(function(d,i){return '<button class="tab'+(i===st.i?' on':'')+(st.fav[d.id]?' fav':'')+'" data-i="'+i+'"><span class="n" style="background:'+d.sw[1]+';color:'+fg(d.sw[1])+';--sw2:'+d.sw[2]+'">'+(i+1)+'</span><div style="min-width:0"><b>'+d.name+'</b><span>'+d.tag+'</span></div><span class="heart">'+heart+'</span></button>';}).join('');
+    var t=$('#tabs .on');if(t&&t.scrollIntoView)t.scrollIntoView({inline:'center',block:'nearest'});
+  }
+  function renderInfo(){
+    var d=D[st.i];
+    $('#info').innerHTML='<div class="num">Mẫu '+(st.i+1)+' / '+D.length+'</div><h2>'+d.name+'</h2><div class="tagline">'+d.tag+'</div><div class="sw">'+d.sw.map(function(c){return '<i style="background:'+c+'"></i>';}).join('')+'</div><p style="margin-top:12px;color:#2A2A32">'+d.desc+'</p>'+
+    '<dl><div><dt>Phong cách</dt><dd>'+d.style+'</dd></div><div><dt>Bố cục điện thoại</dt><dd>'+d.mobile+'</dd></div><div><dt>Bố cục máy tính</dt><dd>'+d.desktop+'</dd></div><div><dt>Phù hợp với</dt><dd>'+d.fit+'</dd></div></dl>'+
+    '<button class="fav-btn'+(st.fav[d.id]?' on':'')+'" id="favThis">'+heart+(st.fav[d.id]?' Đã chọn mẫu này':' Chọn mẫu này')+'</button><div class="hint"><b>Cách xem:</b> bấm vào menu, thẻ, nút trong khung để chuyển màn hình. Dùng hàng nút phía trên để nhảy nhanh tới từng chức năng. Phím <b>←</b> <b>→</b> đổi mẫu, <b>M</b>/<b>D</b> đổi thiết bị.</div>';
+  }
+  function renderQuick(){
+    $('#quick').innerHTML=SCR.map(function(s){return '<button data-r="'+s[0]+'" class="'+(st.route===s[0]?'on':'')+'">'+s[1]+'</button>';}).join('');
+  }
+  function favUI(){var n=Object.keys(st.fav).filter(function(k){return st.fav[k];}).length;$('#favN').textContent='Đã chọn '+n;}
+
+  var frame=null;
+  function src(d){return B?{srcdoc:B[d.file]}:{src:d.file+'?frame='+(st.dev==='mobile'&&!small()?1:0)};}
+  function load(){
+    var d=D[st.i],dev=$('#dev');st.route='home';renderQuick();
+    var real=st.dev==='mobile'&&small(),mob=st.dev==='mobile'&&!real;
+    var ifr='<iframe id="ifr" title="'+d.name+'" '+(B?'':'src="'+d.file+'?frame='+(mob?1:0)+'"')+' allow="clipboard-write"></iframe>';
+    if(real){dev.className='dev fullbleed';dev.style.cssText='';dev.innerHTML=ifr;}
+    else if(mob){dev.className='dev';dev.innerHTML='<div class="phone" id="phone"><div class="scr"><div class="island"></div><div class="sbar'+(d.tone==='light'?' light':'')+'"><span>9:41</span><span class="r"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg><svg viewBox="0 0 17 12"><path d="M8.5 2.3c2.3 0 4.4.9 6 2.4l1-1.1A10.4 10.4 0 0 0 8.5.8C5.8.8 3.3 1.8 1.5 3.6l1 1.1a8.6 8.6 0 0 1 6-2.4Zm0 3.2c1.4 0 2.6.5 3.6 1.4l1-1.1a7 7 0 0 0-9.2 0l1 1.1c1-.9 2.2-1.4 3.6-1.4Zm0 3.1c.6 0 1.2.2 1.6.6L8.5 11 6.9 9.2c.4-.4 1-.6 1.6-.6Z"/></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="19" height="8" rx="2"/><path d="M24 4v4c.8-.3 1.5-1.1 1.5-2S24.8 4.3 24 4Z" opacity=".5"/></svg></span></div>'+ifr+'<div class="homebar'+(d.tone==='light'?'':'')+'"></div></div></div>';}
+    else {dev.className='dev';dev.innerHTML='<div class="win" id="win"><div class="bar"><i></i><i></i><i></i><div class="url">watchflow.vn / '+d.name.toLowerCase()+'</div></div>'+ifr+'</div>';}
+    frame=$('#ifr');
+    if(B){frame.srcdoc=B[d.file];}
+    frame.addEventListener('load',function(){post({wf:'frame',on:mob});});
+    fit();
+  }
+  function post(m){try{frame&&frame.contentWindow&&frame.contentWindow.postMessage(m,'*');}catch(e){}}
+  function fit(){
+    var area=$('#area'),dev=$('#dev');if(!area)return;
+    var W=area.clientWidth-(small()?0:32),H=area.clientHeight-(small()?0:32);
+    if(st.dev==='mobile'&&!small()){
+      var fw=418,fh=872,s=Math.min(1,H/fh,W/fw),ph=$('#phone');
+      dev.style.width=(fw*s)+'px';dev.style.height=(fh*s)+'px';if(ph)ph.style.transform='scale('+s+')';
+    }else if(st.dev==='desktop'){
+      var lw=1366,s2=Math.min(1,W/lw),lh=H/s2,w=$('#win');
+      if(small()){dev.className='dev';dev.style.cssText='';}
+      dev.style.width=(lw*s2)+'px';dev.style.height=H+'px';
+      if(w){w.style.width=lw+'px';w.style.height=lh+'px';w.style.transform='scale('+s2+')';}
+    }
+  }
+  function setDev(d){st.dev=d;save();WF_seg();load();}
+  function WF_seg(){document.querySelectorAll('#devSeg button').forEach(function(b){b.classList.toggle('on',b.dataset.d===st.dev);});}
+  function setI(i){st.i=(i+D.length)%D.length;save();renderTabs();renderInfo();load();}
+  function openFull(){var d=D[st.i];if(!B){window.open(d.file,'_blank');return;}var u=URL.createObjectURL(new Blob([B[d.file]],{type:'text/html'}));window.open(u,'_blank');}
+  function popRender(){
+    var ks=D.filter(function(d){return st.fav[d.id];});
+    $('#pop').innerHTML='<h4>Mẫu đã chọn</h4>'+(ks.length?'<ul>'+ks.map(function(d){return '<li><i style="background:'+d.sw[1]+';color:'+fg(d.sw[1])+'">'+(D.indexOf(d)+1)+'</i>Mẫu '+(D.indexOf(d)+1)+' — '+d.name+'</li>';}).join('')+'</ul><button class="btn dk" id="copyFav" style="width:100%;justify-content:center">Sao chép để gửi lại</button>':'<p>Chưa chọn mẫu nào. Bấm <b>Chọn mẫu này</b> ở bảng bên trái (hoặc biểu tượng tim trên thẻ mẫu).</p>');
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('.tab');if(t){setI(+t.dataset.i);return;}
+    var q=e.target.closest('#quick button');if(q){post({wf:'go',id:q.dataset.r});return;}
+    var sg=e.target.closest('#devSeg button');if(sg){setDev(sg.dataset.d);return;}
+    if(e.target.closest('#openFull')){openFull();return;}
+    var f=e.target.closest('#favThis');if(f){var d=D[st.i];st.fav[d.id]=!st.fav[d.id];save();renderTabs();renderInfo();favUI();popRender();return;}
+    if(e.target.closest('#favBtn')){popRender();$('#pop').classList.toggle('open');return;}
+    var c=e.target.closest('#copyFav');if(c){var txt='Tôi chọn: '+D.filter(function(d){return st.fav[d.id];}).map(function(d){return 'Mẫu '+(D.indexOf(d)+1)+' ('+d.name+')';}).join(', ');var done=function(){c.textContent='Đã sao chép ✓';};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,done);}else{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(er){}ta.remove();done();}return;}
+    if(!e.target.closest('#pop'))$('#pop').classList.remove('open');
+  });
+  window.addEventListener('message',function(e){if(e.data&&e.data.wf==='route'){st.route=e.data.id==='sales'?'pos':e.data.id;renderQuick();}if(e.data&&e.data.wf==='ready'){post({wf:'frame',on:st.dev==='mobile'&&!small()});}});
+  document.addEventListener('keydown',function(e){if(e.target.matches&&e.target.matches('input,textarea'))return;if(e.key==='ArrowRight')setI(st.i+1);else if(e.key==='ArrowLeft')setI(st.i-1);else if(e.key==='m'||e.key==='M')setDev('mobile');else if(e.key==='d'||e.key==='D')setDev('desktop');});
+  var rz;window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){var was=$('#dev').classList.contains('fullbleed');if(was!==(st.dev==='mobile'&&small()))load();else fit();},80);});
+  WF_seg();renderTabs();renderInfo();favUI();popRender();load();
+})();
+</script>
+</body>
+</html>
