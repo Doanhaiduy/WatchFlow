@@ -4,6 +4,15 @@ export type ChangelogEntry = { version: string; date: string; title: string; ite
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.14.1",
+    date: "2026-10-17",
+    title: "Sửa đua dữ liệu hủy đơn CTV và quyết toán; công cụ triển khai staging/production",
+    items: [
+      "Sửa lỗi hiếm ở cộng tác viên: nếu chủ hủy một đơn đúng lúc đang quyết toán chính đơn đó, hệ thống có thể vừa hủy đơn vừa ghi nhận tiền nộp. Giờ quyết toán bị chặn và báo đơn vừa bị hủy.",
+      "Chuẩn bị đưa lên máy chủ thật (staging/production): công cụ dựng cơ sở dữ liệu và cấu hình tự động — không đổi cách dùng.",
+    ],
+  },
+  {
     version: "0.14.0",
     date: "2026-10-17",
     title: "Tiện ích từ Lưu Xá: VietQR, Ctrl+K, nhập Excel, PWA",

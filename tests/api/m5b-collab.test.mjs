@@ -203,6 +203,50 @@ test("CT-08: hủy đơn CTV ∥ quyết toán cùng dòng ⇒ đúng 1 thành c
   assert.ok(!(st.status === "voided" && st.settlement_id), "không vừa hủy vừa đã nộp");
 });
 
+// CT-08b (tất định). CT-08 ở trên chỉ bắt lỗi khi hai yêu cầu "tình cờ" đụng nhau đúng lúc (CI Linux/PG16 gặp, máy Windows/PG18 thì không).
+// Ở đây ép đúng lịch: giao dịch HỦY đơn đã chạy xong nhưng CHƯA commit (giữ khóa), yêu cầu QUYẾT TOÁN đã chạm khóa và đang chờ,
+// rồi mới commit giao dịch hủy. Lỗi cũ: quyết toán thức dậy vẫn thấy phiếu 'confirmed' (giá trị cũ của bảng nối) ⇒ thu tiền cho đơn đã hủy.
+test("CT-08b: quyết toán chờ khóa trong lúc đơn bị hủy ⇒ phải bị chặn, không thu tiền cho đơn đã hủy", async () => {
+  owner.today = c1.today = sales.today = "2026-11-05";
+  const W = await mkUnit("CASIO-LTP-1302", "CT08B-W", 600_000, 900_000);
+  await assign(owner, C1, [{ unitId: W.unitId, basePrice: 800_000 }], "2026-11-05");
+  const kh = (await c1.get("/api/v1/customers")).body.items[0];
+  const d = await c1.post("/api/v1/collab/me/sales", { customerId: kh.id, lines: [{ unitId: W.unitId, unitPrice: 900_000 }] });
+  await sales.post(`/api/v1/sales/${d.body.id}/confirm`, { payments: [] }, K());
+  const line = (await owner.get(`/api/v1/collaborators/${C1}/settlements`)).body.unsettled.find((l) => l.saleId === d.body.id);
+  await reauth(owner);
+
+  let release, voidedInTx;
+  const hold = new Promise((r) => (release = r));
+  const voidedP = new Promise((r) => (voidedInTx = r));
+  // A: hủy đơn trong một giao dịch mở (chưa commit) — giữ khóa phiếu và dòng bán
+  const voiding = asUser(userOf("owner").id, async (cn) => {
+    await cn.query("SELECT app.fn_void_sale($1,$2)", [d.body.id, "Hủy thử tất định CT-08b"]);
+    voidedInTx();
+    await hold;
+  }, { today: "2026-11-05" });
+  await voidedP;
+  // B: quyết toán qua API — sẽ chặn ở khóa cho tới khi A commit
+  const settling = owner.post(`/api/v1/collaborators/${C1}/settlements`, { lineIds: [line.id], method: "cash" }, K());
+  let waiting = 0;
+  for (let i = 0; i < 80 && !waiting; i++) { // chờ tới khi B THẬT SỰ đang chờ khóa (tối đa ~8 giây < lock_timeout 5s của B tính từ lúc chạm)
+    waiting = (await ownerSql("SELECT count(*)::int n FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query ILIKE '%fn_settle_collaborator%'"))[0].n;
+    if (!waiting) await new Promise((r) => setTimeout(r, 100));
+  }
+  release();
+  await voiding;
+  const s = await settling;
+  assert.ok(waiting > 0, "quyết toán đã không chạm khóa — test không ép được lịch cần thiết");
+  assert.notEqual(s.status, 200, "quyết toán phải bị chặn vì đơn vừa bị hủy: " + JSON.stringify(s.body));
+  const [st] = await ownerSql(`SELECT s.status, sl.settlement_id,
+      (SELECT count(*)::int FROM public.payments p WHERE p.doc_type = 'settlement' AND p.status = 'posted'
+         AND p.doc_id IN (SELECT settlement_id FROM public.sale_lines WHERE sale_id = $1 AND settlement_id IS NOT NULL)) AS paid
+    FROM public.sales s JOIN public.sale_lines sl ON sl.sale_id = s.id WHERE s.id = $1`, [d.body.id]);
+  assert.equal(st.status, "voided");
+  assert.equal(st.settlement_id, null, "đơn đã hủy không được gắn vào quyết toán");
+  assert.equal(st.paid, 0);
+});
+
 test("PT-03 + bất biến I6/I10/I11", async () => {
   // CTV chỉ thấy đơn/khách/quyết toán của mình
   const r = await asUser(C2, (cn) => cn.query("SELECT (SELECT count(*) FROM public.sales WHERE collaborator_id <> app.current_user_id())::int a, (SELECT count(*) FROM public.collaborator_settlements)::int b"));

@@ -20,7 +20,9 @@ Mọi `fn_*` khóa theo thứ tự cố định, trong mỗi loại sắp theo `
 4. chứng từ gốc (`sales`, `collaborator_assignments`, `collaborator_settlements`, `repair_orders`, `purchase_receipts`) — khi cần khóa để kiểm tổng thanh toán hoặc trạng thái
 5. ghi `payments` (kiểm tổng với chứng từ đã khóa ở bước 4)
 
-Quy tắc: ai cần chiếc + chứng từ thì khóa chiếc trước rồi chứng từ. `fn_settle_collaborator` khóa các `sale_lines` (theo id) rồi tạo thanh toán. (Không còn khóa quỹ/kỳ — CF-07.)
+Quy tắc: ai cần chiếc + chứng từ thì khóa chiếc trước rồi chứng từ. `fn_settle_collaborator` khóa các **phiếu bán cha** (theo id) bằng một câu lệnh riêng, rồi mới khóa/đọc các `sale_lines` và tạo thanh toán (cùng thứ tự phiếu → dòng với `fn_void_sale`). (Không còn khóa quỹ/kỳ — CF-07.)
+
+> **Bẫy READ COMMITTED (0022):** `SELECT … FROM sale_lines JOIN sales … FOR UPDATE OF sale_lines` chỉ kiểm lại dòng **đã khóa** sau khi chờ khóa; cột của bảng nối (`sales.status`) giữ giá trị cũ từ snapshot của câu lệnh. Muốn đọc trạng thái chứng từ cha sau khi đối thủ commit thì phải khóa chứng từ cha bằng câu lệnh **riêng, đứng trước** (câu lệnh sau lấy snapshot mới) — hoặc `FOR UPDATE` cả hai bảng theo đúng thứ tự khóa chung.
 
 ## 3. Hợp đồng từng hàm trọng yếu
 
@@ -43,7 +45,7 @@ Khóa dòng chứng từ gốc → tính lại `payable`/`paid_net` từ dữ li
 Khóa các chiếc theo id; kiểm `in_stock` (không `reserved`/đã giao); chuyển `with_collaborator`, đặt `held_by_collaborator_id`; trigger chặn đổi `base_price_vnd`. Hai phiên giao cùng chiếc cho hai CTV: unique `U(unit_id) WHERE status='active'` là lưới cuối (CT-06).
 
 ### `fn_settle_collaborator(collaborator_id, line_ids, method, doc_date)`
-Khóa `sale_lines` theo id; mỗi dòng phải là dòng CTV của đúng CTV, phiếu `confirmed`, chưa có `settlement_id`; tạo `collaborator_settlements` + `payments(collab_settlement)` = Σ giá thu; gán `settlement_id`. Hai phiên quyết toán cùng dòng: phiên sau thấy `settlement_id` đã gán ⇒ lỗi (CT-10).
+Khóa các phiếu bán cha (theo id) rồi `sale_lines` theo id; mỗi dòng phải là dòng CTV của đúng CTV, phiếu `confirmed`, chưa có `settlement_id`; tạo `collaborator_settlements` + `payments(collab_settlement)` = Σ giá thu; gán `settlement_id`. Hai phiên quyết toán cùng dòng: phiên sau thấy `settlement_id` đã gán ⇒ lỗi (CT-10).
 
 ### `fn_void_sale`
 Khóa chiếc, rồi phiếu; kiểm cửa sổ hủy, chưa dùng cọc, (đơn CTV) dòng chưa quyết toán; đảo kho/trạng thái, hủy các `payments` và `warranties`. Hủy vs quyết toán đồng thời: kết quả duy nhất một bên thắng (CT-08).

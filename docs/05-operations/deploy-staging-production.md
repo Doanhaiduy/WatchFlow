@@ -1,6 +1,6 @@
 # Triển khai staging & production (Supabase + Vercel)
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Đã tự động hóa phần DB/biến môi trường (kiểm chứng trên PostgreSQL 17 với vai trò không-superuser; chưa chạy trên Supabase thật) · Phiên bản mã: 0.14.0
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Đã tự động hóa phần DB/biến môi trường (kiểm chứng trên PostgreSQL 17 với vai trò không-superuser; chưa chạy trên Supabase thật) · Phiên bản mã: 0.14.1
 > Viết cho: **chủ dự án / kỹ sư dựng staging và production lần đầu**, rồi dùng lại cho mọi lần phát hành. Đọc §0 trước khi chạy lệnh nào.
 
 ---
@@ -227,7 +227,7 @@ node scripts/ops/create-backup-role.mjs --env staging
 Ghi chuỗi kết nối `wf_backup` vào `backup/backup-db-url-staging.txt` (git-ignore) và tự kiểm rằng vai trò này **không ghi được**. Chuỗi này dùng cổng 5432; qua pooler tên đăng nhập phải có dạng `wf_backup.<ref>` — kiểm trước khi đặt vào secret.
 
 ### 5.7 Smoke test (làm đủ, ghi kết quả)
-- [ ] `GET /api/health` ⇒ 200 có `version: 0.14.0`; `GET /api/health?deep=1` ⇒ migration đủ, DB nối được.
+- [ ] `GET /api/health` ⇒ 200 có `version: 0.14.1`; `GET /api/health?deep=1` ⇒ migration đủ, DB nối được.
 - [ ] Đăng nhập chủ ⇒ đổi mật khẩu ⇒ TOTP ⇒ vào Tổng quan. Đăng xuất/đăng nhập lại.
 - [ ] Quản trị → Cài đặt: điền thông tin cửa hàng, **Thanh toán** (ngân hàng, STK, tên chủ TK) ⇒ ở POS chọn "Chuyển khoản" thấy mã VietQR.
 - [ ] Tạo người dùng bán hàng/kho/CTV; kiểm menu theo quyền.

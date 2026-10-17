@@ -168,3 +168,11 @@
 **Khác:** hỗ trợ khóa mới của Supabase (thêm header `apikey`, thử với Storage); CA tải mỗi lần.
 **Nếu đổi, sửa:** `src/server/storage.ts`, `scripts/lib/envfile.mjs` (kiểm khóa), `package.json` engines.
 **Trạng thái:** ☐
+
+### CQ-023 · Deploy/CI · 🔴 · lỗi tìm thấy (đua dữ liệu hủy đơn CTV ∥ quyết toán)
+**Vấn đề:** lần chạy CI đầu tiên trên Linux/PostgreSQL 16 làm CT-08 và SC-13 đỏ: đơn CTV vừa bị **hủy** vừa được **quyết toán và thu tiền** (BR-COL-08, I-hằng đẳng thức tiền sai). Nguyên nhân: `fn_settle_collaborator` đọc `sales.status` trong cùng câu JOIN với `FOR UPDATE OF sale_lines`; sau khi chờ khóa, PostgreSQL chỉ kiểm lại dòng đã khóa nên `status` giữ giá trị cũ. Máy công ty (Windows/PG18) không gặp vì phụ thuộc thời điểm.
+**Đã chọn:** migration `0022_settle_lock_sales.sql` khóa phiếu bán cha trước bằng câu lệnh riêng (cùng thứ tự phiếu → dòng với `fn_void_sale`). Thêm test tất định **CT-08b**: trên mã cũ **hỏng** (quyết toán QT thành công cho đơn đã hủy), sau sửa **đạt**; toàn bộ `test:api` 202/202 trên PostgreSQL 17.
+**Khác:** `FOR UPDATE OF sl, s` trong cùng câu (có nguy cơ deadlock với `fn_void_sale` vì thứ tự khóa dòng↔phiếu khác nhau).
+**Việc nên làm thêm:** rà các hàm khác có mẫu "JOIN chứng từ cha + FOR UPDATE OF dòng" (đã grep: chỉ còn 0009 `parts ⋈ part_costs`, an toàn vì `part_costs` chỉ đổi khi giữ khóa `parts`).
+**Nếu đổi, sửa:** `db/migrations/0022_settle_lock_sales.sql`; `docs/03-architecture/integrity-and-concurrency.md` §2.
+**Trạng thái:** ☐ (cần chủ dự án biết: nếu đã chạy production trước bản này thì kiểm `SELECT … FROM sales s JOIN sale_lines sl … WHERE s.status='voided' AND sl.settlement_id IS NOT NULL`)
