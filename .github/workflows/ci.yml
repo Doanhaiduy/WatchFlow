@@ -32,3 +32,8 @@ jobs:
       - run: pnpm test:api
       - run: pnpm docs:check
       - run: pnpm build
+      - name: Log PostgreSQL cục bộ (chỉ khi lỗi)
+        if: failure()
+        run: |
+          echo "--- .local/pg.log"; tail -n 60 .local/pg.log 2>/dev/null || echo "(không có pg.log)"
+          echo "--- PG_BIN=$PG_BIN"; ls -la "$PG_BIN" 2>/dev/null | head -5

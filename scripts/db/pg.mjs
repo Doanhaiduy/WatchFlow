@@ -67,6 +67,9 @@ export function init() {
   }
   // Chỉ nghe 127.0.0.1
   fs.appendFileSync(path.join(PG_DATA, "postgresql.conf"), `\nlisten_addresses = '127.0.0.1'\nport = ${PG_PORT}\nmax_connections = 200\ntimezone = 'UTC'\n`);
+  // Linux/macOS: PG của gói hệ thống mặc định tạo socket ở /var/run/postgresql (người dùng thường — vd. CI — không ghi được ⇒ không khởi động).
+  // Chỉ dùng TCP 127.0.0.1 nên tắt Unix socket. (Windows không có tham số này — không được ghi.)
+  if (process.platform !== "win32") fs.appendFileSync(path.join(PG_DATA, "postgresql.conf"), `unix_socket_directories = ''\n`);
   return true;
 }
 
