@@ -1,0 +1,6 @@
+.local/
+docs/
+design/
+tests/
+ops/
+*.md

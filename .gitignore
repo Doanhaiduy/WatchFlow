@@ -7,6 +7,7 @@
 .local/
 node_modules/
 .next/
+.next-test/
 out/
 coverage/
 playwright-report/
@@ -28,3 +29,24 @@ design/ui-preview/dist/
 Thumbs.db
 .vscode/
 .idea/
+
+# Chuỗi kết nối sao lưu (sinh bởi scripts/ops/create-backup-role.mjs)
+backup/
+.next-e2e/
+.next-audit/
+.next-test-*/
+.next-dev-*/
+
+# Gói chuyển công ty → nhà (scripts/handoff/pack-changes.mjs)
+watchflow-changes-*.mjs
+.company-bundle-backup/
+
+# Công cụ cục bộ / khóa phiên — không theo repo
+.serena/
+.claude/scheduled_tasks.lock
+
+# Mã dự án khác để tham khảo (Lưu Xá) — KHÔNG được đưa lên repo công khai
+ref-sources/
+
+# Tự sinh bởi Next, trỏ vào thư mục tạm .next-*
+next-env.d.ts
