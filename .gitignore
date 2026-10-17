@@ -50,3 +50,6 @@ ref-sources/
 
 # Tự sinh bởi Next, trỏ vào thư mục tạm .next-*
 next-env.d.ts
+
+# Vercel CLI (liên kết dự án cục bộ)
+.vercel/

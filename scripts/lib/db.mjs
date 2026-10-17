@@ -25,8 +25,19 @@ function dbNameFromEnv() {
   try { return process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).pathname.slice(1) : undefined; } catch { return undefined; }
 }
 
+/** Cấu hình kết nối: DB local để trần; DB ngoài máy BẮT BUỘC TLS có kiểm chứng chỉ bằng DB_SSL_CA (giống src/server/db.ts). */
+export function connConfig(url) {
+  const u = new URL(url);
+  if (["127.0.0.1", "localhost", "::1"].includes(u.hostname)) return { connectionString: url };
+  const ca = process.env.DB_SSL_CA;
+  if (!ca) throw new Error("DB ngoài máy cần TLS có kiểm chứng chỉ: thiếu DB_SSL_CA — chạy `pnpm env:check <staging|production>` để dẫn xuất từ certs/supabase-root-2021-ca.crt.");
+  u.searchParams.delete("sslmode");
+  u.searchParams.delete("sslrootcert");
+  return { connectionString: u.toString(), ssl: { ca: ca.replace(/\\n/g, "\n"), rejectUnauthorized: true } };
+}
+
 export async function connect(url) {
-  const c = new pg.Client({ connectionString: url, application_name: "wf-script" });
+  const c = new pg.Client({ ...connConfig(url), application_name: "wf-script" });
   await c.connect();
   return c;
 }

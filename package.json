@@ -5,7 +5,7 @@
   "description": "WatchFlow — quản lý cửa hàng đồng hồ",
   "packageManager": "pnpm@10.34.4",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "node scripts/db/pg.mjs start --quiet && next dev -p 3000",
@@ -23,7 +23,12 @@
     "db:migrate": "node scripts/db/migrate.mjs",
     "db:migrate:staging": "node scripts/db/migrate.mjs --env staging",
     "db:migrate:production": "node scripts/db/migrate.mjs --env production",
+    "db:deploy:staging": "node scripts/deploy/db-deploy.mjs --env staging",
+    "db:deploy:production": "node scripts/deploy/db-deploy.mjs --env production",
     "db:seed": "node scripts/db/seed.mjs",
+    "db:seed:staging": "node scripts/db/seed.mjs --env staging",
+    "owner:staging": "node scripts/env/bootstrap-owner.mjs --env staging",
+    "owner:production": "node scripts/env/bootstrap-owner.mjs --env production",
     "db:audit": "node scripts/db/audit.mjs",
     "db:backup": "node scripts/db/backup.mjs",
     "db:restore-drill": "node scripts/db/restore-drill.mjs",
@@ -31,6 +36,10 @@
     "setup:local": "node scripts/setup-local.mjs",
     "setup:reset": "node scripts/setup-local.mjs --reset",
     "env:keys": "node scripts/env/gen-keys.mjs",
+    "env:init": "node scripts/env/init-env.mjs",
+    "env:check": "node scripts/env/check-env.mjs",
+    "vercel:env:staging": "node scripts/deploy/vercel-env.mjs staging",
+    "vercel:env:production": "node scripts/deploy/vercel-env.mjs production",
     "dev:staging": "node scripts/env/dev-staging.mjs",
     "version:bump": "node scripts/bump-version.mjs",
     "docs:check": "node scripts/docs/check-docs.mjs",

@@ -50,6 +50,8 @@ if (isMain) {
   const url = ownerUrl({ env, dbName });
   let apiPassword = argValue("--api-password");
   if (!apiPassword && env === "local" && process.env.DATABASE_URL) apiPassword = decodeURIComponent(new URL(process.env.DATABASE_URL).password || "") || undefined;
+  // staging/production: mật khẩu wf_api lấy từ .env.<env> (WF_API_PASSWORD) — không cần gõ tay mỗi lần
+  if (!apiPassword && env !== "local") apiPassword = process.env.WF_API_PASSWORD || undefined;
   console.log(`Migrate → ${env}${dbName ? " / " + dbName : ""}${hasFlag("--dry-run") ? " (dry-run)" : ""}`);
   migrate({ url, dryRun: hasFlag("--dry-run"), apiPassword }).catch((e) => { console.error(e.message); process.exit(1); });
 }
