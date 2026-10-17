@@ -46,6 +46,7 @@
 | 04 | [build-plan](04-engineering/build-plan.md) | **Kế hoạch xây dựng M0…M9** cho AI coding | Duyệt |
 | 05 | [runbook](05-operations/runbook.md) | Vận hành, giám sát, sự cố, khóa/bí mật, bàn giao | Duyệt |
 | 05 | [backup-restore](05-operations/backup-restore.md) | Sao lưu hai lớp, khôi phục, diễn tập | Duyệt |
+| 05 | [deploy-staging-production](05-operations/deploy-staging-production.md) | Dựng staging/production lần đầu & phát hành (Supabase + Vercel, lệnh tự động `env:init` → `db:deploy` → `vercel:env`) | Duyệt |
 | 06 | [golden-scenarios](06-quality/golden-scenarios.md) | **Kịch bản vàng** có số liệu (SC-xx) | Duyệt |
 | 06 | [test-plan](06-quality/test-plan.md) | Kế hoạch test, ca đồng thời (CT), phân quyền (PT), ma trận truy vết | Duyệt |
 | 06 | [uat-acceptance](06-quality/uat-acceptance.md) | Nghiệm thu & checklist go-live | Duyệt |

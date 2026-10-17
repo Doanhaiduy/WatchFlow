@@ -45,6 +45,11 @@ pnpm dev                # http://localhost:3000
 | `pnpm db:audit` | Chạy bộ kiểm cấu trúc (mọi bảng có RLS + FORCE, không hàm `SECURITY DEFINER` thiếu `search_path`, mọi FK có index, hàm đặc quyền có owner đúng…) |
 | `pnpm db:backup [-- --env production --with-storage]` | Sao lưu thủ công |
 | `pnpm env:keys` | Sinh khóa mới (chỉ in màn hình) |
+| `pnpm env:init staging\|production` | Tạo `.env.<env>` đã sinh sẵn bộ khóa riêng; chỉ chừa vài ô điền từ dashboard (không ghi đè file có sẵn) |
+| `pnpm env:check staging\|production [--ping]` | Dẫn xuất chuỗi kết nối từ các ô đã điền, kiểm đủ biến, `--ping` thử nối DB Supabase |
+| `pnpm db:deploy:staging\|production [-- --seed] [--owner-email … --owner-name …]` | **Một lệnh dựng/cập nhật DB**: chuẩn bị vai trò Supabase → migrate → `db:audit` → thử đường nối của ứng dụng → bucket Storage → (tùy chọn) chủ cửa hàng / demo (chỉ staging). Production cần `--yes` |
+| `pnpm db:seed:staging` · `pnpm owner:staging\|production -- --email … --name …` | Nạp demo (chỉ staging) · tạo chủ cửa hàng đầu tiên |
+| `pnpm vercel:env:staging\|production [-- --dry-run] [--only TÊN]` | Đẩy biến môi trường từ `.env.<env>` lên Vercel (staging → Preview nhánh `staging`; bí mật là Sensitive) |
 | `pnpm version:bump <patch\|minor\|major> "Tiêu đề"` | Tăng phiên bản + mục changelog |
 | `pnpm dev:staging` | Chạy máy bạn với DB staging (có cảnh báo; chỉ khi thật cần) |
 | `pnpm docs:check` | Kiểm link/ID/`Cập nhật lần cuối` của docs (bản đầu ở M0, hoàn thiện M9) |
@@ -80,14 +85,14 @@ Quy tắc: **mỗi môi trường một bộ khóa riêng**; `.env.local` trỏ 
 
 ## 5. Dựng môi trường mới (staging/production)
 
-1. Tạo dự án Supabase (vùng **Singapore**), bật gói phù hợp; **tắt Data API** (Project Settings → Data API); lấy chuỗi pooler (6543 cho app, 5432 cho migrate).
-2. `pnpm env:keys` ⇒ lưu vào `.env.<env>` và trình quản lý mật khẩu.
-3. Dựng DB: `node scripts/db/bundle.mjs --apply <chuỗi chủ DB pooler> --allow-remote --api-password <mật khẩu wf_api>` (tạo vai trò, schema, bảng, hàm, RLS, seed tham chiếu) → `pnpm db:migrate:<env>` (ghi nhận migration).
-4. Tạo bucket Storage riêng tư: `unit-photos`, `repair-photos`, `documents`, `branding` (REST `/storage/v1/bucket` bằng `service_role`).
-5. Tạo chủ cửa hàng đầu tiên: `node scripts/env/bootstrap-owner.mjs --env <env> --email … --name …` (mật khẩu tạm, buộc đổi lần đầu, bắt đầu TOTP).
-6. Vercel: tạo project (vùng `sin1`), đặt biến môi trường (Production ← `.env.production`; Preview ← `.env.staging`), kết nối nhánh.
-7. Bật sao lưu: `scripts/ops/create-backup-role.mjs`, repo sao lưu riêng (`ops/backup-repo`), secrets — xem `backup-restore`.
-8. Chạy `GET /api/health?deep=1`, đăng nhập thử, chạy kịch bản vàng thủ công trên staging.
+Hướng dẫn đầy đủ từng bước (kèm chỗ bấm trên dashboard): [`05-operations/deploy-staging-production`](../05-operations/deploy-staging-production.md) §A. Tóm tắt:
+
+1. Tạo dự án Supabase (vùng **Singapore**); lấy 4 giá trị (Project ID, mật khẩu DB, host Session pooler, khóa `service_role` dạng JWT); **tắt Data API**.
+2. `pnpm env:init <env>` (sinh `.env.<env>` + bộ khóa riêng) → điền 4 ô → `pnpm env:check <env> --ping`.
+3. `pnpm db:deploy:<env>` — vai trò, migration, `db:audit`, bucket Storage; thêm `--owner-email/--owner-name` để tạo chủ cửa hàng, `--seed` (chỉ staging) để nạp demo.
+4. Vercel: project đã nối repo; `pnpm vercel:env:<env>` đặt biến; push nhánh (`staging` → Preview, `main` → Production).
+5. Bật sao lưu: `scripts/ops/create-backup-role.mjs`, repo sao lưu riêng (`ops/backup-repo`), secrets — xem `backup-restore`.
+6. Chạy `GET /api/health?deep=1`, đăng nhập thử, chạy kịch bản vàng thủ công trên staging.
 
 ## 6. Cạm bẫy thường gặp
 

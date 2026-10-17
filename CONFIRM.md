@@ -148,3 +148,23 @@
 **Khác:** retention dài/ngắn hơn; ẩn số tài khoản với CTV; cho CTV nhập Excel khách.
 **Nếu đổi, sửa:** cài đặt `activity.*`; `src/app/api/v1/store-info`; `src/lib/import/perms.ts`.
 **Trạng thái:** ☐
+
+### CQ-020 · Deploy · 🔴 · mâu thuẫn (quyền DB khi migrate trên Supabase)
+**Vấn đề:** bản nháp `deploy-staging-production` §3.4 cấp các vai trò `wf_*` cho `postgres` với `INHERIT FALSE`. Trên PostgreSQL 17 với vai trò **không-superuser** như `postgres` của Supabase, migration `0001` vẫn lỗi `permission denied for schema app` (đã tái hiện bằng cụm PG thử) vì sau `ALTER SCHEMA app OWNER TO wf_owner` người chạy mất quyền tạo hàm trong schema.
+**Đã chọn:** `scripts/db/prepare-supabase.mjs` cấp `WITH INHERIT TRUE, SET TRUE` (PG16+). Kiểm trên cụm thử: 34 migration + `db:audit` sạch + đăng nhập `wf_api` rồi `SET ROLE wf_app`. Hệ quả: người chạy migration (quản trị dự án, vốn có BYPASSRLS) thừa hưởng quyền của `wf_*`.
+**Khác:** sửa `0001` để không đổi chủ schema giữa chừng (không được sửa migration đã áp ⇒ cần migration mới + chạy lại từ đầu).
+**Nếu đổi, sửa:** `scripts/db/prepare-supabase.mjs`; `docs/05-operations/deploy-staging-production.md` §3.2.
+**Trạng thái:** ☐ (chưa kiểm trên Supabase thật)
+
+### CQ-021 · Deploy · 🟡 · mâu thuẫn nhỏ (nạp demo ở staging)
+**Vấn đề:** bản nháp tài liệu deploy cấm nạp demo ở staging, trong khi `CLAUDE.md`/`dev-setup` ghi "demo local/staging" và `seed.mjs` chỉ từ chối production.
+**Đã chọn:** cho phép `pnpm db:deploy:staging -- --seed` (tài khoản demo riêng `.local/demo-accounts-staging.*`, mã hóa bằng khóa PII của staging); production luôn từ chối.
+**Khác:** cấm hẳn demo ở staging.
+**Nếu đổi, sửa:** `scripts/deploy/db-deploy.mjs` (cờ `--seed`), `docs/05-operations/deploy-staging-production.md` §0.3.
+**Trạng thái:** ☐
+
+### CQ-022 · Deploy · 🟢 · giả định (Node, khóa service_role, CA)
+**Đã chọn:** (1) `engines.node = 22.x` để Vercel dùng Node 22 như đã kiểm (mặc định project mới là 24.x). (2) Ứng dụng cần khóa `service_role` dạng **JWT (Legacy)** vì `src/server/storage.ts` gửi `Authorization: Bearer`; `env:check` từ chối khóa `sb_secret_…`. (3) CA công khai *Supabase Root 2021* lưu trong repo (`certs/`, hết hạn 2031-04-26) thay vì bắt tải ở dashboard.
+**Khác:** hỗ trợ khóa mới của Supabase (thêm header `apikey`, thử với Storage); CA tải mỗi lần.
+**Nếu đổi, sửa:** `src/server/storage.ts`, `scripts/lib/envfile.mjs` (kiểm khóa), `package.json` engines.
+**Trạng thái:** ☐

@@ -33,6 +33,7 @@ Next.js (App Router) + TypeScript (strict) + Tailwind · PostgreSQL (Supabase) v
 
 ## Lệnh hay dùng (có sau mốc M0)
 `pnpm dev` · `pnpm typecheck` · `pnpm build` (tự chạy `check-version`) · `pnpm test` (đơn vị) · `pnpm test:api` (tích hợp trên DB thật, có bộ đồng thời + phân quyền) · `pnpm test:e2e` · `pnpm db:start|stop|status` · `pnpm db:migrate[:staging|:production]` (luôn `-- --dry-run` trước) · `pnpm db:seed` (demo) · `pnpm db:backup` · `pnpm version:bump <patch|minor|major> "Tiêu đề"` · `pnpm env:keys`.
+**Triển khai (staging/production):** `pnpm env:init <env>` → điền ô dashboard → `pnpm env:check <env> --ping` → `pnpm db:deploy:<env>` (vai trò + migrate + audit + bucket; production cần `--yes`) → `pnpm vercel:env:<env>` → push nhánh. Hướng dẫn: `docs/05-operations/deploy-staging-production.md` §A.
 
 ## Quy tắc sắt (không thương lượng)
 
