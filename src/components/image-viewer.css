@@ -1,0 +1,24 @@
+/* Trình xem ảnh toàn màn hình (ImageViewerHost) — token Glass, nền tối cả hai chế độ sáng/tối; chuyển động tắt khi prefers-reduced-motion. */
+@layer components {
+  .wf-zoomable { cursor: zoom-in; }
+  .wf-iv { position: fixed; inset: 0; z-index: var(--wf-z-viewer); display: flex; flex-direction: column; background: var(--wf-viewer-bg); color: var(--wf-on-accent); user-select: none; -webkit-user-select: none; animation: wf-iv-in .2s ease-out; }
+  @keyframes wf-iv-in { from { opacity: 0; } }
+  .wf-iv-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: max(10px, var(--safe-top, 0px)) 12px 10px; }
+  .wf-iv-title { min-width: 0; }
+  .wf-iv-title b { display: block; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wf-iv-title small { display: block; font-size: 11.5px; opacity: .7; font-variant-numeric: tabular-nums; }
+  .wf-iv-tools { display: flex; align-items: center; gap: 6px; flex: none; }
+  .wf-iv-btn { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; border-radius: 14px; background: var(--wf-viewer-btn); color: inherit; cursor: pointer; transition: background-color .15s; }
+  .wf-iv-btn:hover:not(:disabled) { background: var(--wf-viewer-btn-hover); }
+  .wf-iv-btn:disabled { opacity: .35; cursor: not-allowed; }
+  .wf-iv-btn:focus-visible { outline: 2px solid var(--wf-on-accent); outline-offset: 2px; }
+  .wf-iv-stage { position: relative; flex: 1; min-height: 0; overflow: hidden; touch-action: none; }
+  .wf-iv-img { position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; object-fit: contain; will-change: transform; transition: transform .12s ease-out; }
+  .wf-iv-img.dragging { transition: none; }
+  .wf-iv-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+  .wf-iv-nav.prev { left: 8px; } .wf-iv-nav.next { right: 8px; }
+  .wf-iv-cap { padding: 10px 16px max(12px, var(--safe-bottom, 0px)); text-align: center; font-size: 13.5px; opacity: .9; }
+  .wf-iv-err { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; opacity: .8; pointer-events: none; }
+  @media (max-width: 640px) { .wf-iv-nav { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .wf-iv, .wf-iv-img { animation: none; transition: none; } .wf-iv-btn { transition: none; } }
+}
