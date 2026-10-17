@@ -1,0 +1,193 @@
+/* WatchFlow — token Glass (ui-design-system §3) + ánh xạ --ux-* của Lucian (§8.1). Đổi giá trị ở MỘT nơi này.
+   Hai chế độ: sáng (mặc định, :root) và tối (:root[data-theme="dark"], chỉ khi hiển thị trên màn hình — in luôn dùng bản sáng).
+   Quy ước: --wf-on-accent = chữ trên nền nhấn/gradient (luôn trắng); --wf-surface = mặt phẳng nổi (thẻ/núm/tab đang chọn);
+   --wf-paper(-ink) = giấy in/tem/biên lai/mã QR (luôn trắng-đen, kể cả ở chế độ tối); --wf-accent = màu TÔ (nền nút), --wf-accent-text = màu CHỮ/biểu tượng nhấn. */
+:root {
+  color-scheme: light;
+  /* chữ & bề mặt */
+  --wf-ink: #1B1B3A;
+  --wf-mute: #575A7E; /* AA ≥ 4.5:1 trên kính (ui-design-system §7.3) */
+  --wf-mute-2: #5E6188;
+  --wf-nav: #4B4E78;
+  --wf-label: #646790;
+  --wf-chevron: #B0B3D0;
+  --wf-handle: #CBCDE6;
+  --wf-page: #EEF1FB;
+  --wf-white: #FFFFFF;
+  --wf-on-accent: #FFFFFF;
+  --wf-surface: #FFFFFF;
+  --wf-paper: #FFFFFF;
+  --wf-paper-ink: #1B1B3A;
+  --wf-glass: rgba(255, 255, 255, .58);
+  --wf-glass-line: rgba(255, 255, 255, .82);
+  --wf-glass-strong: rgba(255, 255, 255, .86);
+  --wf-glass-field: rgba(255, 255, 255, .75);
+  --wf-glass-flat: rgba(255, 255, 255, .7);
+  --wf-field-line: rgba(255, 255, 255, .86);
+  --wf-glass-shadow: 0 10px 32px rgba(91, 91, 240, .11), inset 0 1px 0 rgba(255, 255, 255, .95);
+  --wf-blur: blur(22px) saturate(1.5);
+  --wf-line: rgba(27, 27, 58, .07);
+  --wf-scrim: rgba(27, 27, 58, .3);
+  --wf-sheet: rgba(246, 247, 255, .94);
+  --wf-sheet-solid: #F6F7FF;
+  --wf-sheet-grad: linear-gradient(180deg, #E9EEFF, #F4EEFF);
+  --wf-thumb: linear-gradient(160deg, #FFFFFF, #E4E9FF);
+  --wf-img: linear-gradient(160deg, rgba(255, 255, 255, .95), rgba(214, 224, 255, .7));
+  --wf-skel: rgba(27, 27, 58, .07);
+  /* nhấn */
+  --wf-accent: #5B5BF0;
+  --wf-accent-2: #7C9BFF;
+  --wf-accent-text: #4140D2; /* chữ/liên kết màu nhấn đạt AA trên nền pastel */
+  --wf-accent-t: rgba(91, 91, 240, .12);
+  --wf-grad: linear-gradient(135deg, #6C63FF, #5B8DFF);
+  --wf-grad-hero: linear-gradient(140deg, #6C63FF 0%, #5B8DFF 60%, #8CC0FF 100%);
+  --wf-grad-fab: linear-gradient(145deg, #8E7CFF, #4C7DFF);
+  --wf-dark-btn: #15153A;
+  /* trình xem ảnh toàn màn hình: nền tối cả hai chế độ (xem ảnh không bị chói) */
+  --wf-viewer-bg: rgba(10, 10, 28, .985); --wf-viewer-btn: rgba(255, 255, 255, .16); --wf-viewer-btn-hover: rgba(255, 255, 255, .28);
+  /* trạng thái (màu chính + nền nhạt) */
+  --wf-ok: #17A673;      --wf-ok-t: rgba(23, 166, 115, .14);
+  --wf-bad: #E5484D;     --wf-bad-t: rgba(229, 72, 77, .13);  --wf-bad-solid: #D5363B;
+  --wf-hold: #D98A00;    --wf-hold-t: rgba(240, 170, 20, .20);
+  --wf-info: #3B82F6;    --wf-info-t: rgba(59, 130, 246, .14);
+  --wf-check: #8B5CF6;   --wf-check-t: rgba(139, 92, 246, .14);
+  --wf-repair: #F0742A;  --wf-repair-t: rgba(240, 116, 42, .15);
+  --wf-neutral: #6E7194; --wf-neutral-t: rgba(110, 113, 148, .14);
+  /* màu CHỮ của trạng thái trên nền sáng (đạt AA); bản tối dùng luôn màu chính */
+  --wf-ok-text: #0B7A55; --wf-hold-text: #965F00; --wf-bad-text: #C7343A;
+  /* nền gradient phía sau (body::before) */
+  --wf-bg-a: #BCD6FF; --wf-bg-b: #E3D2FF; --wf-bg-c: #FFD8C8; --wf-bg-d: #CDEFE3;
+  /* thang z-index dùng chung (thấp → cao) */
+  --wf-z-sticky: 20; --wf-z-fab: 55; --wf-z-nav: 60; --wf-z-dim: 90; --wf-z-detent: 97; --wf-z-banner: 98;
+  --wf-z-overlay: 120; --wf-z-popover: 130; --wf-z-viewer: 135; --wf-z-toast: 140; --wf-z-skip: 200;
+  /* hình khối */
+  --wf-r-card: 26px; --wf-r-list: 24px; --wf-r-hero: 30px; --wf-r-sheet: 32px; --wf-r-field: 20px; --wf-r-tile: 14px; --wf-r-pill: 999px;
+  --wf-shadow-pri: 0 10px 24px rgba(91, 91, 240, .4);
+  --wf-shadow-hero: 0 18px 40px rgba(91, 91, 240, .35);
+  --wf-shadow-fab: 0 0 0 6px rgba(255, 255, 255, .55), 0 12px 30px rgba(91, 91, 240, .55), 0 0 36px rgba(124, 155, 255, .7);
+  --wf-ease: cubic-bezier(.2, .8, .2, 1);
+  /* vùng an toàn (PWA, tai thỏ) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* ===== Ánh xạ token Lucian --ux-* → Glass (ui-design-system §8.1) ===== */
+  --ux-page: var(--wf-page);            --ux-surface: var(--wf-surface);
+  --ux-surface-2: #F4F6FF;              --ux-surface-3: #E7EBFB;
+  --ux-ink: var(--wf-ink);              --ux-ink-2: var(--wf-nav);            --ux-ink-3: var(--wf-mute);
+  --ux-line: var(--wf-line);            --ux-line-2: rgba(27, 27, 58, .15);
+  --ux-accent: var(--wf-accent);        --ux-accent-2: var(--wf-accent-2);
+  --ux-accent-soft: rgba(91, 91, 240, .12); --ux-accent-ink: #FFFFFF;
+  --ux-mint: var(--wf-ok);              --ux-warn: var(--wf-hold);            --ux-danger: var(--wf-bad);
+  --ux-glass: var(--wf-glass);          --ux-glass-line: var(--wf-glass-line);
+  --ux-shadow: rgba(91, 91, 240, .14);  --ux-shadow-strong: rgba(91, 91, 240, .35);
+  --ux-grad: var(--wf-grad);            --ux-ease: var(--wf-ease);
+  --ux-spring: cubic-bezier(.34, 1.45, .64, 1);
+}
+
+/* ===== Chế độ tối (kính tối). Chỉ áp dụng trên màn hình: @media print giữ bản sáng ===== */
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --wf-ink: #ECEEFF;
+    --wf-mute: #AEB2D6;      /* ≥ 7:1 trên kính tối */
+    --wf-mute-2: #9A9EC8;
+    --wf-nav: #C6C9EA;
+    --wf-label: #9A9EC8;
+    --wf-chevron: #6A6D99;
+    --wf-handle: #4C4F7C;
+    --wf-page: #0E1022;
+    --wf-white: #FFFFFF;
+    --wf-on-accent: #FFFFFF;
+    --wf-surface: #262A52;
+    --wf-paper: #FFFFFF;
+    --wf-paper-ink: #1B1B3A;
+    --wf-glass: rgba(255, 255, 255, .07);
+    --wf-glass-line: rgba(255, 255, 255, .12);
+    --wf-glass-strong: rgba(36, 40, 78, .92);
+    --wf-glass-field: rgba(255, 255, 255, .08);
+    --wf-glass-flat: rgba(255, 255, 255, .06);
+    --wf-field-line: rgba(255, 255, 255, .16);
+    --wf-glass-shadow: 0 10px 32px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .08);
+    --wf-blur: blur(22px) saturate(1.3);
+    --wf-line: rgba(255, 255, 255, .1);
+    --wf-scrim: rgba(4, 5, 16, .62);
+    --wf-sheet: rgba(24, 27, 56, .96);
+    --wf-sheet-solid: #181B38;
+    --wf-sheet-grad: linear-gradient(180deg, #171A3A, #1D1A3E);
+    --wf-thumb: linear-gradient(160deg, #2A2E5A, #1B1E40);
+    --wf-img: linear-gradient(160deg, rgba(60, 66, 122, .7), rgba(30, 34, 74, .8));
+    --wf-skel: rgba(255, 255, 255, .08);
+    /* nhấn: --wf-accent là màu tô (chữ trắng trên đó ≥ 4.5:1), --wf-accent-text là màu chữ trên nền tối */
+    --wf-accent: #5E5EEE;
+    --wf-accent-2: #7C9BFF;
+    --wf-accent-text: #B3B8FF;
+    --wf-accent-t: rgba(124, 131, 255, .2);
+    --wf-grad: linear-gradient(135deg, #5F56F2, #4F7FF5);
+    --wf-grad-hero: linear-gradient(140deg, #4B43D6 0%, #3F6FE0 60%, #4C86C9 100%);
+    --wf-grad-fab: linear-gradient(145deg, #7A68F5, #3F6FE8);
+    --wf-dark-btn: #343878;
+    --wf-viewer-bg: rgba(4, 5, 16, .99);
+    --wf-ok: #3DDC9B;      --wf-ok-t: rgba(61, 220, 155, .16);
+    --wf-bad: #FF7A7F;     --wf-bad-t: rgba(255, 122, 127, .16);  --wf-bad-solid: #D6343C;
+    --wf-hold: #FBBF3A;    --wf-hold-t: rgba(251, 191, 58, .17);
+    --wf-info: #6CB0FF;    --wf-info-t: rgba(108, 176, 255, .17);
+    --wf-check: #B79BFF;   --wf-check-t: rgba(183, 155, 255, .18);
+    --wf-repair: #FF9A5C;  --wf-repair-t: rgba(255, 154, 92, .18);
+    --wf-neutral: #AEB2D6; --wf-neutral-t: rgba(174, 178, 214, .16);
+    --wf-ok-text: var(--wf-ok); --wf-hold-text: var(--wf-hold); --wf-bad-text: var(--wf-bad);
+    --wf-bg-a: #1A2A6C; --wf-bg-b: #2D1F66; --wf-bg-c: #3A1F3C; --wf-bg-d: #0F3A3C;
+    --wf-shadow-pri: 0 10px 24px rgba(0, 0, 0, .45);
+    --wf-shadow-hero: 0 18px 40px rgba(0, 0, 0, .45);
+    --wf-shadow-fab: 0 0 0 6px rgba(255, 255, 255, .1), 0 12px 30px rgba(60, 70, 220, .5), 0 0 36px rgba(124, 155, 255, .35);
+
+    --ux-surface: #1C1F40;
+    --ux-surface-2: #262A55;              --ux-surface-3: #333872;
+    --ux-line-2: rgba(255, 255, 255, .2);
+    /* Lucian dùng --ux-accent cho cả nền lẫn chữ ⇒ bản tối: nhấn SÁNG + chữ trên nhấn TỐI (đạt AA cả hai chiều) */
+    --ux-accent: #9AA0FF; --ux-accent-2: #8FB4FF; --ux-grad: linear-gradient(135deg, #9AA0FF, #86B6FF);
+    --ux-accent-soft: rgba(124, 131, 255, .2); --ux-accent-ink: #0E1022;
+    --ux-shadow: rgba(0, 0, 0, .35);      --ux-shadow-strong: rgba(0, 0, 0, .55);
+  }
+}
+
+@layer base {
+  html { background: var(--wf-page); -webkit-text-size-adjust: 100%; }
+  body {
+    font: 400 14px/1.5 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color: var(--wf-ink);
+    background: var(--wf-page);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+  }
+  body::before { /* nền gradient cố định phía sau */
+    content: ''; position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(55% 45% at 8% 0%, var(--wf-bg-a) 0%, transparent 70%),
+      radial-gradient(50% 42% at 100% 8%, var(--wf-bg-b) 0%, transparent 70%),
+      radial-gradient(60% 50% at 90% 100%, var(--wf-bg-c) 0%, transparent 70%),
+      radial-gradient(50% 50% at 0% 95%, var(--wf-bg-d) 0%, transparent 70%),
+      var(--wf-page);
+  }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--wf-accent); outline-offset: 2px; }
+
+  /* ===== Khối nền .ux của Lucian (lệnh `tokens`, nhánh sáng) — một lần cho cả dự án ===== */
+  .ux, .ux *, .ux *::before, .ux *::after { box-sizing: border-box; }
+  .ux {
+    font-family: inherit; /* Be Vietnam Pro thay Pretendard */
+    color: var(--ux-ink); -webkit-font-smoothing: antialiased; letter-spacing: -.01em;
+    -webkit-tap-highlight-color: transparent;
+    overflow-wrap: break-word;
+  }
+  :where(.ux) :is(button, input, textarea, select) { font: inherit; color: inherit; }
+  :where(.ux) button { cursor: pointer; }
+  .ux :focus-visible { outline: 2px solid var(--ux-accent); outline-offset: 3px; }
+  .ux [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    .ux, .ux *, .ux *::before, .ux *::after {
+      animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+      transition-duration: .001ms !important; scroll-behavior: auto !important;
+    }
+  }
+}

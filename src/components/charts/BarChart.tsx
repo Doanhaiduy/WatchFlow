@@ -1,0 +1,55 @@
+"use client";
+import { useState } from "react";
+
+export type BarDatum = { label: string; value: number };
+
+type Props = {
+  data: BarDatum[];
+  /** Tô gradient cột cuối (kỳ hiện tại) */
+  highlightLast?: boolean;
+  format?: (n: number) => string;
+  ariaLabel: string;
+};
+
+/** Biểu đồ cột (SVG/CSS nhẹ). Chạm/hover/focus một cột để đọc giá trị. Giá trị do máy chủ tính sẵn. */
+export function BarChart({ data, highlightLast = true, format = (n) => String(n), ariaLabel }: Props) {
+  const [sel, setSel] = useState<number | null>(null);
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const cur = sel ?? (data.length ? data.length - 1 : -1);
+  const d = data[cur];
+  return (
+    <figure style={{ margin: 0 }} aria-label={ariaLabel}>
+      <p className="wf-num" aria-live="polite" style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, minHeight: 20 }}>
+        {d ? (
+          <>
+            <span className="wf-mute" style={{ fontWeight: 500 }}>{d.label}: </span>
+            {format(d.value)}
+          </>
+        ) : (
+          "Chưa có dữ liệu"
+        )}
+      </p>
+      <div className="wf-bars" role="group">
+        {data.map((x, i) => (
+          <button
+            key={x.label}
+            type="button"
+            data-hl={highlightLast && i === data.length - 1 ? "true" : undefined}
+            data-sel={sel === i ? "true" : undefined}
+            aria-label={`${x.label}: ${format(x.value)}`}
+            onMouseEnter={() => setSel(i)}
+            onMouseLeave={() => setSel(null)}
+            onFocus={() => setSel(i)}
+            onBlur={() => setSel(null)}
+            onClick={() => setSel(i)}
+          >
+            <span className="b">
+              <i style={{ height: `${Math.max(3, (x.value / max) * 100)}%` }} />
+            </span>
+            <em>{x.label}</em>
+          </button>
+        ))}
+      </div>
+    </figure>
+  );
+}

@@ -1,0 +1,25 @@
+/* Lucian UX/UI Prompt #305 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#305 */
+/* Chỉnh: chỉ lấy ngăn kéo lọc — nút Lọc có huy hiệu đếm, chip bộ lọc đang áp dụng, tiêu đề mục, nút Đặt lại, nút "Xem N kết quả" với số lăn; ngăn kéo dùng Modal Glass; bỏ lưới sản phẩm, thanh giá, màu/cỡ mẫu. */
+@layer lucian {
+.u305-fb{position:relative;display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 12px;border:0;border-radius:999px;background:var(--ux-surface-2);box-shadow:inset 0 0 0 1px var(--ux-line);color:var(--ux-ink);font:inherit;font-size:11.5px;font-weight:850;cursor:pointer}
+.u305-fb svg{width:13px;height:13px}
+.u305-fb i{position:absolute;right:-3px;top:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--ux-accent);color:var(--ux-accent-ink);font-style:normal;font-size:9px;font-weight:900;line-height:16px;text-align:center;transform:scale(0);transition:transform .3s cubic-bezier(.3,1.7,.5,1);box-sizing:border-box}
+.u305-fb i.is-on{transform:none}
+.u305-ac{display:flex;gap:5px;flex-wrap:wrap;min-height:0;margin-top:0;transition:margin .3s}
+.u305-ac:not(:empty){margin-top:9px}
+.u305-ac button{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 6px 0 10px;border:0;border-radius:999px;background:var(--ux-ink);color:var(--ux-surface);font:inherit;font-size:10.5px;font-weight:800;cursor:pointer;animation:u305-in .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes u305-in{from{transform:scale(.6);opacity:0}}
+.u305-ac button svg{width:9px;height:9px;opacity:.7}
+.u305-rs{height:28px;padding:0 10px;border:0;border-radius:8px;background:none;color:var(--ux-ink-3);font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.u305-sh h5{margin:14px 0 0;font-size:11px;font-weight:850;color:var(--ux-ink-2);display:flex;justify-content:space-between}
+.u305-sh h5 span{font-weight:800;color:var(--ux-ink);font-variant-numeric:tabular-nums}
+.u305-ap{display:block;width:100%;height:48px;margin-top:18px;border:0;border-radius:14px;background:var(--ux-ink);color:var(--ux-surface);font:inherit;font-size:13px;font-weight:850;cursor:pointer;transition:opacity .2s}
+.u305-ap:disabled{opacity:.3;cursor:not-allowed}
+.u305-ap b{display:inline-block;margin:0 1px;font-variant-numeric:tabular-nums}
+.u305-ap b.is-roll{animation:u305-rl .3s cubic-bezier(.3,1.5,.5,1)}
+@keyframes u305-rl{from{transform:translateY(60%);opacity:0}}
+.u305-fb{min-height:44px;padding:0 14px;font-size:13px}
+.u305-ac button{min-height:32px}
+.u305-rs{min-height:44px}
+.u305-h5{margin:16px 0 8px;font-size:12px;font-weight:850;color:var(--ux-ink-2)}
+}

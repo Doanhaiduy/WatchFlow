@@ -1,0 +1,27 @@
+/* Lucian UX/UI Prompt #008 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#008 */
+/* Chỉnh: chỉ lấy nút sao chép (biểu tượng đổi thành dấu tích, vệt sáng quét, bong bóng "Đã sao chép"); bỏ tab trình quản lý gói và hộp lệnh. */
+@layer lucian {
+.u008-code::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 20%,color-mix(in srgb,var(--ux-mint) 30%,transparent) 50%,transparent 80%);transform:translateX(-110%);pointer-events:none}
+.u008.is-copied .u008-code::after{animation:u008-sweep .7s var(--ux-ease)}
+@keyframes u008-sweep{to{transform:translateX(110%)}}
+.u008-btn{position:relative;flex:none;width:46px;height:46px;border:0;padding:0;border-radius:13px;background:var(--ux-surface-2);color:var(--ux-ink-2);display:grid;place-items:center;transition:background-color .35s var(--ux-ease),color .35s var(--ux-ease),transform .45s var(--ux-spring)}
+.u008-btn:hover{background:var(--ux-surface-3);color:var(--ux-ink)}
+.u008-btn:active{transform:scale(.88)}
+.u008-btn:focus-visible{outline:2px solid var(--ux-accent);outline-offset:3px}
+.u008-btn svg{position:absolute;width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:opacity .25s var(--ux-ease),transform .5s var(--ux-spring)}
+.u008-ok{opacity:0;transform:scale(.4) rotate(-30deg)}
+.u008-ok path{stroke-width:2.6;stroke-dasharray:22;stroke-dashoffset:22;transition:stroke-dashoffset .4s var(--ux-ease) .1s}
+.u008.is-copied .u008-btn{background:var(--ux-mint);color:var(--ux-accent-ink)}
+.u008.is-copied .u008-cp{opacity:0;transform:scale(.4) rotate(30deg)}
+.u008.is-copied .u008-ok{opacity:1;transform:none}
+.u008.is-copied .u008-ok path{stroke-dashoffset:0}
+.u008.is-copied .u008-box{box-shadow:0 0 0 1.5px var(--ux-mint),0 0 0 6px color-mix(in srgb,var(--ux-mint) 16%,transparent),0 18px 32px -24px var(--ux-shadow-strong)}
+.u008-tip{position:absolute;right:-6px;top:-44px;padding:7px 12px;border-radius:10px;background:var(--ux-ink);color:var(--ux-page);font-size:13px;font-weight:650;white-space:nowrap;pointer-events:none;opacity:0;transform:translateY(8px) scale(.8);transform-origin:80% 100%;transition:opacity .25s var(--ux-ease),transform .5s var(--ux-spring)}
+.u008-tip::after{content:"";position:absolute;right:24px;bottom:-5px;width:10px;height:10px;background:inherit;border-radius:2px;transform:rotate(45deg)}
+.u008.is-copied .u008-tip{opacity:1;transform:none}
+.u008{position:relative;display:inline-flex}
+.u008-btn{width:44px;height:44px}
+.u008-tip{right:50%;top:-40px;transform:translate(50%,8px) scale(.8)}
+.u008.is-copied .u008-tip{transform:translate(50%,0)}
+.u008-tip::after{right:auto;left:50%;margin-left:-5px}
+}

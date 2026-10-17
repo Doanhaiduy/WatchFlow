@@ -1,0 +1,53 @@
+/* Lucian UX/UI Prompt #046 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#046 */
+/* Chỉnh: bảng lệnh Ctrl+K của WatchFlow — giữ ô tìm + thanh sáng trượt theo mục đang chọn + chữ khớp tô màu + phím tắt dạng kbd + hoạt ảnh mở xuống;
+   bỏ pill thu gọn/dữ liệu mẫu; thêm nhóm có tiêu đề, dòng phụ, trạng thái đang tải/lỗi/trống; điện thoại = toàn màn hình, desktop = hộp giữa 640px. */
+@layer lucian {
+.u046{position:fixed;inset:0;z-index:2;pointer-events:auto}
+.u046-pal{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--wf-sheet-solid);clip-path:inset(0 0 calc(100% - 64px) 0 round 0);transition:clip-path .5s var(--ux-ease);padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+.u046[data-open="true"] .u046-pal{clip-path:inset(0 0 0 0 round 0)}
+.u046-field{position:relative;display:flex;align-items:center;gap:10px;height:64px;flex:none;padding:0 8px 0 18px;border-bottom:1px solid var(--ux-line);cursor:text}
+.u046-field>svg{width:20px;height:20px;flex:none;fill:none;stroke:var(--ux-ink-3);stroke-width:2;stroke-linecap:round}
+.u046-in{flex:1;min-width:0;height:100%;border:0;padding:0;background:none;font:inherit;font-size:16px;font-weight:560;color:var(--ux-ink);outline:none}
+.u046-in:focus-visible{outline:none}
+.u046-in::placeholder{color:var(--ux-ink-3);font-weight:500}
+.u046-field:has(.u046-in:focus-visible){box-shadow:inset 0 -2px 0 var(--ux-accent)}
+.u046-kbd{display:none;align-items:center;height:24px;padding:0 7px;border-radius:7px;background:var(--ux-surface-2);box-shadow:inset 0 -1px 0 var(--ux-line-2);font-size:11.5px;font-weight:700;color:var(--ux-ink-3);font-family:inherit;white-space:nowrap}
+.u046-x{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;color:var(--ux-ink-3);background:none;border:0;cursor:pointer}
+.u046-x:hover{background:var(--ux-surface-2)}
+.u046-body{position:relative;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;padding:6px 8px 12px}
+.u046-body::-webkit-scrollbar{display:none}
+.u046-hl{position:absolute;left:8px;right:8px;top:0;height:var(--h,50px);border-radius:13px;background:var(--ux-accent-soft);box-shadow:inset 3px 0 0 var(--ux-accent);transform:translateY(var(--y,0));transition:transform .4s var(--ux-spring),height .25s,opacity .2s;pointer-events:none}
+.u046-list{position:relative;margin:0;padding:0;list-style:none}
+.u046-g{padding:12px 10px 6px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ux-ink-3)}
+.u046-op{position:relative;display:flex;align-items:center;gap:12px;min-height:50px;padding:6px 10px;border-radius:13px;font-size:14.5px;font-weight:620;color:var(--ux-ink-2);cursor:pointer;animation:u046-in .4s var(--ux-spring) backwards;animation-delay:calc(var(--i,0) * 22ms)}
+.u046-op[aria-selected="true"]{color:var(--ux-ink)}
+.u046-op mark{background:none;color:var(--wf-accent-text);font-weight:800}
+.u046-ic{width:30px;height:30px;flex:none;border-radius:10px;display:grid;place-items:center;background:var(--tb,var(--ux-surface-2));color:var(--tc,var(--ux-ink-2))}
+.u046-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.u046-tx>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u046-tx>small{font-size:12px;font-weight:500;color:var(--ux-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u046-tag{flex:none;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--ux-accent-soft);color:var(--wf-accent-text)}
+.u046-st{padding:14px 12px;font-size:13.5px;color:var(--ux-ink-3);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.u046-st b{color:var(--ux-ink);font-weight:700}
+.u046-st button{min-height:44px;padding:0 14px;border-radius:999px;border:0;background:var(--ux-accent-soft);color:var(--wf-accent-text);font:inherit;font-weight:700;cursor:pointer}
+.u046-empty{padding:36px 12px;text-align:center;font-size:14px;color:var(--ux-ink-3)}
+.u046-empty b{display:block;margin-bottom:4px;font-size:15px;color:var(--ux-ink)}
+.u046-spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--ux-line-2);border-top-color:var(--ux-accent);animation:u046-spin .7s linear infinite;flex:none}
+.u046-foot{display:none;align-items:center;gap:14px;height:44px;flex:none;padding:0 16px;border-top:1px solid var(--ux-line);font-size:12px;font-weight:600;color:var(--ux-ink-3)}
+.u046-foot .u046-kbd{display:inline-flex;height:20px;padding:0 5px;margin-right:4px;font-size:11px}
+@keyframes u046-in{from{opacity:0;transform:translateY(8px)}}
+@keyframes u046-spin{to{transform:rotate(360deg)}}
+@media (min-width:1000px){
+  .u046{inset:12vh auto auto 50%;transform:translateX(-50%);width:640px;max-width:calc(100vw - 32px);height:min(580px,76vh)}
+  .u046-pal{border-radius:24px;padding:0;box-shadow:0 0 0 1px var(--ux-line),0 34px 60px -20px var(--ux-shadow-strong);clip-path:inset(0 0 calc(100% - 64px) 0 round 24px)}
+  .u046[data-open="true"] .u046-pal{clip-path:inset(0 0 0 0 round 24px)}
+  .u046-kbd{display:inline-flex}
+  .u046-x{display:none}
+  .u046-foot{display:flex}
+}
+@media (prefers-reduced-motion:reduce){
+  .u046-pal,.u046-hl{transition-duration:.001ms!important}
+  .u046-op{animation:none}
+  .u046-spin{animation-duration:2s}
+}
+}

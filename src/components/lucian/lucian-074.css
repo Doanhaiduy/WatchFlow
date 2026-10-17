@@ -1,0 +1,38 @@
+/* Lucian UX/UI Prompt #074 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#074 */
+/* Chỉnh: chỉ lấy chuông (lắc khi có thông báo mới, huy hiệu nảy) + bảng thả xuống + hàng thông báo có chấm chưa đọc; bỏ tab Nhắc tên/avatar emoji/dữ liệu mẫu. */
+@layer lucian {
+.u074-bell{position:relative;width:48px;height:48px;border:0;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--ux-surface);color:var(--ux-ink);box-shadow:0 0 0 1px var(--ux-line),0 10px 20px -14px var(--ux-shadow-strong);transition:transform .3s var(--ux-spring)}
+.u074-bell:active{transform:scale(.9)}
+.u074-bell:focus-visible{outline:2px solid var(--ux-accent);outline-offset:3px}
+.u074-bell svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transform-origin:50% 15%}
+.u074-bell.ring svg{animation:u074-ring .9s var(--ux-ease)}
+@keyframes u074-ring{10%{transform:rotate(18deg)}25%{transform:rotate(-16deg)}40%{transform:rotate(12deg)}55%{transform:rotate(-8deg)}70%{transform:rotate(4deg)}}
+.u074-badge{position:absolute;right:4px;top:4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--ux-danger);color:var(--ux-accent-ink);font-size:11px;font-weight:850;line-height:20px;text-align:center;box-shadow:0 0 0 2.5px var(--ux-surface);font-variant-numeric:tabular-nums;transition:transform .4s var(--ux-spring)}
+.u074-badge.zero{transform:scale(0)}
+.u074-pan{position:absolute;left:0;right:0;top:62px;bottom:0;display:flex;flex-direction:column;border-radius:24px;background:var(--ux-surface);box-shadow:0 0 0 1px var(--ux-line),0 30px 50px -30px var(--ux-shadow-strong);transform-origin:calc(100% - 28px) -10px;transition:transform .45s var(--ux-spring),opacity .25s}
+.u074-pan::before{content:"";position:absolute;right:22px;top:-6px;width:14px;height:14px;border-radius:3px;background:var(--ux-surface);transform:rotate(45deg);box-shadow:-1px -1px 0 0 var(--ux-line)}
+.u074.is-closed .u074-pan{transform:scale(.4);opacity:0;pointer-events:none;transition:transform .3s var(--ux-ease),opacity .2s}
+.u074-ph{display:flex;align-items:center;gap:6px;padding:14px 14px 10px}
+.u074-all{margin-left:auto;border:0;padding:4px 6px;background:none;font-size:12.5px;font-weight:750;color:var(--ux-accent)}
+.u074-all:disabled{color:var(--ux-ink-3);cursor:default}
+.u074-list{position:relative;flex:1;margin:0;padding:0 8px 10px;list-style:none;overflow:hidden}
+.u074-it{display:grid;grid-template-rows:1fr;transition:grid-template-rows .45s var(--ux-ease)}
+.u074-it.new{grid-template-rows:0fr}
+.u074-it.hide{display:none}
+.u074-it>div{min-height:0;overflow:hidden}
+.u074-row{position:relative;display:flex;gap:12px;width:100%;padding:11px 26px 11px 10px;border:0;border-radius:14px;background:none;text-align:left;transition:background-color .2s}
+.u074-row:hover{background:var(--ux-surface-2)}
+.u074-row:focus-visible{outline:2px solid var(--ux-accent);outline-offset:-2px}
+.u074-it.new .u074-row{transform:translateY(-30px);opacity:0}
+.u074-row{transition:background-color .2s,transform .5s var(--ux-spring),opacity .3s}
+.u074-tx{flex:1;min-width:0;font-size:13px;line-height:1.45;color:var(--ux-ink-2)}
+.u074-tx b{color:var(--ux-ink);font-weight:780}
+.u074-tx small{display:block;margin-top:2px;font-size:11.5px;font-weight:650;color:var(--ux-ink-3)}
+.u074-dot{position:absolute;right:10px;top:50%;width:9px;height:9px;margin-top:-4.5px;border-radius:50%;background:var(--ux-accent);transition:transform .35s var(--ux-spring),opacity .25s}
+.u074-row.read .u074-dot{transform:scale(0);opacity:0}
+.u074-row.read .u074-tx{color:var(--ux-ink-3)}
+.u074{position:relative;display:inline-block}
+.u074-bell{width:44px;height:44px}
+.u074-pan{position:absolute;left:auto;right:-6px;top:54px;width:min(340px,calc(100vw - 24px));max-height:70vh;z-index:var(--wf-z-popover);bottom:auto}
+.u074-list{overflow:auto;max-height:52vh}
+}

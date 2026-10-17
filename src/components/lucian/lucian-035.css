@@ -1,0 +1,27 @@
+/* Lucian UX/UI Prompt #035 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#035 */
+/* Chỉnh: bỏ chip người nhận, nút đổi tiền tệ, nút Gửi; số tiền theo VND (dấu chấm nghìn); khung rộng 100%. */
+@layer lucian {
+.u035-amt{position:relative;display:flex;align-items:baseline;justify-content:center;gap:2px;width:100%;height:84px;margin-top:22px;cursor:text;border-radius:18px}
+.u035-num{display:flex;align-items:baseline;height:64px;overflow:hidden;font-size:52px;font-weight:820;letter-spacing:-.05em;line-height:64px;font-variant-numeric:tabular-nums;color:var(--ux-ink);transition:color .3s var(--ux-ease)}
+.u035-num span{display:inline-block}
+.u035-num span.new{animation:u035-up .4s var(--ux-spring)}
+@keyframes u035-up{from{transform:translateY(60%);opacity:0}}
+.u035-num span.c{color:var(--ux-ink-3);font-weight:700}
+.u035-num .ph{color:var(--ux-ink-3)}
+.u035-caret{width:3px;height:46px;margin-left:3px;align-self:center;border-radius:2px;background:var(--ux-accent);opacity:0}
+.u035.is-focus .u035-caret{opacity:1;animation:u035-blink 1s steps(1) infinite}
+@keyframes u035-blink{50%{opacity:0}}
+.u035-real{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;font-size:16px;cursor:text}
+.u035-sub{margin:6px 0 0;height:20px;font-size:13.5px;font-weight:600;color:var(--ux-ink-3);font-variant-numeric:tabular-nums;transition:color .3s}
+.u035.is-over .u035-num{color:var(--ux-danger)}
+.u035.is-over .u035-sub{color:var(--ux-danger)}
+.u035.is-shake .u035-amt{animation:u035-shake .42s var(--ux-ease)}
+@keyframes u035-shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.u035-chips{display:flex;gap:6px;margin-top:22px}
+.u035-chip{height:44px;padding:0 14px;border:0;border-radius:12px;background:var(--ux-surface);box-shadow:inset 0 0 0 1px var(--ux-line-2);font-size:13.5px;font-weight:700;color:var(--ux-ink-2);transition:transform .35s var(--ux-spring),box-shadow .2s,color .2s}
+.u035-chip:hover{color:var(--ux-ink);box-shadow:inset 0 0 0 1px var(--ux-ink-3)}
+.u035-chip:active{transform:scale(.92)}
+.u035-chip:focus-visible{outline:2px solid var(--ux-accent);outline-offset:2px}
+.u035.is-focus .u035-amt{box-shadow:0 0 0 2px var(--ux-accent-soft)}
+.u035{position:relative;display:flex;flex-direction:column;align-items:center;width:100%}
+}

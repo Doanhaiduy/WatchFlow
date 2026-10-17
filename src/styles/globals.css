@@ -1,0 +1,56 @@
+@layer theme, base, lucian, components, utilities;
+@import "tailwindcss";
+@import "@fontsource/be-vietnam-pro/300.css";
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
+@import "@fontsource/be-vietnam-pro/800.css";
+@import "./tokens.css";
+@import "./glass.css";
+
+/* Tailwind v4: cấu hình bằng @theme (không có tailwind.config). Màu/bo góc/bóng trỏ về biến --wf-* ở tokens.css. */
+@theme inline {
+  --font-sans: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --breakpoint-desk: 1000px;
+
+  --color-ink: var(--wf-ink);
+  --color-mute: var(--wf-mute);
+  --color-mute-2: var(--wf-mute-2);
+  --color-nav: var(--wf-nav);
+  --color-page: var(--wf-page);
+  --color-accent: var(--wf-accent);
+  --color-accent-2: var(--wf-accent-2);
+  --color-ok: var(--wf-ok);
+  --color-ok-t: var(--wf-ok-t);
+  --color-bad: var(--wf-bad);
+  --color-bad-t: var(--wf-bad-t);
+  --color-hold: var(--wf-hold);
+  --color-hold-t: var(--wf-hold-t);
+  --color-info: var(--wf-info);
+  --color-info-t: var(--wf-info-t);
+  --color-check: var(--wf-check);
+  --color-check-t: var(--wf-check-t);
+  --color-repair: var(--wf-repair);
+  --color-repair-t: var(--wf-repair-t);
+  --color-neutral: var(--wf-neutral);
+  --color-neutral-t: var(--wf-neutral-t);
+  --color-glass: var(--wf-glass);
+  --color-glass-line: var(--wf-glass-line);
+  --color-glass-strong: var(--wf-glass-strong);
+  --color-glass-field: var(--wf-glass-field);
+  --color-line: var(--wf-line);
+
+  --radius-card: var(--wf-r-card);
+  --radius-list: var(--wf-r-list);
+  --radius-hero: var(--wf-r-hero);
+  --radius-sheet: var(--wf-r-sheet);
+  --radius-field: var(--wf-r-field);
+  --radius-tile: var(--wf-r-tile);
+
+  --shadow-glass: var(--wf-glass-shadow);
+  --shadow-pri: var(--wf-shadow-pri);
+  --shadow-hero: var(--wf-shadow-hero);
+
+  --ease-glass: var(--wf-ease);
+}

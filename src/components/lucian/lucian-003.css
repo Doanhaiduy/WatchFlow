@@ -1,0 +1,13 @@
+/* Lucian UX/UI Prompt #003 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#003 */
+/* Chỉnh: chỉ lấy nút giữ-để-xác-nhận (đổ đầy đỏ khi giữ 1,2 giây, rung nhẹ); bỏ tệp mẫu và thanh hoàn tác; dùng cho thao tác nguy hiểm (tịch thu cọc). */
+@layer lucian {
+.u003-btn{--p:0;position:absolute;inset:0;border:0;border-radius:999px;padding:0;overflow:hidden;isolation:isolate;background:color-mix(in srgb,var(--ux-danger) 12%,var(--ux-surface));color:var(--ux-danger);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--ux-danger) 40%,transparent);touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .5s var(--ux-spring),opacity .4s var(--ux-ease),width .6s var(--ux-ease)}
+.u003-btn:focus-visible{outline:2px solid var(--ux-danger);outline-offset:4px}
+.u003-lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:10px;font-size:16.5px;font-weight:700;letter-spacing:-.02em;white-space:nowrap}
+.u003-lab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.u003-fill{position:absolute;inset:0;background:var(--ux-danger);color:var(--ux-accent-ink);clip-path:inset(0 calc(100% - var(--p) * 100%) 0 0 round 999px)}
+.u003-btn.is-holding{transform:scale(.97);animation:u003-shake .12s linear infinite;animation-play-state:var(--shake,paused)}
+@keyframes u003-shake{0%,100%{translate:0 0}25%{translate:-.6px .3px}75%{translate:.6px -.3px}}
+.u003-btn.is-gone{opacity:0;transform:scale(.9);pointer-events:none}
+.u003-row{position:relative;height:64px;width:100%}
+}

@@ -1,0 +1,11 @@
+/* Lucian UX/UI Prompt #336 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#336 */
+/* Chỉnh: chỉ lấy tờ trượt 3 nấc + lò xo (đóng · nửa · đầy); bỏ bản đồ, chấm ghim, danh sách quán cà phê mẫu; nền tờ dùng token Glass. */
+@layer lucian {
+.u336-hd{position:relative;padding:22px 20px 10px;display:flex;align-items:baseline;gap:8px;touch-action:none;cursor:grab;user-select:none}
+.u336-hd b{font-size:19px;font-weight:880;letter-spacing:-.03em;color:var(--ux-ink)}
+.u336-hd span{font-size:12.5px;font-weight:700;color:var(--ux-ink-3)}
+.u336-gr{position:absolute;left:50%;top:4px;width:60px;height:18px;margin-left:-30px;border:0;padding:0;background:none;border-radius:9px}
+.u336-gr::before{content:"";position:absolute;left:12px;right:12px;top:7px;height:5px;border-radius:3px;background:var(--ux-line-2)}
+.u336-gr:focus-visible{outline:2px solid var(--ux-accent)}
+.u336-hd{display:block;padding:10px 18px 8px}
+}

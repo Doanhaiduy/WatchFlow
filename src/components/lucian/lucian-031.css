@@ -1,0 +1,24 @@
+/* Lucian UX/UI Prompt #031 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#031 */
+/* Chỉnh cho WatchFlow: chỉ lấy danh sách chọn — thanh sáng trượt theo mục đang trỏ (.u031-hl), dấu ✓ nảy vào (.u031-ck), mũi tên xoay (.u031-car). Bỏ cờ/chú thích phụ, nút lưu, khung 340x436.
+   Danh sách nằm trong Popover (desktop) hoặc Modal (điện thoại) và cuộn được; hàng cao --row (44px popover, 52px tờ đáy). */
+@layer lucian {
+.u031-car{width:18px;height:18px;flex:none;fill:none;stroke:var(--ux-ink-3);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .45s var(--ux-spring)}
+[aria-expanded="true"] > .u031-car{transform:rotate(180deg)}
+.u031-list{--row:44px;position:relative;margin:0;padding:6px;list-style:none;outline:none;overflow-y:auto;overscroll-behavior:contain;max-height:inherit;flex:1;min-height:0}
+.u031-list[data-sheet="true"]{--row:52px;max-height:min(52vh,420px);padding:2px 0 6px}
+.u031-hl{position:absolute;left:6px;right:6px;top:6px;height:var(--row);border-radius:12px;background:var(--ux-surface-2);transform:translateY(calc(var(--i,0) * var(--row)));transition:transform .35s var(--ux-spring),opacity .2s;pointer-events:none}
+.u031-list[data-sheet="true"] .u031-hl{left:0;right:0;top:2px}
+.u031-list[data-nohl="true"] .u031-hl{opacity:0}
+.u031-o{position:relative;display:flex;align-items:center;gap:10px;min-height:var(--row);padding:0 10px;border-radius:12px;cursor:pointer;font-size:14.5px;font-weight:620;color:var(--ux-ink)}
+.u031-list[data-sheet="true"] .u031-o{font-size:16px;padding:0 12px}
+.u031-o > span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
+.u031-o[aria-disabled="true"]{opacity:.4;cursor:not-allowed}
+.u031-o.ph{color:var(--ux-ink-3);font-weight:500}
+.u031-o.ph[aria-selected="true"]{font-weight:500}
+.u031-ck{margin-left:auto;width:18px;height:18px;flex:none;fill:none;stroke:var(--wf-accent-text);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.4);transition:opacity .2s,transform .4s var(--ux-spring)}
+.u031-o[aria-selected="true"] .u031-ck{opacity:1;transform:none}
+.u031-o[aria-selected="true"]{font-weight:720}
+.u031-empty{padding:18px 12px;text-align:center;font-size:13.5px;color:var(--ux-ink-3)}
+}
+/* WatchFlow: dòng phụ (mã/mô tả) dưới tên lựa chọn */
+.u031-sub{display:block;font-size:12px;font-weight:500;color:var(--ux-ink-3);margin-top:1px}

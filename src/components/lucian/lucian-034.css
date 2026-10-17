@@ -1,0 +1,22 @@
+/* Lucian UX/UI Prompt #034 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#034 */
+/* Chỉnh cho WatchFlow (Combobox): bỏ biểu tượng máy bay/mã sân bay/khung 340x380; giữ (1) chữ mờ hoàn thành + Tab nhận, (2) danh sách lọc có tô đậm
+   phần khớp, (3) thanh sáng trượt theo mục đang trỏ. Danh sách nằm trong Popover (desktop) hoặc nối liền dưới ô (điện thoại). Hàng cao --row. */
+@layer lucian {
+.u034-box{position:relative}
+/* Chữ mờ nằm TRÊN ô nhập (sau trong DOM), cùng hộp/chữ với .wf-in để thẳng hàng; phần đã gõ trong suốt nên không chồng chữ */
+.u034-ghost{position:absolute;inset:0;box-sizing:border-box;display:block;pointer-events:none;white-space:pre;overflow:hidden;padding:12px 16px;border:1px solid transparent;font:inherit;font-size:16px;font-weight:500;line-height:1.4;color:var(--ux-ink-3);opacity:.7}
+.u034-ghost b{font-weight:inherit;color:transparent}
+.u034-list{--row:48px;position:relative;margin:0;padding:6px;list-style:none;outline:none;overflow-y:auto;overscroll-behavior:contain;max-height:inherit;flex:1;min-height:0}
+.u034-list[data-two="true"]{--row:58px}
+.u034-list[data-inline="true"]{margin-top:6px;max-height:calc(var(--row) * 4 + 12px);border-radius:18px;background:var(--wf-sheet);box-shadow:0 0 0 1px var(--wf-glass-line),0 20px 40px -28px var(--ux-shadow-strong)}
+.u034-hl{position:absolute;left:6px;right:6px;top:6px;height:var(--row);border-radius:14px;background:var(--ux-surface-2);transform:translateY(calc(var(--i,0) * var(--row)));transition:transform .35s var(--ux-spring),opacity .2s;pointer-events:none}
+.u034-list[data-none="true"] .u034-hl{opacity:0}
+.u034-o{position:relative;display:flex;align-items:center;gap:12px;height:var(--row);padding:0 12px;border-radius:14px;cursor:pointer;font-size:15px;font-weight:620;color:var(--ux-ink);animation:u034-in .35s var(--ux-spring) backwards}
+@keyframes u034-in{from{opacity:0;transform:translateY(6px)}}
+.u034-o > span{min-width:0;flex:1}
+.u034-o b{display:block;font-weight:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u034-o b mark{background:none;color:var(--wf-accent-text);font-weight:800}
+.u034-o small{display:block;margin-top:2px;font-size:12.5px;font-weight:500;color:var(--ux-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.u034-note{padding:10px 12px 6px;font-size:12.5px;color:var(--ux-ink-3)}
+@media (prefers-reduced-motion:reduce){.u034-o{animation:none}}
+}

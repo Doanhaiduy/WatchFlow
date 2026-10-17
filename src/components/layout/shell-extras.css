@@ -1,0 +1,38 @@
+/* Khung ứng dụng — phần bổ sung: huy hiệu số việc (FR-NAV-02), nút mở bảng lệnh (FR-NAV-01), dải cảnh báo vận hành (FR-NAV-03).
+   Chỉ dùng biến --wf-* (tokens.css), có cả bản sáng/tối. */
+@layer components {
+  /* ===== Huy hiệu số việc: đỏ = có việc quá hạn, vàng = chỉ đang chờ ===== */
+  .wf-nb { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--wf-r-pill); font-size: 11px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; flex: none; box-shadow: 0 0 0 2px var(--wf-surface); }
+  .wf-nb.bad { background: var(--wf-bad-solid); color: var(--wf-on-accent); }
+  .wf-nb.warn { background: var(--wf-hold); color: var(--wf-paper-ink); }
+  /* Dock: nằm góc trên-phải biểu tượng */
+  .wf-dock a .wf-nb, .wf-dock .wf-dk .wf-nb { position: absolute; top: 5px; left: calc(50% + 7px); }
+  .wf-dock .wf-dk .wf-nb { z-index: 1; }
+  /* Sidebar / menu: nằm cuối hàng */
+  .wf-nb.inline { position: static; margin-left: auto; box-shadow: none; }
+  .wf-ire .wf-nb { box-shadow: none; }
+
+  /* ===== Nút mở bảng lệnh ở thanh trên (desktop): dáng ô tìm nhưng là nút ===== */
+  .wf-tb .wf-cp-trigger { border: 0; font-family: inherit; font-size: 14px; font-weight: 500; text-align: left; cursor: pointer; color: var(--wf-mute); }
+  .wf-tb .wf-cp-trigger > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wf-tb .wf-cp-trigger kbd { font-family: inherit; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 8px; background: var(--wf-glass); color: var(--wf-mute-2); box-shadow: inset 0 -1px 0 var(--wf-line); white-space: nowrap; }
+  .wf-tb .wf-cp-trigger:hover { background: var(--wf-glass-field); }
+
+  /* ===== Dải cảnh báo vận hành (người có system.health) ===== */
+  .wf-ops { display: flex; align-items: center; gap: 10px; margin: 10px 14px 0; padding: 10px 8px 10px 14px; border-radius: 20px; font-size: 13.5px; line-height: 1.35; border: 1px solid transparent; }
+  .wf-ops[data-level="error"] { background: var(--wf-bad-t); border-color: var(--wf-bad); color: var(--wf-ink); }
+  .wf-ops[data-level="warn"] { background: var(--wf-hold-t); border-color: var(--wf-hold); color: var(--wf-ink); }
+  .wf-ops > svg { flex: none; }
+  .wf-ops[data-level="error"] > svg { color: var(--wf-bad-text); }
+  .wf-ops[data-level="warn"] > svg { color: var(--wf-hold-text); }
+  .wf-ops a.wf-ops-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; min-height: 44px; }
+  .wf-ops .wf-ops-more { margin-left: auto; font-weight: 700; white-space: nowrap; display: none; align-items: center; gap: 2px; flex: none; color: var(--wf-accent-text); }
+  .wf-ops a.wf-ops-main:hover .wf-ops-more { text-decoration: underline; }
+  .wf-ops button.wf-ops-x { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--wf-mute); background: none; border: 0; cursor: pointer; }
+  .wf-ops button.wf-ops-x:hover { background: var(--wf-glass); }
+  @media (min-width: 1000px) {
+    .wf-ops { margin: 0 0 14px; }
+    .wf-ops .wf-ops-more { display: inline-flex; }
+  }
+  @media print { .wf-ops { display: none !important; } }
+}

@@ -1,0 +1,28 @@
+/* Lucian UX/UI Prompt #026 · MIT License (c) 2026 Seokwoooo · https://lucianlabs.dev/uxui-prompt/#026 */
+/* Chỉnh: bỏ khung 350x250 + biểu tượng/tiêu đề mẫu (u026-ic/t/s); nền ô là kính-trắng; giữ ô, con trỏ nháy, sóng, rung, ô nhập thật. */
+@layer lucian {
+.u026-row{position:relative;display:flex;gap:8px;width:100%;max-width:100%;justify-content:center}
+.u026-row i.sep{width:10px;align-self:center;height:2px;border-radius:2px;background:var(--ux-line-2)}
+.u026-c{position:relative;flex:0 1 46px;min-width:0;height:58px;border-radius:14px;background:var(--ux-surface);box-shadow:inset 0 0 0 1.5px var(--ux-line-2);display:grid;place-items:center;overflow:hidden;
+  font-size:26px;font-weight:760;font-variant-numeric:tabular-nums;transition:box-shadow .25s var(--ux-ease),background-color .4s var(--ux-ease),color .4s,transform .45s var(--ux-spring)}
+.u026-c span{display:block;animation:u026-in .4s var(--ux-spring)}
+@keyframes u026-in{from{transform:translateY(70%);opacity:0}}
+.u026-c.cur{box-shadow:inset 0 0 0 2px var(--ux-accent),0 0 0 4px var(--ux-accent-soft)}
+.u026-c.cur::after{content:"";position:absolute;left:50%;top:16px;bottom:16px;width:2px;margin-left:-1px;border-radius:1px;background:var(--ux-accent);animation:u026-blink 1s steps(1) infinite}
+.u026-c.cur.has::after{display:none}
+@keyframes u026-blink{50%{opacity:0}}
+.u026.is-check .u026-c{animation:u026-wave .5s var(--ux-ease);animation-delay:calc(var(--i) * 60ms)}
+@keyframes u026-wave{40%{transform:translateY(-8px)}}
+.u026.is-ok .u026-c{background:color-mix(in srgb,var(--ux-mint) 14%,var(--ux-surface));box-shadow:inset 0 0 0 2px var(--ux-mint);color:var(--ux-mint);transition-delay:calc(var(--i) * 50ms)}
+.u026.is-bad .u026-row{animation:u026-shake .45s var(--ux-ease)}
+.u026.is-bad .u026-c{box-shadow:inset 0 0 0 2px var(--ux-danger);color:var(--ux-danger)}
+@keyframes u026-shake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(2px)}}
+.u026-real{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;font-size:16px;cursor:text;caret-color:transparent;color:transparent;background:transparent}
+.u026-msg{height:20px;margin:16px 0 0;font-size:13.5px;font-weight:650;color:var(--ux-ink-3);transition:color .3s var(--ux-ease)}
+.u026.is-ok .u026-msg{color:var(--ux-mint)}
+.u026.is-bad .u026-msg{color:var(--ux-danger)}
+.u026-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.u026-real:focus-visible{outline:none}
+.u026{position:relative;display:flex;flex-direction:column;align-items:center;width:100%}
+@media (max-width:360px){.u026-c{width:40px}.u026-row{gap:6px}}
+}
