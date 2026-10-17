@@ -60,6 +60,12 @@ Secrets repo sao lưu: `BACKUP_DATABASE_URL`, `BACKUP_PASSPHRASE`, `OPS_HEARTBEA
 ### 5.3 Khôi phục Storage
 Từ bản tuần: tải lại ảnh theo `files.path`; ảnh `intake`/`evidence`/`id_document` ưu tiên. Ảnh thiếu vẫn giữ metadata (`files`) nên hiển thị "tệp không còn" thay vì lỗi.
 
+### 5.4 Dọn tệp đã xóa & dung lượng kho (BR-SEC-09, BR-BAK-04)
+- Job DAILY bước `storage-purge` xóa thật tệp đã `is_deleted` có `purge_after <= now()` (ảnh giấy tờ: ngay; ảnh thường: sau `storage.purge_after_days` = 7 ngày; tệp bất biến: không bao giờ). Xem kết quả ở Quản trị → Hệ thống (`job_runs.note`: "storage-purge: đã xóa n/m tệp"). Tệp lỗi xóa được thử lại lượt sau.
+- **Hệ quả cho khôi phục:** tệp đã xóa thật **không** có trong bản Storage tuần mới; khi khôi phục Storage cũ, dòng `files` có `purged_at` **phải bỏ qua** (không tải lại ảnh giấy tờ của khách đã ẩn danh). Sau khôi phục, chạy lại job DAILY để xóa lại những tệp đã `purged_at` mà vẫn còn trong kho.
+- Bản sao lưu cũ (DB + Storage) vẫn chứa dữ liệu trước khi ẩn danh cho đến hết thời hạn giữ bản sao lưu (≥ 90 ngày) — nêu rõ với khách khi họ yêu cầu xóa dữ liệu.
+- Dung lượng: Quản trị → Hệ thống → "Dung lượng lưu trữ" (tổng/hạn mức `storage.quota_mb`, theo bucket, tăng trưởng/ngày, ước tính ngày đầy); vượt `storage.warn_percent` (80%) hoặc `storage.critical_percent` (95%) ⇒ thông báo cho người có `system.health` (tối đa mỗi mức một lần/tuần). API: `GET /api/v1/system/storage`.
+
 ## 6. Diễn tập khôi phục
 
 - **Trước go-live** và **mỗi quý** (BR-BAK-03), do người kỹ thuật + chủ.

@@ -51,6 +51,7 @@
 | PT-10 | Luôn còn ≥ 1 owner: không hạ quyền/khóa/xóa owner cuối | `WF-SEC-LAST-OWNER` |
 | PT-11 | Hạn mức giảm giá và bán dưới giá vốn **do server/DB quyết định** (UI bị bỏ qua) với đơn cửa hàng; đơn CTV không áp | Gọi API thẳng với giá thấp ⇒ `WF-SALE-DISCOUNT-LIMIT`/`WF-SALE-BELOW-COST`; thông báo không lộ số giá vốn cho người không có `cost.view` |
 | PT-12 | PII: `id_number_enc` không bao giờ xuất hiện rõ trong API/log/audit; `reveal` cần `customer.pii.view` + lý do; ghi audit; ảnh giấy tờ chỉ người có quyền | Đọc `audit_logs.before/after`; `files` quyền |
+| PT-13 | Ảnh & lưu trữ: ẩn danh khách ⇒ job DAILY xóa thật ảnh giấy tờ (cả của phiếu thu mua) + thumb; tệp bất biến không bị xóa; `wf_app` không ghi được `purge_after/purged_at`; dung lượng kho cần `system.health` | `tests/api/m10-storage.test.mjs` |
 
 Ma trận vai trò × endpoint sinh tự động từ `permissions` + bản đồ endpoint (`api-conventions`); thiếu ô ⇒ test thất bại.
 

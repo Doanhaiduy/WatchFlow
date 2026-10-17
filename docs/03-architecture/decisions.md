@@ -151,6 +151,7 @@
 
 ## ADR-026 — Phong cách giao diện Glass
 - **Quyết định:** Khách chọn mẫu `design/ui-preview/v6-glass.html` (kính mờ, gradient sáng, dock nổi với nút "+" giữa; máy tính: sidebar đảo nổi + thanh tiện ích). Token màu/bo góc/đổ bóng/phông (Be Vietnam Pro) trong `ui-design-system`. **Chỉ bản sáng** ở giai đoạn đầu; token tổ chức sao cho thêm bản tối là thay giá trị, không viết lại component.
+- **Cập nhật 2026-10-17:** thêm **chế độ tối** theo yêu cầu người dùng (Sáng mặc định / Tối / Theo hệ thống) — chỉ đổi giá trị token, không viết lại component; in luôn bản sáng. Câu "chế độ tối" trong danh mục "không xây" của CLAUDE.md đã lỗi thời (cần chủ dự án xác nhận).
 - **Hệ quả:** Mọi màn hình dựng theo hệ thống này; màn chưa có trong mẫu (CTV, bảo hành, sửa chữa gọn…) thiết kế bổ sung theo cùng ngôn ngữ; các màn trong mẫu đã bị loại (Thu chi, Đổi trả…) **không dựng**.
 
 ## ADR-027 — Lucian UX/UI cho phần tử tương tác

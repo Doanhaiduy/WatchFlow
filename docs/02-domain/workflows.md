@@ -135,3 +135,10 @@ Không có khóa kỳ, không điều chỉnh quỹ. Chứng từ đã xác nh�
 ## W14. Sao lưu & khôi phục (vận hành)
 
 Xem `05-operations/backup-restore`. Chủ chỉ cần: thấy trạng thái "Sao lưu gần nhất" ở **Quản trị → Hệ thống**, nhận cảnh báo khi quá hạn.
+
+## W15. Nhập Excel hàng loạt (khách, đồng hồ tồn đầu kỳ, linh kiện)
+
+1. Vào **Nhập từ Excel** (hoặc nút **Nhập Excel** ở Khách hàng / Đồng hồ / Linh kiện), chọn loại, **tải tệp mẫu** (.xlsx: sheet Dữ liệu, Hướng dẫn, Danh mục), điền, chọn tệp (.xlsx/.csv, ≤ 300 dòng).
+2. Trình duyệt đọc tệp (nhận tên cột có/không dấu, đồng nghĩa) và gửi các dòng; hệ thống **xem trước** từng dòng: hợp lệ / cảnh báo / lỗi (kèm lý do) / trùng — chưa ghi gì (BR-IMP-02).
+3. Người dùng sửa tệp rồi chọn lại nếu cần, tích chọn dòng muốn nhập (dòng trùng mặc định bỏ qua, dòng lỗi không nhập được) rồi **Nhập**.
+4. Khách: tạo từng dòng (CCCD mã hóa). Đồng hồ/linh kiện: **một phiếu `opening`** được lập và xác nhận ngay (giá vốn = giá thu trong tệp; hàng cũ vào "Chờ kiểm tra"). Kết quả liệt kê từng dòng có liên kết + mã phiếu.

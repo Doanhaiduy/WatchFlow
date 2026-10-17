@@ -1,6 +1,6 @@
 # Mô hình dữ liệu
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đây là **thiết kế**; DDL thật nằm ở `db/migrations/` và là nguồn sự thật cuối cùng cho kiểu cột (từ điển cột sinh tự động ở M9: `scripts/docs/gen-data-dictionary.mjs`). Mâu thuẫn giữa file này và migration ⇒ sửa file này trong cùng PR.
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đây là **thiết kế**; DDL thật nằm ở `db/migrations/` và là nguồn sự thật cuối cùng cho kiểu cột (từ điển cột sinh tự động ở M9: `scripts/docs/gen-data-dictionary.mjs`). Mâu thuẫn giữa file này và migration ⇒ sửa file này trong cùng PR.
 > Bảng đã hoãn (`suppliers`, `cash_accounts`, `ledger_entries`, `payment_allocations`, `account_transfers`, `expense_categories`, `financial_periods`, `account_reconciliations`, `returns*`, `sale_commissions`, `technician_*`, `repair_tech_pay`): thiết kế ở `docs/99-archive/2026-10-16-full-scope/03-architecture/data-model.md`.
 
 ## 1. Quy ước
@@ -81,6 +81,7 @@ erDiagram
 | `auth_sessions` | `id`, `user_id`, `created_at`, `last_seen_at`, `revoked_at`, `user_agent`, `ip_hash` | ix(user_id) | `wf_auth` |
 | `refresh_tokens` | `session_id`, `token_hash U`, `expires_at`, `rotated_at`, `replaced_by`, `reuse_detected_at` | ix(session_id) | `wf_auth` |
 | `user_mfa` | `user_id PK`, `totp_secret_enc`, `enabled_at`, `recovery_codes_hash[]` | | `wf_auth` |
+| `trusted_devices` (0021a) | `id`, `user_id FK→users`, `token_hash U` (SHA-256 hex của token trong cookie httpOnly; **không** lưu token thô), `device_label`, `ip_hash`, `created_at`, `last_used_at`, `expires_at`, `revoked_at`, `revoked_reason` | C `token_hash ~ ^[0-9a-f]{64}$`; C `expires_at > created_at AND ≤ created_at + 91 ngày`; C `(revoked_at IS NULL) = (revoked_reason IS NULL)`; ix(user_id, expires_at) WHERE revoked_at IS NULL. Trigger `trg_users__revoke_trusted` (trên `users`: đổi `password_hash`, `status` khỏi `active`, tắt `mfa_enabled`) thu hồi hàng loạt + audit `auth.trusted_devices_revoked`. Không dùng `tg_audit` (ghi audit `auth.*` ở tầng xác thực) | chỉ `wf_auth`/`wf_worker`/`wf_definer`; `wf_app` KHÔNG truy cập |
 | `collaborator_profiles` | `user_id PK→users`, `phone`, `area`, `note`, `is_active` | Không còn cột hoa hồng (CF-03) | `collab.manage`/`collab.view` đọc/ghi; CTV đọc hồ sơ của mình |
 
 ## 4. Nền tảng hệ thống
@@ -90,11 +91,15 @@ erDiagram
 | `settings` | `key PK`, `value jsonb`, `description`, `updated_by`, `updated_at` | Danh mục khóa: `settings-catalog`; audit khi đổi |
 | `audit_logs` | `id`, `at`, `actor_id`, `action`, `entity_table`, `entity_id`, `reason`, `before jsonb`, `after jsonb`, `request_id`, `ip_hash` | **Append-only** (trigger); ix(entity_table, entity_id, at), ix(actor_id, at), ix(at). Ít dữ liệu nên **không phân vùng** (tránh lỗi job phân vùng đã gặp ở dự án mẫu); xem lại nếu > 5 triệu dòng |
 | `number_sequences` | `code`, `year`, `last_value` | PK(code, year); cấp mã bằng `INSERT … ON CONFLICT DO UPDATE … RETURNING` trong transaction (BR-GEN-06) |
-| `files` | `id`, `bucket`, `path U`, `original_name`, `mime`, `size_bytes`, `sha256`, `kind` (`product\|condition\|intake\|evidence\|id_document\|logo\|other`), `entity_table`, `entity_id`, `is_immutable`, `created_by`, `created_at` | Metadata tệp ở Supabase Storage; `intake`/`evidence`/`id_document` bất biến; quyền đọc theo thực thể |
+| `files` | `id`, `bucket`, `path U`, `original_name`, `mime`, `size_bytes`, `sha256`, `kind` (`product\|condition\|intake\|evidence\|id_document\|logo\|other`), `entity_table`, `entity_id`, `is_immutable`, `created_by`, `created_at` | Metadata tệp ở Supabase Storage; `intake`/`evidence`/`id_document` bất biến; quyền đọc theo thực thể · **0014:** `thumb_size_bytes` (dung lượng thumb), `is_deleted`, `deleted_at`, `purge_after` (hẹn xóa thật; NULL = không tự xóa), `purged_at` (đã xóa thật khỏi kho, bất biến một chiều). Trigger `tg_files_lifecycle` đặt `deleted_at/purge_after` khi `is_deleted` false→true (`id_document` ⇒ ngay; tệp bất biến khác ⇒ NULL; còn lại ⇒ +`storage.purge_after_days`). `wf_app` KHÔNG có quyền ghi `purge_after/purged_at`; worker xóa qua `fn_storage_purge_candidates` + `fn_storage_mark_purged` |
 | `domain_events` | `id`, `type`, `payload jsonb`, `occurred_at`, `available_at`, `processed_at`, `attempts`, `last_error` | **Outbox**: `fn_*` chèn sự kiện cùng transaction; worker xử lý (`extensibility`) |
+| `push_subscriptions` | `id`, `user_id`, `endpoint` (UNIQUE), `p256dh`/`auth` (BÍ MẬT, chỉ `wf_worker` đọc), `user_agent`, `created_at`, `last_ok_at`, `fail_count`, `disabled_at` | Thiết bị nhận thông báo đẩy (0020); người dùng thấy/hủy của mình qua `fn_*` |
+| `push_preferences` | `user_id` PK, `quiet_enabled`, `quiet_start`, `quiet_end` (phút trong ngày, giờ VN) | Giờ yên tĩnh (0020) |
+| `push_outbox` | `id`, `notification_id` UNIQUE, `user_id`, `status` (queued/sent/skipped/failed), `attempts`, `next_attempt_at`, `last_error`, `sent_at` | Hàng đợi gửi đẩy; trigger `tg_notification_push` chèn khi người nhận có thiết bị bật (0020) |
 | `notifications` | `id`, `user_id`, `type`, `title`, `body`, `link`, `created_at`, `read_at` | Trong ứng dụng; người nhận đọc của mình |
+| `activity_logs` (0021) | `id`, `at`, `user_id FK→users`, `method` (GET\|POST\|PUT\|PATCH\|DELETE), `route` (mẫu `/api/v1/sales/[id]/confirm`, CHECK ký tự an toàn, không query), `action` (mã đọc nhạy cảm: export/print/view_cost/view_report/reveal_pii/view_audit), `entity_id` (CHỈ UUID), `status`, `error_code`, `duration_ms`, `ip_hash` (HMAC, không IP thô), `request_id` (nối `audit_logs.request_id`) | **Append-only**: trigger `tg_activity_immutable` (UPDATE luôn chặn; DELETE chỉ trong `fn_activity_purge` do `wf_definer` + cờ cục bộ) + `tg_no_truncate`; ix(at DESC, id DESC), ix(user_id, at DESC), ix(action, at) WHERE action NOT NULL. RLS: `wf_app` SELECT khi `audit.view`; `wf_worker` chỉ INSERT; dọn quá `activity.retention_days` (sàn 30) bằng `app.fn_activity_purge()` (job hằng ngày) |
 | `job_runs` | `id`, `job`, `slot`, `started_at`, `finished_at`, `status`, `note` | Lịch sử cron |
-| `error_events` | `fingerprint`, `source`, `route`, `code`, `message`, `count`, `first_seen`, `last_seen`, `request_id` | Lỗi gộp |
+| `error_events` | `fingerprint`, `source`, `route`, `code`, `message`, `count`, `first_seen`, `last_seen`, `request_id`, `app_version` (0015) | Lỗi gộp; `source` = `api`/`server-render`/`client` |
 | `rate_limit_hits` | `key_hash`, `window_start`, `count` | PK(key_hash, window_start) |
 | `idempotency_keys` | `key`, `user_id`, `route`, `request_hash`, `response jsonb`, `status_code`, `created_at` | PK(key, user_id); TTL 48 giờ dọn bởi job |
 | `app_migrations` | `name PK`, `sha256`, `applied_at` | Do `scripts/db/migrate.mjs` ghi |
@@ -173,7 +178,7 @@ RLS: `purchase.view` (giá/tổng chỉ cho người có quyền này). Không c
 | `service_types` | `code U`, `name`, `default_price_vnd`, `is_active` | |
 | `repair_orders` | `code U`, `kind` (`customer\|internal`), `charge_mode` (`paid\|warranty_free`), `customer_id`, `customer_watch_id`, `unit_id`, `warranty_id`, `received_at`, `received_by`, `status`, `intake_condition`, `customer_complaint`, `findings`, `expected_date`, `quote_total_vnd`, `quote_approved_at`, `quote_approved_by`, `quote_approved_channel`, `final_total_vnd`, `completed_at`, `delivered_at`, `delivered_by`, `cancel_reason`, `version` | C: internal ⇒ unit_id NOT NULL; customer ⇒ customer_id NOT NULL AND (customer_watch_id OR unit_id OR mô tả máy) NOT NULL; ix(status), ix(customer_id), ix(unit_id). Không còn `assigned_technician_id` (CF-04/05) |
 | `repair_lines` | `order_id`, `line_no`, `line_type` (`service\|part\|other`), `service_type_id`, `part_id`, `description`, `qty`, `unit_price_vnd`, `line_total_vnd`, `consumed_at` (đã xác nhận dùng linh kiện), `consumed_by` | U(order_id, line_no) |
-| `repair_line_costs` | `repair_line_id PK`, `cost_vnd` (linh kiện × bình quân, chốt) | **Append-only**; RLS **`cost.view`** |
+| `repair_line_costs` | `id`, `repair_line_id`, `cost_vnd` (± — `use` linh kiện × bình quân chốt, `reversal` âm khi bỏ dùng/hủy, `other` chi phí khác sửa nội bộ), `kind` | **Append-only**; RLS **`cost.view`**; giá vốn dòng = Σ (CQ-012) |
 | `repair_status_history` | `order_id`, `from_status`, `to_status`, `at`, `actor_id`, `reason` | **Append-only** |
 
 Ảnh nhận máy (nếu có): `files(kind='intake', entity_table='repair_orders')`, bất biến.
@@ -200,10 +205,11 @@ Tất cả `SECURITY DEFINER`, `SET search_path = public, app, pg_temp`, owner `
 | Module | Hàm | Mục đích (BR chính) |
 |---|---|---|
 | platform | `fn_next_number(code)`, `fn_audit_event(...)`, `fn_emit_event(type, payload)`, `app.setting(key, default)`, `app.today_vn()` | BR-GEN-04/06 |
+| platform | `fn_activity_purge(p_days)` (0021; chỉ `wf_worker`: dọn `activity_logs` quá hạn giữ, sàn 30 ngày, audit `activity.purged`) | BR-SEC-11 |
 | iam | `fn_set_user_status`, `fn_assign_roles`, `fn_reveal_pii(customer_id, reason)` | BR-SEC-03/07 |
 | catalog | `fn_set_unit_price`, `fn_move_unit`, `fn_release_unit`, `fn_writeoff_unit`, `fn_restore_unit` | BR-UNIT-* |
 | parts | `fn_adjust_part_stock` | BR-PART-05 |
-| purchasing | `fn_confirm_purchase`, `fn_void_purchase`, `fn_adjust_unit_cost` | BR-PUR-*, BR-COST-05 |
+| purchasing | `fn_confirm_purchase`, `fn_void_purchase`, `fn_adjust_unit_cost`, `fn_audit_import` (0019: audit tổng hợp một lần nhập Excel; **không thêm bảng** — dữ liệu đi qua `customers` và phiếu `opening`) | BR-PUR-*, BR-COST-05, BR-IMP-* |
 | payments | `fn_record_payment`, `fn_void_payment`; view `v_doc_balances` | BR-PAY-* |
 | sales | `fn_create_reservation`, `fn_cancel_reservation`, `fn_confirm_sale`, `fn_void_sale`, `fn_create_warranty` (nội bộ) | BR-SALE/RSV/TRD/WAR |
 | sales (CTV) | `fn_confirm_assignment`, `fn_void_assignment`, `fn_return_from_collaborator`, `fn_settle_collaborator`, `fn_void_settlement` | BR-COL-* |

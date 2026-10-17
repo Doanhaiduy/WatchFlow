@@ -1,6 +1,6 @@
 # Sổ tay vận hành
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (điền địa chỉ/ID thật khi dựng môi trường) · Mẫu: `VAN_HANH.md` của Lưu Xá · Đối tượng: chủ cửa hàng + người kỹ thuật phụ trách
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (điền địa chỉ/ID thật khi dựng môi trường) · Mẫu: `VAN_HANH.md` của Lưu Xá · Đối tượng: chủ cửa hàng + người kỹ thuật phụ trách
 
 ## 1. Địa chỉ & thành phần (điền khi dựng)
 
@@ -15,6 +15,9 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 
 - **Sống/sẵn sàng:** `GET /api/health` ⇒ 200 khi DB trả lời, 503 khi DB lỗi. **Sâu:** `GET /api/health?deep=1` ⇒ thêm 503 khi cron sáng/tối quá 30 giờ chưa chạy xong không lỗi, hoặc nhịp tim sao lưu quá 36 giờ. Đặt **hai** monitor (UptimeRobot/Better Stack, chu kỳ 5–15 phút, báo email/Telegram): một cho `/api/health`, một cho `/api/health?deep=1`.
 - **Trong ứng dụng (Quản trị → Hệ thống & sao lưu):** lượt chạy tác vụ nền (`job_runs`, từng bước), nhật ký lỗi gộp (`error_events`), trạng thái "Sao lưu gần nhất", kết quả kiểm bất biến (`fn_consistency_check`), dung lượng DB/Storage, biến môi trường thiếu. Dải cảnh báo đỏ dưới thanh tiêu đề khi cron/sao lưu có vấn đề; chủ nhận thông báo ngay khi cron lỗi hoặc **`fn_consistency_check` báo vi phạm (sự cố nghiêm trọng)**.
+- **Nhật ký lỗi gộp (`error_events`, cột `source`):** `api` (route `api()`/`publicApi()` ném lỗi lạ, 5xx) · `server-render` (lỗi render trang/route không bọc, qua `src/instrumentation.ts` `onRequestError`) · `client` (lỗi trình duyệt: `window.onerror`, `unhandledrejection`, error boundary — `code` = `window|promise|boundary|global`, kèm `app_version`). Lỗi trình duyệt do `ClientErrorReporter` gửi tới `POST /api/v1/public/client-error` (mỗi lần mở trang tối đa 8 lỗi, trùng bị gộp; chỉ gửi thông điệp/stack rút gọn + pathname + phiên bản, đã che email/số dài/token; máy chủ giới hạn 30/phút/IP-băm và 600/giờ toàn hệ thống). Một lỗi có `count` tăng nhanh sau một lần deploy = nghi lỗi của bản mới (so `app_version`): xem trang/route, tái hiện, cân nhắc rollback. Tiện ích trình duyệt (`chrome-extension:`…) và `ResizeObserver loop` bị bỏ qua. Dev (`next dev`) tự tải lại trang khi render lỗi nên `count` tăng ảo — không phải sự cố.
+- **Khởi động máy chủ chạy lâu** (`pnpm start`/local, không phải Vercel): `src/instrumentation.ts` mở sẵn `DB_POOL_WARM` (mặc định 2, không vượt `DB_POOL_MAX`) kết nối DB để lần tải đầu không chờ bắt tay TLS. Không có tác vụ nền trong tiến trình — việc định kỳ chạy bằng route cron.
+- **Dung lượng kho ảnh:** Quản trị → Hệ thống → "Dung lượng lưu trữ" (theo bucket, tăng trưởng/ngày, ước tính ngày đầy; ngưỡng `storage.*`); cảnh báo trong ứng dụng khi ≥ 80%/95% (BR-BAK-04). Job `storage-purge` xóa thật tệp đã xóa (BR-SEC-09; chi tiết `backup-restore` §5.4). Kho sắp đầy ⇒ xóa ảnh không cần, hoặc nâng gói/tăng `storage.quota_mb`.
 - **Mã lỗi:** người dùng thấy "(mã lỗi: xxxxxxxx)" = 8 ký tự đầu `requestId` ⇒ tra ở nhật ký lỗi hoặc log Vercel.
 - **Tốc độ:** header `Server-Timing` (DevTools → Network → Timing); Vercel Speed Insights.
 - **Cron:** `overview` §7. Chạy thử/tra cứu ở Quản trị → Hệ thống.
@@ -37,6 +40,9 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 |---|---|
 | Không đăng nhập được, "phiên hết hạn" liên tục | Có đổi `AUTH_JWT_*` giữa hai lần deploy? Cookie Secure khi chạy http (`COOKIE_SECURE`)? Đồng hồ máy khách lệch? |
 | Tài khoản bị khóa | Khóa tạm 15 phút sau 5 lần sai; chủ có thể đặt lại mật khẩu tạm (Quản trị → Người dùng) |
+| Nghi ngờ lộ máy đã "Tin cậy thiết bị này" (mất máy, nhân viên nghỉ) | Đổi mật khẩu của tài khoản đó (thu hồi **tự động** mọi thiết bị tin cậy + phiên khác) hoặc khóa tài khoản; người dùng tự bấm "Quên các thiết bị đã tin cậy" ở Cài đặt; muốn tắt hẳn: Quản trị → Cài đặt → `security.trusted_device_days = 0` (chỉ chủ). Xem lịch sử: Quản trị → Hoạt động → Đăng nhập (`auth.device_trusted`, `auth.login_trusted`) |
+| Cần biết ai đã xuất Excel / in phiếu / xem giá vốn / xem CCCD | Quản trị → Hoạt động → tab Thao tác → tick "Chỉ sự kiện nhạy cảm" (lọc theo người/ngày). Lý do xem CCCD nằm ở Nhật ký (`pii.reveal`) cùng mã yêu cầu. Nhật ký giữ `activity.retention_days` ngày (mặc định 180) |
+| Bảng `activity_logs` phình / muốn đổi thời gian giữ | Chỉnh `activity.retention_days` (≥ 30); job hằng ngày bước `activity-purge` dọn qua hàm `app.fn_activity_purge()` (không có đường xóa nào khác; bước lỗi hiện ở Hệ thống). Không `DELETE` tay (trigger chặn) |
 | Mất thiết bị TOTP của chủ | Dùng mã khôi phục; nếu mất cả hai: người kỹ thuật tắt MFA qua script `scripts/env/reset-mfa.mjs` (cần `MIGRATE_DATABASE_URL`, ghi audit) rồi chủ bật lại |
 | 503 ở `/api/health` | Supabase tạm ngưng/hết kết nối (xem Dashboard); `DATABASE_URL` phải dùng pooler cổng 6543; kiểm hạn mức gói |
 | Trang chậm bất thường | Server-Timing: nhiều vòng DB? Truy vấn thiếu index? Vùng Vercel khác vùng Supabase? |
@@ -48,6 +54,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 | Cron "đỏ" trong Vercel | Quản trị → Hệ thống xem bước lỗi; thiếu `CRON_SECRET` ⇒ 503; chạy lại bước |
 | Sao lưu không chạy | Repo sao lưu: workflow đỏ? Secret hết hạn? Repo bị chuyển công khai (workflow tự dừng)? Xem `backup-restore` |
 | Lỗi sau khi deploy | Vercel "Promote previous deployment"; kiểm migration đã áp trước code; xem `release-process` §3 rollback |
+| Người dùng báo "không kết nối được máy chủ" / "quá chậm" | Đó là lỗi mạng phía họ (`WF-NETWORK`, do `humanize-error` diễn giải; không có bản ghi ở máy chủ). Kiểm tra mạng/Wi-Fi; nếu nhiều người cùng báo ⇒ `/api/health`, trạng thái Vercel/Supabase |
 | Camera không bật (quét QR) | Cần HTTPS/quyền camera của trình duyệt; iOS Safari dùng thư viện dự phòng; có ô nhập tay |
 
 ## 5. Khóa & bí mật
@@ -60,6 +67,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 | `DATABASE_URL` (mật khẩu `wf_api`) | Ứng dụng nối DB | Đổi ở DB rồi Vercel, deploy lại | 6–12 tháng |
 | `MIGRATE_DATABASE_URL` | Migrate/backup trên máy dev | Chỉ máy dev, **không lên Vercel** | Khi nhân sự đổi |
 | `SUPABASE_SERVICE_ROLE_KEY` | Storage từ máy chủ | Tạo lại ở Supabase rồi cập nhật Vercel | 12 tháng / khi nghi lộ |
+| `VAPID_PRIVATE_KEY` (+ `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT`) | Ký tin đẩy tới Google/Mozilla/Apple | Mọi thiết bị mất đăng ký ⇒ phải bật lại thông báo (trong Cài đặt) | Không xoay thường; chỉ khi nghi lộ |
 | `OPS_HEARTBEAT_SECRET` | Repo sao lưu báo "đã sao lưu" | Đổi đồng thời secret cùng tên ở repo sao lưu | 12 tháng |
 | `BACKUP_DATABASE_URL`, `BACKUP_PASSPHRASE` (repo sao lưu) | Sao lưu / mã hóa | **Mất passphrase = mất cả sao lưu** | Cất ở trình quản lý mật khẩu; không xoay trừ khi nghi lộ |
 | Tài khoản Vercel/Supabase/GitHub/tên miền | Sở hữu hạ tầng | — | Bật 2FA; ≥ 2 người có quyền sở hữu (chủ + 1 người tin cậy) |
@@ -74,6 +82,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 - Dữ liệu khách (tên, SĐT, địa chỉ, CCCD người bán) chỉ dùng cho nghiệp vụ cửa hàng; CCCD mã hóa; xem đầy đủ phải nêu lý do (audit).
 - **Yêu cầu của khách** (xem/xóa dữ liệu): `fn_anonymize_customer` (ẩn danh, giữ giao dịch tài chính); ghi nhận yêu cầu và kết quả trong ghi chú. Thông tin pháp lý về bảo vệ dữ liệu cá nhân (vd. Nghị định 13/2023/NĐ-CP) do chủ/ tư vấn pháp lý xác nhận.
 - Thời hạn lưu: chứng từ tài chính giữ theo quy định kế toán/thuế (chủ xác nhận với kế toán); ảnh giấy tờ người bán giữ theo chính sách cửa hàng (đề xuất ≥ thời hạn bảo hành + 1 năm).
+- **Ẩn danh khách xóa thật ảnh giấy tờ** (BR-SEC-09): ảnh CCCD của khách (gắn khách, phiếu thu mua, phiếu bán) bị xóa khỏi kho ở lượt tác vụ nền kế tiếp (không chờ 7 ngày); bản sao lưu cũ còn dữ liệu đến hết vòng đời — ghi rõ khi trả lời khách.
 - Không gửi PII cho dịch vụ ngoài (kể cả AI) trừ khi có ADR và đồng ý.
 
 ## 7. Bàn giao & quyền sở hữu (FR-BAK-08)
@@ -100,6 +109,8 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 - [ ] Nhập thương hiệu/loại/loại việc/loại linh kiện ban đầu, vai trò/hạn mức giảm giá, hồ sơ CTV, thông tin cửa hàng in phiếu, cài đặt bảo hành; **tồn đầu kỳ** bằng phiếu `opening`.
 - [ ] Xác nhận với kế toán: hóa đơn điện tử/thuế (`vision-scope` Q1).
 - [ ] Chạy UAT, ký nghiệm thu, đào tạo.
+- [ ] ⏭ **PWA (cloud):** kiểm trên HTTPS thật: service worker đăng ký, trang offline hiện khi tắt mạng, nút "Cài ứng dụng", dải cảnh báo khi mở link trong Zalo (Android + iOS).
+- [ ] ⏭ **Thông báo đẩy (cloud):** `pnpm env:keys production` (và `staging`) ⇒ đặt `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (Sensitive), `VAPID_SUBJECT` trên Vercel từng môi trường (cặp riêng mỗi môi trường); deploy; mở Cài đặt → bật thông báo trên điện thoại thật (iPhone: phải cài vào màn hình chính) → "Gửi thử". Chưa kiểm thật với dịch vụ đẩy của trình duyệt (máy công ty không gọi ra ngoài). Gói Hobby chỉ cron mỗi ngày: tin thử lại sau lỗi tạm thời dựa vào lần ghi dữ liệu kế tiếp — gói Pro có thể thêm cron 5 phút gọi `dispatchPendingPush`.
 
 ## 9. Quản lý thay đổi
 

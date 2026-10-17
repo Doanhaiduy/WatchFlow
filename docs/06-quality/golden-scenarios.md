@@ -19,7 +19,7 @@
 | Vị trí | "Tủ trưng bày 1", "Két" |
 | Khách | `KH-A` Nguyễn Văn An (0901000001), `KH-B` Trần Thị Bình (0901000002), `KH-C` (do `C1` tạo) |
 | Người dùng | `owner`; `sales` (hạn mức giảm giá **5%**); `warehouse`; `C1` (CTV) |
-| Linh kiện (tồn đầu kỳ qua phiếu `opening`, tổng **3.500.000**) | `LK-0001` Dây da 20mm: SL 10, bình quân 80.000, giá bán 150.000 · `LK-0002` Kính sapphire 36mm: SL 5, bình quân 250.000, giá bán 450.000, ngưỡng 2 · `LK-0003` Ron chống nước: SL 20, bình quân 35.000, giá bán 70.000 · `LK-0004` Pin SR626: SL 50, bình quân 15.000, giá bán 40.000 |
+| Linh kiện (tồn đầu kỳ qua phiếu `opening`, tổng **2.750.000** = 10×80.000 + 5×250.000 + 20×35.000 — CQ-008) | `LK-0001` Dây da 20mm: SL 10, bình quân 80.000, giá bán 150.000 · `LK-0002` Kính sapphire 36mm: SL 5, bình quân 250.000, giá bán 450.000, ngưỡng 2 · `LK-0003` Ron chống nước: SL 20, bình quân 35.000, giá bán 70.000 · `LK-0004` Pin SR626: SL 50, bình quân 15.000, giá bán 40.000 |
 | Loại việc | `Bảo dưỡng máy` (mặc định 300.000), `Thay pin` (mặc định 100.000) |
 | Chiếc | Không có (tạo trong từng SC bằng helper qua phiếu nhập thật) |
 
@@ -46,7 +46,7 @@ Chi phí: **Vận chuyển 120.000** (`by_value`). Xác nhận.
 | Giá vốn | A **6.060.000** · B **1.212.000** · C **4.848.000** (Σ 12.120.000) |
 | Chiếc | 3 chiếc `in_stock`, `asset_code` mới, `cost_cycle=1`, mỗi chiếc có `unit_status_history` (∅→in_stock) |
 | Thanh toán / công nợ | **Không có** (phiếu nhập không theo dõi trả tiền — BR-PUR-06) |
-| Giá trị tồn | Đồng hồ **12.120.000**; linh kiện 3.500.000 |
+| Giá trị tồn | Đồng hồ **12.120.000**; linh kiện 2.750.000 |
 | Doanh thu | **0** |
 **Phủ định:** `sales` đọc giá vốn chiếc A ⇒ 403/không có trường (PT-01); nhập serial `SK-A-001` lần nữa ⇒ `WF-UNIT-SERIAL-DUPLICATE`; thiếu nguồn hàng ⇒ `WF-VALIDATION`; xác nhận phiếu hai lần cùng `Idempotency-Key` ⇒ một kết quả.
 
@@ -210,7 +210,7 @@ Chạy SC-01, SC-02, SC-03, SC-04(a) [2026-11-02/03], rồi SC-04(b) [2026-11-05
 | Thực thu (ngày 03) | tiền mặt 5.000.000 + 6.500.000 + 500.000 = 12.000.000; chuyển khoản 3.200.000 ⇒ **15.200.000** |
 | Khách còn nợ | **1.300.000** (KH-B) = Doanh thu 16.500.000 − Thực thu 15.200.000 ✓ |
 | Số đồng hồ tồn kho / có thể bán | **0 / 0**; đã bán **3** |
-| Giá trị tồn | Đồng hồ **0**; linh kiện **3.500.000** |
+| Giá trị tồn | Đồng hồ **0**; linh kiện **2.750.000** |
 
 **Sau 2026-11-05 (thu thêm 1.000.000 chuyển khoản):** khách còn nợ **300.000**; thực thu ngày 05 = **1.000.000**; **tổng thực thu 16.200.000** = Doanh thu 16.500.000 − nợ 300.000 ✓.
 

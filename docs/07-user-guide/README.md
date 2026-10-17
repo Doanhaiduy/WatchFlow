@@ -1,7 +1,7 @@
 # Hướng dẫn sử dụng — dàn bài
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Nháp (viết nội dung đầy đủ ở M9; từng mốc bổ sung mục tương ứng ngay khi tính năng xong) · Đã cập nhật theo `customer-feedback-01` (vai trò: chủ, bán hàng, kho, cộng tác viên — không còn thợ)
-> **Nguồn sự thật nội dung:** `src/content/guide.ts` (hiển thị trong ứng dụng, lọc theo vai trò). File `docs/07-user-guide/HUONG_DAN_SU_DUNG.md` được **sinh** từ đó bằng `node --experimental-strip-types scripts/docs/export-guide.mjs` để in/phát cho nhân viên — **đừng sửa tay file sinh ra**.
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Đã viết nội dung (M9) — bản in: [HUONG_DAN_SU_DUNG.md](HUONG_DAN_SU_DUNG.md) · Đã cập nhật theo `customer-feedback-01` (vai trò: chủ, bán hàng, kho, cộng tác viên — không còn thợ)
+> **Nguồn sự thật nội dung:** `src/content/guide.ts` (hiển thị trong ứng dụng, lọc theo vai trò). File `docs/07-user-guide/HUONG_DAN_SU_DUNG.md` được **sinh** từ đó bằng `pnpm docs:guide` để in/phát cho nhân viên — **đừng sửa tay file sinh ra**.
 
 ## Nguyên tắc viết
 

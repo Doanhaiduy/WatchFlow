@@ -40,7 +40,7 @@ Các màn hình khách **không** có ý kiến (Đăng nhập, Tổng quan, Đ�
 | Nhà cung cấp & công nợ | **Bỏ → Hoãn** | |
 | Thu chi, quỹ, sổ quỹ chuỗi băm, đối chiếu, khóa kỳ, chi phí | **Bỏ → Hoãn** | |
 | Vai trò Thợ, tiền công thợ | **Bỏ** | Vai trò còn: Chủ, Bán hàng, Kho, CTV |
-| Chế độ tối | **Hoãn** | Mẫu Glass chỉ có bản sáng; token sẵn sàng để thêm sau |
+| Chế độ tối | **Hoãn** → đã làm 2026-10-17 (CQ-016) | Mẫu Glass chỉ có bản sáng; bản tối thêm bằng khối token `[data-theme="dark"]`, mặc định vẫn sáng |
 
 "Hoãn" = không xây ở giai đoạn này; thiết kế đầy đủ còn ở kho lưu trữ; khi khách cần sẽ bật lại bằng module mới (xem `extensibility` §7).
 

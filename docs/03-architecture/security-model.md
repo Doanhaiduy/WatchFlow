@@ -1,6 +1,6 @@
 # Mô hình bảo mật & phân quyền
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Quy tắc gốc: BR-SEC-*, BR-COST-06, BR-COL-09, ADR-003/004/005
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Quy tắc gốc: BR-SEC-*, BR-COST-06, BR-COL-09, ADR-003/004/005
 
 ## 1. Các lớp bảo vệ (phòng thủ chiều sâu)
 
@@ -18,7 +18,7 @@ Hệ quả: API **không bao giờ** chạy bằng superuser hay chủ bảng (R
 | Vai trò DB | Thuộc tính | Dùng cho |
 |---|---|---|
 | `wf_owner` | Chủ sở hữu đối tượng (không đăng nhập runtime) | Sở hữu bảng/hàm |
-| `wf_definer` | Chủ sở hữu hàm `SECURITY DEFINER` | Hàm đặc quyền, có `SET search_path` cố định |
+| `wf_definer` | Chủ sở hữu hàm `SECURITY DEFINER`; `NOLOGIN BYPASSRLS` + quyền DML bảng (CQ-001) | Hàm đặc quyền, có `SET search_path` cố định, tự kiểm quyền trong thân |
 | `wf_api` | `LOGIN`, `NOINHERIT` | Kết nối của ứng dụng; không quyền gì nếu quên `SET ROLE` |
 | `wf_app` | `NOLOGIN`, chịu RLS | `SET LOCAL ROLE wf_app` cho mọi truy vấn của người dùng đã đăng nhập |
 | `wf_auth` | Quyền riêng trên bảng xác thực | Đăng nhập, đăng ký, làm mới token, MFA |
@@ -147,12 +147,12 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | Dữ liệu | Biện pháp |
 |---|---|
 | CCCD người bán / khách | `id_number_enc` AES-256-GCM (khóa `PII_KEY_V1`, version hóa), `id_number_bidx` (HMAC-SHA256 với `PII_BIDX_KEY`) để tìm chính xác; giao diện chỉ hiện `*** *** 123`; xem đủ ⇒ `customer.pii.view` + lý do + audit `pii.reveal` |
-| Ảnh giấy tờ người bán | Bucket riêng tư `documents`; URL ký ngắn hạn (≤ 5 phút); hạn chế quyền; không hiện trong danh sách chung |
+| Ảnh giấy tờ người bán | Bucket riêng tư `documents`; URL ký ngắn hạn (≤ 5 phút); hạn chế quyền; không hiện trong danh sách chung. **Ẩn danh khách ⇒ XÓA THẬT** (BR-SEC-09, migration 0014): `fn_anonymize_customer` đánh dấu xóa mọi ảnh `id_document` của khách (gắn khách, phiếu thu mua có `seller_customer_id`, phiếu bán) ⇒ `purge_after = now()` ⇒ job DAILY `storage-purge` xóa ảnh chính + thumb khỏi kho (local: `fs.rm`; Supabase: `DELETE /storage/v1/object/<bucket>`) rồi mới chốt `purged_at` (lỗi ⇒ thử lại lượt sau). Tệp bất biến khác (nhận máy/chứng từ) không bao giờ tự xóa |
 | SĐT, email, địa chỉ | Lưu rõ nhưng theo RLS; không đưa vào URL/log; xuất Excel cần quyền |
 | Khách do CTV tạo | Chỉ CTV đó + người có `customer.view`; CTV không xem khách của người khác |
 | Nhật ký | Che cột nhạy cảm (`id_number_*`, `password_hash`, `totp_secret_enc`) trước khi ghi `before/after` |
 | AI | Không gửi PII; ẩn danh hóa mọi thứ trước khi gọi (xem `integrations`) |
-| Quyền chủ thể dữ liệu | Có thể ẩn danh khách (xóa PII, giữ giao dịch) khi được yêu cầu: `fn_anonymize_customer` (audit) |
+| Quyền chủ thể dữ liệu | Có thể ẩn danh khách (xóa PII **và ảnh giấy tờ thật**, giữ giao dịch) khi được yêu cầu: `fn_anonymize_customer` (audit `customer.anonymized` ghi số ảnh giấy tờ đã xóa; `storage.purged` khi kho đã xóa). Bản sao lưu cũ vẫn chứa dữ liệu cũ đến hết vòng đời sao lưu (xem `backup-restore`) |
 
 Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm trong trình quản lý mật khẩu của chủ và là mục bắt buộc của runbook.
 
@@ -163,9 +163,11 @@ Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm tron
 - Kiểm tra phiên **trong cùng lượt `BEGIN`** của request đầu tiên (không tốn thêm vòng mạng) — phiên bị thu hồi ⇒ rollback và 401.
 - **MFA TOTP** (RFC 6238) bắt buộc cho vai trò trong `security.mfa_required_roles` (mặc định `owner`); mã khôi phục dùng một lần. Thao tác nhạy cảm (hủy quyết toán CTV, đổi quyền, xem PII, hủy phiếu bán) yêu cầu **xác thực lại trong 5 phút**.
 - Khóa tạm sau 5 lần sai, 15 phút; đổi mật khẩu thu hồi phiên khác; mật khẩu tạm (do chủ đặt) buộc đổi ở lần đầu, **chặn mọi API trừ `/api/v1/auth/*`** cho tới khi đổi.
-- Thiết bị tin cậy (tùy chọn) để giảm hỏi TOTP; liệt kê & thu hồi phiên ở Cài đặt → Bảo mật.
+- **Tin cậy thiết bị này N ngày** (BR-SEC-10; `0021a_trusted_devices`, `src/server/auth/trusted-device.ts`; cài đặt `security.trusted_device_days`, mặc định 30, **0 = tắt**, tối đa 90). Ô "Tin cậy thiết bị này" ở bước `/xac-thuc-2-buoc` (chỉ hiện khi tính năng bật). Tick ⇒ máy chủ sinh token ngẫu nhiên **256-bit** đặt trong cookie `__Secure-wf_td` (`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`; chạy http local: `wf_td`); **DB chỉ lưu SHA-256** (`trusted_devices.token_hash`), không bao giờ token thô, không có trong audit. Hiệu lực: gắn đúng **một tài khoản** (token của A vô dụng với B), **hết hạn cố định** (không gia hạn khi dùng), **nhãn thiết bị** (trình duyệt · hệ điều hành suy từ User-Agent) phải trùng lúc tin cậy; một trình duyệt tin cậy tối đa 5 tài khoản (cookie chứa ≤ 5 token), mỗi người ≤ 10 thiết bị còn hạn. **Chỉ bỏ bước mã 6 số khi đăng nhập — MẬT KHẨU LUÔN PHẢI ĐÚNG** (kiểm trước, tài khoản khóa/vô hiệu bị chặn trước, đếm sai/khóa tạm như thường). Phiên tạo qua thiết bị tin cậy có `mfa_at` nhưng **không có `reauth_at`**: thao tác nhạy cảm (`requireReauth`: xem CCCD, đặt lại mật khẩu, tắt 2FA, đổi quyền…) **vẫn đòi mật khẩu + mã 2FA**. Thu hồi: (a) **trigger `trg_users__revoke_trusted` trên `users`** — đổi/đặt lại mật khẩu (kể cả chủ đặt lại), tài khoản chuyển khỏi `active` (chủ khóa), tắt/gỡ 2FA — mọi đường đều đi qua trigger nên không thể sót, ghi audit `auth.trusted_devices_revoked`; (b) người dùng bấm "Quên các thiết bị đã tin cậy" / "Bỏ" từng thiết bị ở `/cai-dat` (xóa luôn cookie máy này); (c) đặt `security.trusted_device_days = 0` ⇒ thiết bị cũ lập tức không còn bỏ qua mã. Audit: `auth.device_trusted`, `auth.login_trusted`, `auth.trusted_device_revoked`. Bảng `trusted_devices` chỉ `wf_auth`/`wf_worker`/`wf_definer` truy cập (`wf_app` không đọc/ghi); job hằng ngày dọn dòng hết hạn/thu hồi > 7 ngày. Rủi ro còn lại (chấp nhận, chủ động nêu ở CQ): kẻ có **cả mật khẩu lẫn cookie thiết bị** vào được trong N ngày — giảm thiểu bằng cookie HttpOnly/SameSite=Strict, ràng buộc nhãn thiết bị, khuyến nghị chỉ tick trên máy riêng, thu hồi tự động khi đổi mật khẩu, và N chỉnh/tắt được.
+- Liệt kê & thu hồi phiên ở Cài đặt → Bảo mật (`/cai-dat`).
 - **CSRF**: cookie ⇒ mọi `POST/PUT/PATCH/DELETE` cần token CSRF (double-submit) + kiểm `Origin`/`Sec-Fetch-Site`. Cùng origin duy nhất (Vercel phục vụ cả giao diện lẫn `/api/v1`) ⇒ không cần CORS ở production.
-- **Giới hạn tốc độ** (lưu DB, `rate_limit_hits`, khóa băm — không lưu IP thô): auth 10/15 phút theo IP và theo tài khoản; mặc định 300/phút/người; xuất file 5/giờ; tải ảnh 30/phút.
+- **Giới hạn tốc độ** (lưu DB, `rate_limit_hits`, khóa băm — không lưu IP thô): auth 10/15 phút theo IP và theo tài khoản; mặc định 300/phút/người; xuất file 5/giờ; tải ảnh 30/phút; báo lỗi trình duyệt 30/phút/IP-băm + 600/giờ toàn hệ thống.
+- **Endpoint công khai ghi dữ liệu — `POST /api/v1/public/client-error`** (nhật ký lỗi trình duyệt; lỗi có thể xảy ra trước khi đăng nhập). Bảo vệ: kiểm `Origin`/`Sec-Fetch-Site` cùng nguồn (không dùng CSRF token — chưa có phiên), Zod giới hạn độ dài (message 500, stack 2000, path 300, digest 100, version 32; `kind` là enum), giới hạn tốc độ lưu DB `clientError` 30/phút theo `ipHash` + `clientErrorAll` 600/giờ toàn hệ thống ⇒ 429, **làm sạch PII ở cả hai phía** (`src/lib/client-error.ts`: che email, chuỗi số ≥ 7 chữ số, UUID, token, query; path chuẩn hóa `:id`), **không lưu IP/User-Agent/cookie/người dùng**. Ghi vào `error_events` qua vai trò `wf_worker` (không đụng bảng nghiệp vụ). Trần 8 lỗi/lần mở trang ở trình duyệt.
 - **Tiêu đề bảo mật**: CSP chặt (`default-src 'self'`; ảnh từ origin Storage đã ký; font từ nguồn đã khai báo), HSTS, `X-Content-Type-Options`, `Referrer-Policy: same-origin`, `Permissions-Policy` (camera cho trang quét/chụp), `X-Frame-Options: DENY`.
 
 ## 8. Mô hình mối đe dọa (rút gọn)
@@ -185,6 +187,33 @@ Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm tron
 | Brute force / credential stuffing | Giới hạn tốc độ + khóa tạm + MFA cho owner |
 | Mất dữ liệu | Sao lưu 2 lớp + diễn tập; RPO/RTO (BR-BAK-*) |
 | AI rò dữ liệu | Tắt mặc định, ẩn danh hóa, không quyết định nghiệp vụ |
+
+## 8a. Bổ sung khi triển khai (2026-10-17)
+
+- `sale_lines.base_price_vnd` / `shop_revenue_vnd` **không** cấp `SELECT` cho `wf_app`; đọc qua `app.fn_sale_line_collab(sale_id)` (cần `cost.view`/`collab.view` hoặc chính CTV của đơn). `part_stock_movements.unit_cost/prev_avg` đọc qua `app.fn_part_movement_costs` (`cost.view`). `customers.id_number_enc` không cấp `SELECT`; xem đủ qua `app.fn_reveal_customer_id` (lý do + audit `pii.reveal`) + xác thực lại 5 phút.
+- `audit_logs` của bảng `customers` chỉ ghi tên cột PII đã đổi (giá trị `***`) để ẩn danh khách có hiệu lực (CQ-007).
+- Thu cũ đổi mới: `fn_confirm_purchase`/`fn_void_purchase` bỏ qua `purchase.*` chỉ khi được `fn_confirm_sale`/`fn_void_sale` gọi nội bộ cho đúng phiếu `trade_in` (CQ-009).
+- Giới hạn tốc độ đăng nhập/MFA/xác thực lại chỉ đếm lần **sai** (CQ-004) — mọi bucket (kể cả đăng nhập theo IP + email đã chuẩn hóa) giữ chỗ +1 trước khi chạy rồi trả lại đúng chỗ đó nếu không sai (chống đua). Kết nối phụ (wf_auth/wf_worker) dùng pool riêng để không chờ vòng tròn với pool wf_app. Ân hạn dùng lại refresh token 10 giây: trong ân hạn chỉ cấp access token mới, không xoay, không xóa cookie (CQ-005).
+- Chống chiếm quyền chủ (CQ-015): người có `user.manage`/`role.manage` mà không phải `owner` không gán/bỏ vai trò `owner`, không sửa/khóa/đặt lại mật khẩu tài khoản owner, không sửa vai trò `owner` hay vai trò mình đang giữ; không ai tự đổi vai trò/khóa/đặt lại mật khẩu chính mình. Cài đặt `security.*` chỉ owner; `security.mfa_required_roles` luôn chứa `owner`. **Trần cấp quyền:** người không phải owner chỉ thêm vào vai trò, hoặc gán cho người dùng vai trò có, những quyền chính mình đang có (`app.guard_grant_ceiling`, 0013c).
+- Phiên có hạn tuyệt đối `auth_sessions.expires_at` = lúc đăng nhập + `security.refresh_token_ttl_days`; refresh không kéo dài. Hàm pgcrypto không cấp `EXECUTE` cho PUBLIC. Nhật ký che thêm tên/SĐT người bán (`purchase_receipts`) và SĐT CTV.
+- Pool DB: `statement_timeout`/`lock_timeout`/`idle_in_transaction_session_timeout`; DB ngoài máy bắt buộc TLS kiểm chứng chỉ (`DB_SSL_CA` hoặc `sslmode=verify-full`, thiếu thì từ chối nối).
+- Tên người dùng cho danh sách/lịch sử qua `app.user_display_name(id)` (chỉ họ tên, cần đăng nhập) và `app.fn_users_with_permission(perm)`.
+
+- Nhập Excel (BR-IMP-*): máy chủ **không bao giờ mở tệp** (trình duyệt đọc, gửi JSON ≤ 300 dòng) nên không có bề mặt zip-bomb/tệp độc ở máy chủ; quyền kiểm theo loại (cần đủ danh sách ở `src/lib/import/perms.ts`) và ghi bằng quyền của người dùng (RLS); CCCD mã hóa tầng ứng dụng, không lặp lại trong phản hồi/audit; `app.fn_audit_import` chỉ ghi số đếm + mã phiếu.
+
+- Thông báo đẩy (FR-PUSH-*, migration 0020): `push_subscriptions.p256dh`/`auth` là **bí mật mã hóa tin đẩy** — `wf_app` chỉ có `SELECT` các cột còn lại và chỉ dòng của mình (RLS `user_id = current_user`); không có `INSERT/UPDATE/DELETE` trực tiếp, ghi qua `app.fn_register_push_subscription` (cùng endpoint đã thuộc người khác ⇒ chuyển chủ, phục vụ máy dùng chung; tối đa 10 thiết bị/người) và `app.fn_remove_push_subscription` (chỉ của mình); chỉ `wf_worker` đọc khóa để gửi. `push_outbox` chỉ `wf_worker`. Endpoint API (mọi người dùng đã đăng nhập, chỉ dữ liệu của mình): `GET/PUT /api/v1/me/push-config`, `POST/DELETE /api/v1/me/push-subscriptions`, `POST /api/v1/me/push-subscriptions/test` (1 lần/10 giây/người). Tin đẩy chỉ chứa tiêu đề ≤ 120, nội dung ≤ 200, liên kết nội bộ (`safeLink`: bắt đầu `/`, chặn `//`, `\\`, ký tự điều khiển), id thông báo — không mã người dùng/email/PII. `sw.js` cũng kiểm đường dẫn trước khi mở. Audit `push.subscribed/unsubscribed` không kèm endpoint/khóa. `sw.js`/`offline.html`/`offline.js` ngoài proxy CSP: có CSP tĩnh riêng ở `next.config.ts`.
+
+## 8b. Nhật ký hoạt động cấp request (BR-SEC-11; migration `0021_activity`)
+
+Bổ sung cho `audit_logs` (thay đổi **dữ liệu**, do trigger/hàm DB ghi): `activity_logs` trả lời "**ai đã gọi API nào, lúc nào, kết quả gì, từ máy nào**" ở mức yêu cầu — kể cả thao tác thất bại/bị từ chối và các lần **đọc nhạy cảm** (audit chỉ thấy khi dữ liệu đổi).
+
+- **Ghi** (`src/server/activity.ts`, móc ở `api()` trong `http.ts`): xếp vào hàng chờ trong bộ nhớ rồi `after()` (Next) ghi **sau khi đã trả phản hồi**, gộp mọi request đang chờ thành **một** `INSERT … unnest` dưới `wf_worker` (pool phụ) ⇒ không thêm độ trễ cho request; lỗi ghi không bao giờ làm hỏng request (chỉ `console.error`); hàng chờ tràn (DB hỏng) ⇒ bỏ bớt. Ghi: **mọi thao tác ghi** (POST/PUT/PATCH/DELETE, kể cả 4xx/5xx và 403), trừ `SKIP_ROUTES` (đánh dấu thông báo đã đọc, báo lỗi trình duyệt, heartbeat); **GET chỉ khi** là sự kiện nhạy cảm hoặc bị từ chối quyền (403, trừ khi chỉ thiếu 2FA/đổi mật khẩu). Không bao giờ ghi: health, huy hiệu, thông báo (poll), tìm kiếm gõ từng phím, `/auth/me`, `/system/status`, tra cứu chiếc.
+- **Mã sự kiện nhạy cảm** (`activity_logs.action`, gắn ở máy chủ từ method + route + `format=xlsx`, không lưu query): `export` (xuất Excel báo cáo/phiếu nhập), `print` (in phiếu bán, tem), `view_cost` (xem giá vốn chiếc), `view_report` (xem báo cáo, báo cáo CTV; trang Tổng quan tự nạp nên không ghi), `reveal_pii` (xem CCCD đầy đủ), `view_audit` (xem nhật ký). Các sự kiện đã có audit riêng (`pii.reveal`, `report.exported`) **cùng `request_id`** ⇒ nối được hai bảng.
+- **Riêng tư theo cấu trúc**: cột `route` là **mẫu** (`/api/v1/sales/[id]/confirm`), không chứa giá trị tham số, query, nội dung gửi lên, tên/SĐT/CCCD; CHECK ở DB chặn ký tự lạ (`?`, `=`, khoảng trắng, chữ có dấu), `entity_id` chỉ nhận UUID, `ip_hash` chỉ hex (IP băm HMAC, không IP thô). Tham số không phải UUID (có thể là PII) chỉ tồn tại ở dạng `[id]`.
+- **Đọc**: chỉ quyền `audit.view` (policy RLS `has_permission('audit.view')`; API kiểm sớm); `wf_app` không INSERT/UPDATE/DELETE. Tên người dùng qua `app.user_display_name`. Giao diện Quản trị → **Hoạt động** (`/quan-tri/hoat-dong`): tab "Thao tác" (lọc người, khu vực, khoảng ngày, kết quả, chỉ sự kiện nhạy cảm) và tab "Đăng nhập".
+- **Lịch sử đăng nhập không nhân đôi dữ liệu**: tab "Đăng nhập" đọc lại `audit_logs` với `action` thuộc `auth.*` (đăng nhập, sai mật khẩu, khóa tạm, sai mã 2FA, dùng mã khôi phục, dùng lại refresh token, đổi mật khẩu, thiết bị tin cậy…) và `user.password_reset`/`user.status` do `activity-labels.ts` (`AUTH_EVENT_LABEL`) gắn nhãn tiếng Việt.
+- **Append-only + dọn có kiểm**: trigger `tg_activity_immutable` chặn UPDATE; `tg_no_truncate` chặn TRUNCATE; DELETE **chỉ** thành công khi chạy trong `app.fn_activity_purge()` (SECURITY DEFINER, owner `wf_definer`, `EXECUTE` chỉ `wf_worker`): trigger yêu cầu đồng thời `current_user = 'wf_definer'` và cờ cục bộ `app.activity_purge='on'` do chính hàm đặt/xóa trong transaction ⇒ `wf_definer`/`wf_worker` gọi DELETE trực tiếp đều bị chặn. Giữ `activity.retention_days` ngày (mặc định **180**, **sàn 30** dù cài đặt/tham số nhỏ hơn); job `activity-purge` chạy hằng ngày; mỗi lần xóa ghi audit `activity.purged` (số dòng).
+- Rủi ro chấp nhận: ghi sau phản hồi có thể mất một lô nếu máy chủ bị ngắt đúng khoảng đó (nhật ký là chứng cứ phụ trợ; nguồn sự thật nghiệp vụ vẫn là `audit_logs` ghi cùng transaction).
 
 ## 9. Kiểm thử bảo mật
 

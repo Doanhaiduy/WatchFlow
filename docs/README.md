@@ -19,7 +19,7 @@
 | 01 | [customer-feedback-01](01-product/customer-feedback-01.md) | **Phản hồi của khách vòng 1** → quyết định thay đổi phạm vi (CF-01…09), phần cần khách xác nhận (Q8–Q19) | Duyệt (chốt sơ) |
 | 01 | [vision-scope](01-product/vision-scope.md) | Mục tiêu, phạm vi, **quyết định đã chốt**, giả định, câu hỏi mở | Duyệt |
 | 01 | [requirements](01-product/requirements.md) | Toàn bộ yêu cầu chức năng đánh số FR-xxx, gắn module/mốc/BR/test | Duyệt |
-| 01 | [WatchFlow_Xac-nhan-tinh-nang.xlsx](01-product/WatchFlow_Xac-nhan-tinh-nang.xlsx) | **Bản dành cho khách xác nhận**: tóm tắt theo 20 màn hình + 177 tính năng bằng ngôn ngữ đời thường, quy tắc đề xuất, phân quyền, ví dụ tính tiền, câu hỏi mở. Khách trả lời xong ⇒ cập nhật `requirements`/`business-rules` theo ý kiến | Gửi khách |
+| 01 | `01-product/WatchFlow_Xac-nhan-tinh-nang.xlsx` (tệp gửi khách, không commit — `*.xlsx` bị git-ignore) | **Bản dành cho khách xác nhận**: tóm tắt theo 20 màn hình + 177 tính năng bằng ngôn ngữ đời thường, quy tắc đề xuất, phân quyền, ví dụ tính tiền, câu hỏi mở. Khách trả lời xong ⇒ cập nhật `requirements`/`business-rules` theo ý kiến | Gửi khách |
 | 01 | [ux-and-navigation](01-product/ux-and-navigation.md) | Vai trò & thiết bị, sơ đồ trang, nguyên tắc dễ dùng, màn hình chính (phong cách Glass) | Duyệt khung |
 | 02 | [glossary](02-domain/glossary.md) | Thuật ngữ VN↔EN, định nghĩa chính xác (doanh thu, thực thu, tồn kho…) | Duyệt |
 | 02 | [business-rules](02-domain/business-rules.md) | **Quy tắc nghiệp vụ BR-xxx** (nguồn sự thật nghiệp vụ) | Duyệt |

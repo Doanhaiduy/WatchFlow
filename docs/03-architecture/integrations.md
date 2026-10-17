@@ -32,7 +32,8 @@ Phạm vi hiện tại: **phiếu bán hàng nội bộ**. Khi cần hóa đơn 
 
 - **Hiện tại**: thông báo trong ứng dụng (`notifications`), sinh bởi cron và handler sự kiện; chuông + danh sách; lọc theo quyền người nhận.
 - **Loại**: giữ hàng sắp/quá hạn · khách hẹn trả đến hạn · đơn nháp của CTV chờ xác nhận · chiếc ở CTV quá hạn · linh kiện sắp hết · hàng tồn lâu · bảo hành sắp hết · máy sửa xong chưa lấy · cảnh báo sao lưu · lỗi cron · vi phạm bất biến (`fn_consistency_check`, nghiêm trọng).
-- **Sau này**: push (Web Push/VAPID), email (Resend), Zalo — thêm handler + `notification_outbox` theo mẫu Lưu Xá; người dùng chọn kênh/giờ yên tĩnh.
+- **Đã có (FR-PUSH-04)**: Web Push/VAPID tới thiết bị của chính người nhận — `notifications` (INSERT) → trigger `app.tg_notification_push` → `push_outbox` → `src/server/push.ts` (`web-push`; gửi ngoài transaction; thử lại ≤ 5 lần giãn 2^n phút; 404/410 ⇒ `disabled_at`; giờ yên tĩnh lùi `next_attempt_at`). Gọi sau mỗi request ghi (`kickOutbox`) và sau job cron. Thiếu `VAPID_*` ⇒ tắt êm. Test dùng bộ gửi giả `WF_PUSH_FAKE=1` (+ `WF_PUSH_FAKE_FILE`), không bao giờ bật ở production/Vercel. **Gửi thật tới Google FCM/Mozilla/Apple chỉ chạy được ở môi trường có mạng ra ngoài — ⏭ cloud** (`runbook` §8). Email (Resend), Zalo vẫn là "sau này".
+- **Sau này**: email (Resend), Zalo — thêm handler + hàng đợi theo mẫu push ở trên; người dùng chọn kênh.
 
 ## 6. Ngân hàng / mã thanh toán (tùy chọn, COULD)
 

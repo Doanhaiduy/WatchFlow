@@ -11,7 +11,7 @@
 4. **Ít chữ, ít chạm.** Mỗi màn một mục đích; hành động hay dùng ≤ 3 chạm; nháp tự lưu.
 5. **Nhẹ.** Không thư viện UI nặng; CSS thuần + Tailwind; `backdrop-filter` có phương án dự phòng.
 6. **Nhất quán qua token.** Không gõ cứng màu/bo góc/đổ bóng trong component — dùng biến CSS ở §3.
-7. **Chỉ bản sáng** ở giai đoạn đầu (khách chốt mẫu sáng; ưu tiên điện thoại). Token tổ chức để thêm bản tối sau (ADR-026).
+7. **Hai chế độ: Sáng (mặc định, mẫu khách chốt) và Tối** (thêm 2026-10-17 theo yêu cầu người dùng, ADR-026 cập nhật). Người dùng chọn Sáng / Tối / Theo hệ thống (`ThemeSwitch`, lưu `localStorage` khoá `wf-theme`); tất cả màu đi qua token nên hai chế độ chỉ khác giá trị token (`tokens.css`, khối `:root[data-theme="dark"]` trong `@media screen` — **in luôn dùng bản sáng**). Quy ước token: `--wf-on-accent` (chữ trên nền nhấn/gradient, luôn trắng), `--wf-surface` (mặt nổi: núm tab, mục sidebar đang chọn…), `--wf-paper`/`--wf-paper-ink` (tem, biên lai, mã QR — luôn trắng/đen), `--wf-accent` là màu TÔ còn `--wf-accent-text` là màu CHỮ/biểu tượng nhấn (đạt AA ở cả hai chế độ), `--wf-bad-solid` (nền nút nguy hiểm), `--wf-field-line` (viền ô nhập), `--wf-bg-a…d` (nền gradient). Chống nháy: `src/app/layout.tsx` chèn script nhỏ có CSP nonce đặt `data-theme` trước khi vẽ (`src/lib/theme-script.ts`).
 
 ## 2. Cấu trúc mẫu → cấu trúc ứng dụng
 
@@ -124,10 +124,17 @@ Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, 
 | `FilterChips` | `.g-chips` — cuộn ngang, chip chọn nền tím | Lọc trạng thái |
 | `Button` | `.btn` (kính), `.pri` (gradient), `.dk` (tối), `.sm`, `.block`; cao 46px | Đủ vùng chạm ≥ 44px |
 | `SearchBar` | `.sbar` — viên thuốc kính + nút quét | Ô tìm **một** cho mọi mã |
-| `Field` | `.fld` — nhãn nhỏ phía trên, ô bo 20 nền `--wf-glass-field` | `MoneyInput`, `PhoneInput`, `DatePicker`, `Select` bọc quanh |
+| `Field` | `.fld` — nhãn nhỏ phía trên, ô bo 20 nền `--wf-glass-field` | `MoneyInput`, `PhoneInput`, `DateInput`, `Select` bọc quanh |
+| `Select` | Listbox TỰ DỰNG (không còn `<select>` gốc). Desktop: `Popover` (portal, tự lật lên khi sát đáy, rộng ≥ nút); điện thoại < 1000px: bottom sheet (`Modal`) tiêu đề = nhãn; ô tìm không dấu khi > 8 lựa chọn; ✓ mục đang chọn; mục `disabled`; `placeholder` là dòng đầu giá trị `""`; `invalid` → `aria-invalid` | API giữ như cũ (`value`, `onChange(e)` với `e.target.value`, `options`, `placeholder`); thêm `onValueChange`, `label`, `searchable`, `name`. A11y: `role=combobox/listbox/option`, `aria-activedescendant`, ↑↓ Home End Enter Esc Tab, gõ chữ nhảy mục |
+| `DateInput` / `DateRange` | Chọn ngày tự dựng: giá trị `"YYYY-MM-DD"` (hoặc `""`), hiển thị dd/mm/yyyy, gõ tay được (tự chèn `/`), lịch tháng tiếng Việt (T2…CN, tuần bắt đầu thứ Hai), `min`/`max`, nút Hôm nay / Xóa, lưới chọn tháng/năm. Desktop popover, điện thoại bottom sheet. `DateRange`: một nút "dd/mm/yyyy – dd/mm/yyyy", chọn đầu–cuối rồi "Áp dụng" | `onChange(value)` nhận **chuỗi** (không phải sự kiện). Phép tính ngày qua `src/lib/dates.ts` |
+| `Popover` | Bảng nổi gắn nút neo (portal, `--wf-z-popover`, tự lật, bám nút khi cuộn, đóng khi bấm ngoài/Esc chỉ lớp trên cùng) | Dùng bởi `Select`, `DateInput` |
+| `Checkbox` / `Switch` / `RadioGroup` | Ô chọn, công tắc, nhóm chọn một — tự dựng Glass (input gốc ẩn để có phím/Tab chuẩn; vùng chạm 44px) | Không dùng `<input type="checkbox|radio">` trần ở màn nghiệp vụ |
+| `ThemeSwitch` | `SegmentedControl` 3 lựa chọn Sáng / Tối / Theo hệ thống (`compact` = "Hệ thống") | Đặt ở menu tài khoản (mobile), sidebar (desktop), trang Tài khoản |
 | `Stepper` | `.stp` — các viên thuốc bước | Nhận máy, form dài |
-| `BottomSheet` / `Modal` | `.modal`, `.sheet`, `.cart` — trượt từ đáy (mobile), giữa màn hình (desktop) | Có `gb` (thanh kéo), scrim, khóa cuộn nền |
-| `ActionSheet` | `.as` — danh sách hành động + Hủy | Từ nút "+" |
+| `BottomSheet` / `Modal` | `.modal`, `.sheet`, `.cart` — trượt từ đáy (mobile), giữa màn hình (desktop) | Có `gb` (thanh kéo), scrim, khóa cuộn nền; `dirty`/`busy` (§5.2) |
+| `ActionSheet` | `.as` — danh sách hành động + Hủy | Từ nút "+"; có `dirty`/`busy` (§5.2) |
+| `Combobox` | Ô nhập CÓ GỢI Ý (gõ tự do + chọn gợi ý, không dấu, chữ mờ Tab nhận) — §5.3 | Nguồn hàng ở phiếu nhập/Thêm đồng hồ; khác `Select` ở chỗ không bắt buộc chọn trong danh sách |
+| `DiscardConfirm`, `useDirtyGuard`, `ModalClose` | Hộp "Bỏ thay đổi chưa lưu?" + hook bảo vệ trang + nút Hủy qua cổng đóng — §5.2 | Mọi form dài / hộp thoại có form |
 | `Dock`, `Sidebar`, `TopBar` | §4 | Theo `nav.ts` và quyền |
 | `CartBar` / `CartPanel` | `.cartbar`, `.cart` | POS |
 | `Timeline` | `.tl` — chấm tím + đường nối | Lịch sử trạng thái/giá |
@@ -138,6 +145,28 @@ Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, 
 | `Chart` (area/bars/donut/ring) | Mẫu dùng SVG tự vẽ (`WF.chart.*`) | Tooltip kéo (scrub), nhãn trục nhỏ; màu: tím `--wf-accent` (doanh thu), xanh lá `--wf-ok` (lãi gộp) |
 
 Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permission="cost.view"` và kèm `LockNote`; người không có quyền **không render và không gọi API** (FR-DASH-11).
+
+### 5.2 Bảo vệ form: `dirty` / `busy` / `useDirtyGuard` (cập nhật 2026-10-17)
+
+Ứng dụng **khai báo** trạng thái bằng prop rõ ràng — **không** dò DOM theo chữ nút (khác `ModalGuard` của ref Lưu Xá). Mã: `ui/CloseGuard.tsx`, `ui/useDirtyGuard.tsx`, `ui/Modal.tsx`, `ui/ActionSheet.tsx`, `lucian/DetentSheet.tsx`; trình diễn ở `/dev/design` (mục "Bảo vệ form").
+
+| Prop / hook | Ở đâu | Hành vi |
+|---|---|---|
+| `dirty` | `Modal`, `ActionSheet`, `DetentSheet` | Có thay đổi chưa lưu ⇒ mọi đường đóng (bấm nền, Esc, nút X, vuốt xuống tờ 3 nấc, nút Hủy dùng `<ModalClose>`) hỏi **"Bỏ thay đổi chưa lưu?"** — "Ở lại" là nút mặc định (focus + Esc = ở lại), "Bỏ thay đổi" đỏ. Tờ 3 nấc vuốt xuống mà hỏi thì tự bật về mức cũ. Chọn một hành động của `ActionSheet` không hỏi (là chủ ý). Kèm `beforeunload` (đóng tab/tải lại). |
+| `busy` | cùng ba thành phần | Đang gửi dữ liệu ⇒ chặn đóng, nội dung `inert` (không bấm/Tab được), phủ lớp **"Đang xử lý…"** (hiện sau 0,2 giây để lần xử lý nhanh không nháy), trả focus sau khi xong. `locked` cũ vẫn dùng được (chỉ chặn đóng, không có lớp phủ). Mọi `locked={busy}` hiện có đã đổi thành `busy={busy}`. |
+| `<ModalClose>Hủy</ModalClose>` / `useModalClose()` | trong `Modal` | Nút Hủy/Đóng của chân hộp thoại phải đi qua cổng này (không phải `onClick={onClose}` trần) để `dirty` có tác dụng. |
+| `useDirtyGuard(dirty)` → `{ dialog, release }` | trang/biểu mẫu dài (POS, phiếu nhập, nhận máy sửa, thêm đồng hồ, giao CTV) | `beforeunload` + chặn bấm liên kết nội bộ (menu, dock, `<Link>`) bằng hộp trên; nút "Quay lại" của app đi qua `guardedNavigate`. Phải render `{dialog}` trong trang. Liên kết có `data-allow-leave` không bị chặn. **Giới hạn đã biết:** App Router không có `router.events` — `router.push()` trong mã và nút Back/vuốt Back của trình duyệt **không chặn được** (chỉ `beforeunload` còn tác dụng khi tải lại), nên biểu mẫu quan trọng vẫn nên tự lưu nháp (POS, phiếu nhập đã làm). |
+| `Button guard` | mọi nút | Bỏ lần bấm thứ hai trong 600ms (hoặc số ms nêu). **Mặc định bật cho `type="submit"`**; nút xác nhận/gửi khác (Xác nhận thu, Giữ hàng, Nhận máy…) bật tay bằng `guard`. Không bật mặc định cho nút primary thường vì nút "Tiếp" của wizard có thể bấm liên tiếp hợp lệ. Logic thuần: `src/lib/submit-guard.ts` (có test). |
+
+Cách tính `dirty`: **khác giá trị lúc mở** (hộp sửa) hoặc **đã nhập/chọn gì** (hộp thêm mới); xong lưu (`onDone`) đóng bằng `open=false` thì không hỏi. Biểu mẫu tự lưu nháp chỉ tính dirty khi chưa kịp lưu / lưu lỗi (POS: `!saleId || saving || error || body ≠ bản đã gửi`).
+
+### 5.3 `Combobox` — ô nhập có gợi ý (Lucian #034)
+
+- Giá trị luôn là **chữ trong ô** (gõ tự do được); chọn gợi ý chỉ điền nhãn (`onPick` nếu cần thêm). Gợi ý `string | { value, label, sublabel?, keywords? }`, lọc **không dấu** bằng `foldVi` (logic thuần `src/lib/suggest.ts`: xếp hạng đầu chuỗi → đầu từ → chứa → chữ phụ; tô đậm phần khớp).
+- Desktop: `Popover` (lật lên/xuống) + chữ mờ hoàn thành, **Tab** nhận. Điện thoại: danh sách nối liền dưới ô (không chiếm cả màn hình, không che bàn phím).
+- Phím: ↑↓ chọn · **Enter chỉ nhận khi đang trỏ một gợi ý** (còn lại Enter vẫn gửi biểu mẫu) · **Esc chỉ đóng danh sách** (hộp thoại chứa nó vẫn mở) · danh sách chỉ mở khi gõ / bấm vào ô / ↓ (không tự bật khi vừa focus).
+- A11y: `role="combobox"` + `aria-expanded/controls/activedescendant/autocomplete`, `role="listbox"`/`option`.
+- Đang dùng: **Nguồn hàng** (phiếu nhập "Mua vào", Thêm đồng hồ) với gợi ý từ `GET /api/v1/purchases/sources` (tên nguồn đã dùng, RLS theo người gọi, gộp không phân biệt hoa/thường/dấu, mới nhất trước; chỉ tên + số phiếu + ngày, không có tiền).
 
 ## 6. Màn hình: mẫu v6-glass → ứng dụng
 
@@ -173,6 +202,8 @@ Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permi
 7. **Mất mạng/nháp:** `OfflineBanner`, nút xác nhận khóa khi offline (`ux-and-navigation` §6).
 8. **Không dựng màn đã bị loại** dù mẫu có.
 
+**Lớp phủ thống nhất (2026-10-17).** Mọi lớp phủ (`Modal`/`BottomSheet`, `ActionSheet`, `Popover`, `DetentSheet`, `FilterDrawer`, `ConfirmDialog`) dùng chung `useOverlayBehavior` (`ui/overlay.ts`): Esc đóng lớp TRÊN CÙNG, bẫy focus, khóa cuộn nền, trả focus; chung scrim `.wf-scrim`, hoạt ảnh `usePresence` (tôn trọng `prefers-reduced-motion`), safe-area đáy. Thang z-index ở `tokens.css`: sticky 20 · fab 55 · nav 60 · dim 90 · detent 97 · banner 98 · overlay 120 · popover 130 · toast 140 · skip 200. `Modal` = bottom sheet trên điện thoại, hộp giữa 520px trên desktop. Không dùng `window.alert/confirm/prompt`/`<dialog>`.
+
 ## 8. Lucian UX/UI — dùng thế nào (skill `lucian-uxui`)
 
 **Là gì:** thư viện phần tử UI tương tác tự chứa (400 phần tử/27 nhóm, kiểm tra 2026-10-16, catalog `34c4b3e61d`), giấy phép MIT. Mỗi phần tử: `<style>` scoped `.uNNN` + `<div class="ux uNNN">` + `<script>`; đọc màu qua token `--ux-*`. Skill `/lucian-uxui:lucian-uxui` (CLI `search` → `get` → port) dùng để **tìm và lấy đúng phần tử cần**.
@@ -201,7 +232,7 @@ Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permi
 }
 .ux{ font-family:inherit }                /* dùng Be Vietnam Pro thay Pretendard */
 ```
-Giữ nguyên khối quy tắc nền `.ux` (box-sizing, focus ring `outline:2px solid var(--ux-accent)`, ép giảm chuyển động) lấy từ `node <skill-dir>/scripts/lucian-uxui.mjs tokens` — **một lần cho cả dự án**. Chỉ định nghĩa nhánh sáng; khi thêm bản tối, thêm khối `[data-theme="dark"]` với cùng tên token.
+Giữ nguyên khối quy tắc nền `.ux` (box-sizing, focus ring `outline:2px solid var(--ux-accent)`, ép giảm chuyển động) lấy từ `node <skill-dir>/scripts/lucian-uxui.mjs tokens` — **một lần cho cả dự án**. Nhánh sáng ở `:root`; nhánh tối ở `:root[data-theme="dark"]` (đã có, định nghĩa lại mọi `--wf-*` và các `--ux-*` không trỏ về `--wf-*`).
 
 ### 8.2 Bản đồ phần tử cần → từ khóa tìm → ứng viên đã thấy (2026-10-16)
 
@@ -222,7 +253,7 @@ Giữ nguyên khối quy tắc nền `.ux` (box-sizing, focus ring `outline:2px 
 | Trạng thái rỗng / không có kết quả | Danh sách, tìm kiếm | `empty state` | #092, #088 |
 | Lỗi tải widget / 404 | Widget, trang không tồn tại | `error state` | #090, #089 |
 | Skeleton tải | Danh sách, Tổng quan | `skeleton loading` | #079 |
-| Wizard nhận máy / form nhiều bước | Nhận máy sửa, giao hàng CTV | `stepper wizard` | #042 |
+| Wizard nhận máy / form nhiều bước | Nhận máy sửa, giao hàng CTV, **Nhập Excel hàng loạt** (`/nhap-excel`: Chọn tệp → Xem trước → Kết quả; khu thả tệp tự dựng theo Glass — không có trong Lucian) | `stepper wizard` | #042 (+#047 lọc dòng) |
 | Bottom sheet nhiều độ cao (giỏ POS) | POS | `bottom sheet` | #336 |
 | Drawer bộ lọc có đếm kết quả | Đồng hồ, Phiếu | `filter drawer` | #305 |
 | Tải ảnh (kéo thả, tiến trình) | Ảnh chiếc, ảnh nhận máy, giấy tờ | `image upload` | #032, #075 |
@@ -264,7 +295,26 @@ Mỗi lần port một phần tử, thêm một dòng (cũng là danh sách ghi 
 
 | # | Tên | Tệp trong dự án | Dùng ở | Chỉnh sửa so với bản gốc | Ngày | Người |
 |---|---|---|---|---|---|---|
-| — | (chưa có) | | | | | |
+| 034 | Airport autocomplete | `src/components/lucian/lucian-034.css` · `src/components/ui/Combobox.tsx` · `src/lib/suggest.ts` | Ô nhập có gợi ý (`Combobox`): nguồn hàng ở phiếu nhập / thêm đồng hồ | Chỉ lấy chữ mờ hoàn thành (Tab nhận), danh sách lọc tô đậm phần khớp, thanh sáng trượt theo mục; bỏ biểu tượng máy bay/mã sân bay/khung 340×380; lọc không dấu; Enter chỉ nhận khi đang trỏ (để Enter vẫn gửi form), Esc chỉ đóng danh sách; Popover (desktop) / danh sách nối liền dưới ô (điện thoại); chữ mờ chỉ desktop | 2026-10-17 | AI (Claude) |
+| 031 | Custom select listbox | `src/components/lucian/lucian-031.css` · `src/components/ui/Select.tsx` | Mọi ô chọn (`Select`) | Chỉ lấy danh sách chọn: thanh sáng trượt theo mục đang trỏ (`--i` × `--row`), dấu ✓ nảy, mũi tên xoay; bỏ cờ/chú thích phụ/nút Lưu/khung 340×436; danh sách nằm trong `Popover` (desktop) hoặc `Modal` (điện thoại), cuộn được, ô tìm không dấu, mục disabled, phím ↑↓ Home End gõ-chữ-nhảy; logic viết lại bằng state React | 2026-10-17 | AI (Claude) |
+| 030 | Date range calendar | `src/components/lucian/lucian-030.css` · `src/components/lucian/CalendarPanel.tsx` · `src/components/ui/DateInput.tsx` | Mọi ô ngày (`DateInput`), khoảng ngày báo cáo (`DateRange`) | Lấy lưới ngày + dải chọn khoảng + nút chuyển tháng; bỏ khung thẻ 350px; thêm chế độ MỘT ngày, tuần bắt đầu thứ Hai (T2…CN, CN đỏ), `min`/`max`, lưới chọn tháng/năm, nút Hôm nay/Xóa, tiếng Việt; ngày là chuỗi ISO, cộng trừ qua `src/lib/dates.ts`; phím mũi tên/Home/End/PageUp/PageDown | 2026-10-17 | AI (Claude) |
+| 070 | Stacking toasts | `src/components/lucian/lucian-070.css` · `src/components/ui/Toast.tsx` | Toàn app (`ToastProvider`/`useToast`) | Bỏ nút demo + khung 350×370; vùng toast cố định (**đầu màn hình dưới tai thỏ ở mobile**, góc phải dưới ở desktop; `--k` lật chiều xếp chồng; z = `--wf-z-toast`, trên mọi lớp phủ); viết lại logic bằng state/ref React (xếp chồng, xòe khi hover/focus, vuốt bỏ, đếm ngược rAF, dọn timer); chữ tiếng Việt; thêm kind cảnh báo/loading + `promise()`; vùng chạm nút ×/hành động ≥ 44px | 2026-10-16 | AI (Claude) |
+| 047 | Period segmented control | `src/components/lucian/lucian-047.css` · `src/components/ui/SegmentedControl.tsx` | Chọn kỳ, tab chỉ số (Tổng quan, Báo cáo, Thống kê CTV) | Chỉ lấy công tắc phân đoạn (núm giãn khi trượt); bỏ thẻ số đếm + biểu đồ; mặc áo Glass (`.wf-seg`, viên pill, núm trắng); N tùy chọn thay vì 4; vai trò radiogroup hoặc tablist; phím mũi tên; ResizeObserver dọn khi unmount | 2026-10-16 | AI (Claude) |
+| 026 | 6-digit code input | `src/components/lucian/lucian-026.css` · `src/components/lucian/OtpInput.tsx` | Xác thực 2 bước (TOTP) | Bỏ khung 350×250 + biểu tượng/tiêu đề mẫu; mã đúng do `onComplete` (không gắn cứng); chữ tiếng Việt; chữ số vào ô bằng JSX (không innerHTML); bỏ đếm ngược gửi lại; thu nhỏ ô ≤ 360px | 2026-10-16 | AI (Claude) |
+| 062 | Sign-in card feedback | `src/components/lucian/lucian-062.css` · `src/components/lucian/LoginCard.tsx` | Đăng nhập | Thành phần trình bày (props `onSubmit`, `loading`, `error`, `attemptsLeft`, `success`); bỏ ngăn chào mừng; logo + nút theo token Glass; nhập chữ 16px; nút vô hiệu khi thiếu dữ liệu; không còn mật khẩu mẫu | 2026-10-16 | AI (Claude) |
+| 035 | Money transfer amount | `src/components/lucian/lucian-035.css` · `src/components/lucian/MoneyAmountInput.tsx` | POS "Khách đưa", thanh toán, cọc, giá thu giao CTV | Bỏ chip người nhận, đổi tiền tệ, nút Gửi; số theo VND (dấu chấm nghìn, hậu tố ₫); chip cộng nhanh/"Đủ"/"Xóa" cao 44px; hạn mức `max` làm số đỏ + rung; dòng phụ do cha truyền | 2026-10-16 | AI (Claude) |
+| 092 | Empty search that loosens filters | `src/components/lucian/lucian-092.css` · `src/components/ui/EmptyState.tsx` | Danh sách/tìm kiếm không có kết quả | Chỉ lấy ngăn rỗng (kính lúp quét kệ + nút "gỡ bộ lọc → N kết quả"); bỏ ô tìm, chip, lưới, dữ liệu mẫu; biến thể "plain" cho câu hướng dẫn bắt đầu; tròng kính dùng token | 2026-10-16 | AI (Claude) |
+| 090 | Error widget that plugs back in | `src/components/lucian/lucian-090.css` · `src/components/ui/ErrorState.tsx` | Lỗi tải widget/danh sách | Bỏ thẻ widget + sân khấu thành công + biểu đồ; giữ phích cắm, đếm ngược tự thử lại (vòng trên nút), chấm lần thử, chi tiết lỗi; `onRetry` thật; nút "Chi tiết" ≥ 44px | 2026-10-16 | AI (Claude) |
+| 079 | Skeleton that blooms into a post | `src/components/lucian/lucian-079.css` · `src/components/ui/Skeleton.tsx` | Skeleton danh sách/KPI/avatar | Chỉ lấy vệt sáng quét (`u079-sk`); mỗi khối quét riêng (không căn vệt chung `--sx`); bỏ bài đăng mẫu + hiệu ứng nở nội dung | 2026-10-16 | AI (Claude) |
+| 008 | Copy button that turns into a check | `src/components/lucian/lucian-008.css` · `CopyCodeButton.tsx` | Mã nội bộ chiếc; dùng lại (không port mới) ở `TransferQr` — sao chép STK/số tiền/nội dung chuyển khoản (VietQR) | Chỉ lấy nút (biểu tượng thành dấu tích, vệt sáng, bong bóng "Đã sao chép"); bỏ tab và hộp lệnh; vùng chạm 44px | 2026-10-16 | AI (Claude) |
+| 018 | Rolling quantity stepper | `lucian-018.css` · `QuantityStepper.tsx` | Điều chỉnh tồn linh kiện (sau này giỏ POS) | Chỉ lấy bộ chỉnh số lăn; bỏ thẻ sản phẩm + tổng tiền; hỗ trợ số âm có dấu +/− | 2026-10-16 | AI (Claude) |
+| 032 | Drag-and-drop upload | `lucian-032.css` · `ImageUpload.tsx` | Ảnh chiếc (sản phẩm/tình trạng) | Tải thật bằng XHR có % tiến trình, thử lại khi lỗi; bỏ dữ liệu mẫu; chỉ nhận ảnh; chữ tiếng Việt | 2026-10-16 | AI (Claude) |
+| 305 | Filter drawer with live result count | `lucian-305.css` · `FilterDrawer.tsx` | Danh sách đồng hồ | Lấy nút Lọc + huy hiệu, chip bộ lọc đang áp dụng, nút "Xem N kết quả" số lăn; ngăn kéo dùng Modal Glass; số kết quả lấy từ API (pageSize=1); bỏ lưới/thanh giá/màu/cỡ mẫu | 2026-10-16 | AI (Claude) |
+| 042 | Step-by-step wizard | `lucian-042.css` · `WizardSteps.tsx` | Phiếu nhập nhiều bước | Chỉ lấy thanh bước (đường tiến độ + chấm đổi thành dấu tích, bấm để quay lại); bỏ thẻ khung, nội dung và nút mẫu; chấm ≥ 44px | 2026-10-17 | AI (Claude) |
+| 336 | Bottom sheet with three detents | `lucian-336.css` · `DetentSheet.tsx` | Giỏ phiếu bán (POS mobile) | Chỉ lấy tờ 3 nấc (đóng · nửa · đầy) kéo + lò xo; bỏ bản đồ/danh sách mẫu; nền kính Glass; nội dung cuộn riêng + chừa đáy | 2026-10-17 | AI (Claude) |
+| 003 | Hold to delete | `lucian-003.css` · `HoldButton.tsx` | Tịch thu cọc giữ hàng | Chỉ lấy nút giữ-để-xác-nhận (đổ đầy đỏ 1,2 giây); bỏ tệp mẫu/hoàn tác; hỗ trợ phím cách/Enter; tự đặt lại sau khi xác nhận | 2026-10-17 | AI (Claude) |
+| 074 | Notification bell dropdown | `lucian-074.css` · `NotificationBell.tsx` | Chuông ở thanh trên (desktop) và tiêu đề mobile | Chỉ lấy chuông (lắc khi có thông báo mới, huy hiệu nảy) + bảng thả xuống + hàng có chấm chưa đọc; bỏ tab Nhắc tên/avatar emoji/dữ liệu mẫu; bấm hàng = đánh dấu đã đọc + mở liên kết; đóng khi bấm ngoài/Esc | 2026-10-17 | AI (Claude) |
+| 046 | Command palette | `src/components/lucian/lucian-046.css` · `src/components/layout/CommandPalette.tsx` (+ `palette-bus.ts`) | Bảng lệnh Ctrl+K / tìm toàn cục (nút tìm ở thanh trên và đầu trang điện thoại) | Lấy ô tìm + thanh sáng trượt theo mục (`--y`/`--h` đo thật) + chữ khớp tô màu (nhiều từ khóa, không dấu) + phím tắt `kbd` + hoạt ảnh mở xuống (clip-path); bỏ pill thu gọn, dữ liệu mẫu, màu gradient từng mục; thêm nhóm có tiêu đề, dòng phụ, tag "Enter để mở", trạng thái đang tải/lỗi/trống, combobox/listbox (`aria-activedescendant`); điện thoại = toàn màn hình, desktop = hộp giữa 640px; mở bằng Ctrl/⌘+K, `/`; Esc/bẫy focus/khóa cuộn qua `useOverlayBehavior`; logic viết lại bằng state React (không innerHTML) | 2026-10-17 | AI (Claude) |
 
 ## 10. Quy trình thiết kế màn chưa có trong mẫu
 

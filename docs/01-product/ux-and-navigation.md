@@ -13,7 +13,7 @@
 6. **Không mất việc.** Nháp tự lưu liên tục (cục bộ + máy chủ), mất mạng có biểu ngữ và nút xác nhận bị khóa, gửi lại an toàn.
 7. **Rõ ràng về tiền.** Tiền luôn định dạng `8.200.000 ₫`, cỡ chữ lớn ở tổng phải trả; màu *chỉ* hỗ trợ, luôn kèm chữ.
 8. **Hành động nguy hiểm tách riêng.** Hủy/tịch thu/ghi mất: hộp xác nhận nêu hậu quả bằng số ("Sẽ trả máy về kho và hủy thanh toán 8.200.000 ₫") + bắt lý do.
-9. **Chỉ chạm ≥ 44px**, chữ nhập ≥ 16px, tương phản AA; **bản sáng** (bản tối hoãn — ADR-026).
+9. **Chỉ chạm ≥ 44px**, chữ nhập ≥ 16px, tương phản AA; bản sáng mặc định + **bản tối** chọn được (Sáng / Tối / Theo hệ thống — CQ-016).
 10. **Trống thì hướng dẫn.** Màn hình trống có câu "Bạn chưa có … — Bắt đầu bằng …" + nút hành động.
 11. **Ai không có quyền thì không thấy.** Khối giá vốn/lãi/thống kê không render nếu thiếu quyền, kèm ghi chú khóa ở nơi người có quyền xem.
 
@@ -89,6 +89,12 @@ Bước 1 Khách (tìm SĐT/tạo nhanh) → Bước 2 Máy (thương hiệu/mod
 
 ### 4.7 Tiền thu (báo cáo R8) — thay "Thu chi"
 Một trang xem **thực thu** theo ngày/khoảng ngày: tiền mặt / chuyển khoản; cọc nhận/hoàn; CTV nộp; thu nhập khác. Không số dư, không phiếu chi.
+
+### 4.8 Tìm nhanh (Ctrl+K), huy hiệu số việc, dải cảnh báo vận hành — FR-NAV-01…03
+
+- **Bảng lệnh / tìm toàn cục.** Mở bằng **Ctrl/⌘+K**, phím **/** (khi không gõ trong ô nhập), nút tìm ở thanh trên (desktop, hiện kèm phím tắt) hoặc nút kính lúp đầu mọi trang trên điện thoại. Desktop = hộp giữa 640px; điện thoại = toàn màn hình. Ô trống: *Gần đây* (≤ 5, lưu trình duyệt — chỉ nhãn + đường dẫn, **không** lưu khách/SĐT), *Hành động nhanh* (Bán nhanh, Nhận máy sửa, Nhập một chiếc, Thêm khách, Giữ hàng… theo quyền) và *Trang* (theo quyền, kể cả các tab Quản trị). Gõ ≥ 2 ký tự: lọc hành động/trang không dấu + tìm máy chủ (`GET /api/v1/search`, debounce 250ms): Đồng hồ, Khách hàng, Phiếu bán/sửa/nhập, Giữ hàng, Linh kiện — mỗi nhóm chỉ hiện khi có quyền. Gõ **đúng mã nội bộ/serial** ⇒ dòng "Khớp chính xác" lên đầu, **Enter mở thẳng** chiếc (kể cả bấm Enter trước khi hết debounce). ↑↓ chọn, Enter mở, Esc đóng; có trạng thái đang tải, lỗi (nút Thử lại), trống; combobox/listbox có `aria-activedescendant`. CTV chỉ thấy chiếc đang giữ và khách của mình.
+- **Huy hiệu số việc** (`GET /api/v1/me/badges`, làm mới 60 giây + khi quay lại tab): viên số ở mục điều hướng tương ứng — dock (góc biểu tượng; việc của mục chỉ có trong Menu gom vào nút **Menu**), sidebar, danh sách Menu. **Đỏ** khi có việc quá hạn, **vàng** khi chỉ đang chờ; rê chuột/đọc màn hình thấy từng loại việc. Tổng số cũng lên biểu tượng ứng dụng đã cài (`navigator.setAppBadge`, bọc `try`).
+- **Dải cảnh báo vận hành** (chỉ người có `system.health`, `GET /api/v1/system/status?summary=1`, 5 phút/lần): dưới thanh trên. Đỏ = cron quá hạn/lỗi, sao lưu lỗi/quá hạn, kho ảnh sắp đầy; vàng = lỗi hệ thống mới 24 giờ, kho ảnh đã dùng nhiều. Bấm ⇒ Quản trị → Hệ thống; nút × ẩn đến hết hôm nay (`localStorage`), tự hiện lại khi sang ngày mới hoặc có vấn đề **loại khác**.
 
 ## 5. Thành phần giao diện dùng chung
 Danh sách thành phần, lớp và token: `ui-design-system` §3–§5 (Glass). Quy ước: không dùng `<input>`/`<select>` thô trong màn nghiệp vụ — bọc qua `Field`/`MoneyInput`/`Select`…; phần tử tương tác phức tạp ưu tiên lấy từ thư viện Lucian (`ui-design-system` §8).

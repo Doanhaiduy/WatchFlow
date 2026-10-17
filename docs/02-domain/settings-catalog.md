@@ -78,15 +78,32 @@
 | `security.mfa_required_roles` | `["owner"]` | Vai trò bắt buộc TOTP | BR-SEC-04 |
 | `security.password_min_length` | 10 | Độ dài tối thiểu | BR-SEC-04 |
 | `security.pii_reveal_requires_reason` | true | Xem CCCD đầy đủ phải nêu lý do | BR-SEC-03 |
+| `security.trusted_device_days` | 30 | "Tin cậy thiết bị này" ở bước 2FA: số ngày (0 = tắt tính năng, tối đa 90). Chỉ bỏ bước mã 6 số khi đăng nhập; mật khẩu và xác thực lại vẫn bắt buộc. Chỉ chủ đổi được (khóa `security.*`) | BR-SEC-10 |
+| `activity.retention_days` | 180 | Giữ nhật ký hoạt động (Quản trị → Hoạt động) bao nhiêu ngày rồi job hằng ngày dọn (tối thiểu 30, tối đa 3650) | BR-SEC-11 |
 
 ## 8. Hệ thống
 
 | Khóa | Mặc định | Ý nghĩa |
 |---|---|---|
 | `backup.heartbeat_max_hours` | 36 | Quá ngưỡng ⇒ cảnh báo (BR-BAK-02) |
+| `storage.purge_after_days` | 7 | Ảnh thường bị xóa mềm giữ N ngày rồi xóa THẬT khỏi kho; ảnh giấy tờ (`id_document`) xóa ngay lượt job kế tiếp; tệp bất biến không tự xóa (BR-SEC-09) |
+| `storage.quota_mb` | 1024 | Hạn mức kho lưu trữ (MB) — Supabase gói Free 1 GB; dùng cho % đã dùng và ước tính ngày đầy (BR-BAK-04) |
+| `storage.warn_percent` | 80 | Dùng ≥ N% hạn mức ⇒ cảnh báo trong ứng dụng cho người có `system.health` |
+| `storage.critical_percent` | 95 | Dùng ≥ N% ⇒ mức khẩn ("Sắp đầy") |
 | `ui.disabled_modules` | `[]` | Danh sách module ẩn/bảo trì (cờ tính năng) |
 | `feature.ai.enabled` | false | Công tắc tổng AI (ngoài đường găng) |
 | `notifications.enabled_types` | (tất cả) | Loại thông báo trong ứng dụng đang bật |
+
+## 8b. Thanh toán chuyển khoản (VietQR)
+
+| Khóa | Mặc định | Ý nghĩa |
+|---|---|---|
+| `payment.bank_bin` | "" | Mã BIN 6 số của ngân hàng nhận tiền (chọn từ danh sách, có ô tìm). Trống ⇒ chưa cấu hình ⇒ không hiện QR |
+| `payment.account_no` | "" | Số tài khoản nhận (4–19 ký tự chữ-số) |
+| `payment.account_name` | "" | Tên chủ tài khoản (hiển thị cạnh QR) |
+| `payment.transfer_template` | "{code}" | Mẫu nội dung chuyển khoản; {code} = mã phiếu. Chuẩn hóa không dấu/IN HOA, ≤ 25 ký tự, giữ trọn mã phiếu. Phiếu chưa có mã (POS, cọc lúc tạo) dùng mã tạm theo ngữ cảnh |
+
+Mã VietQR vẽ ngay trên trình duyệt (không gọi dịch vụ ngoài) khi chọn Chuyển khoản/Kết hợp; **chỉ hiển thị, không ghi tiền** (BR-PAY-02). Thông tin tài khoản nhận + thông tin cửa hàng in trên phiếu đọc qua `GET /api/v1/store-info` (mọi người đã đăng nhập: bán hàng cần hiện QR cho khách dù không có `settings.view`); sửa cần `settings.manage`.
 
 ## 9. Đã bỏ khỏi danh mục (hoãn — xem archive)
 `sales.return_window_days`, `sales.return_window_days_used` (đổi trả), `commission.pay_when` (hoa hồng), `repair.internal_labor_costing` (không tiền công), `finance.allow_negative_cash`, `finance.books_start_date`, `finance.debt_alert_days` (quỹ/kỳ/công nợ).

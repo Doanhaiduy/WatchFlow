@@ -1,6 +1,6 @@
 # Quy ước API & bản đồ endpoint
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Hợp đồng dữ liệu = schema Zod ở `src/lib/types/*` (dùng chung cho form và API); tài liệu này cố định **quy ước** và **bản đồ**.
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01` + triển khai M0–M8) · Hợp đồng dữ liệu = schema Zod ở `src/lib/types/*` (dùng chung cho form và API); tài liệu này cố định **quy ước** và **bản đồ**.
 
 ## 1. Quy ước chung
 
@@ -39,6 +39,7 @@
 
 | Nhóm | Mã (HTTP) |
 |---|---|
+| Thông báo đẩy | `WF-PUSH-DISABLED` (503, thiếu khóa VAPID) · `WF-PUSH-NO-DEVICE` (409, chưa có thiết bị bật khi "Gửi thử") — API `/api/v1/me/push-config` (GET, PUT), `/api/v1/me/push-subscriptions` (POST, DELETE), `/api/v1/me/push-subscriptions/test` (POST) |
 | Chung | `WF-AUTH-UNAUTHENTICATED` (401) · `WF-AUTH-FORBIDDEN` (403) · `WF-AUTH-MUST-CHANGE-PASSWORD` (403) · `WF-AUTH-MFA-REQUIRED` (403) · `WF-AUTH-LOCKED` (423) · `WF-VALIDATION` (422) · `WF-NOT-FOUND` (404) · `WF-CONFLICT-VERSION` (412) · `WF-IDEMPOTENCY-MISMATCH` (422) · `WF-RATE-LIMIT` (429) · `WF-BUSY` (409) · `WF-REASON-REQUIRED` (422) · `WF-DOC-NOT-DRAFT` (409) · `WF-DOC-BACKDATE` (422) |
 | Catalog | `WF-UNIT-SERIAL-DUPLICATE` (409) · `WF-UNIT-INVALID-TRANSITION` (409) · `WF-UNIT-PHOTO-REQUIRED` (422) · `WF-UNIT-GRADE-REQUIRED` (422) |
 | Nhập hàng & giá vốn | `WF-PUR-HAS-DEPENDENTS` (409) · `WF-PUR-SELLER-ID-REQUIRED` (422) · `WF-PUR-COST-ALLOCATION` (422) · `WF-COST-NOT-ADJUSTABLE` (409) |
@@ -50,6 +51,8 @@
 | Sửa chữa | `WF-REP-INVALID-STATUS` (409) · `WF-REP-QUOTE-NOT-APPROVED` (409) · `WF-REP-PART-INSUFFICIENT` (409) · `WF-REP-LOCKED` (409) |
 | Kiểm kê | `WF-INV-STOCKTAKE-CLOSED` (409) |
 | Bảo mật | `WF-SEC-LAST-OWNER` (409) · `WF-SEC-PII-REASON` (422) · `WF-SEC-REAUTH` (401, cần xác thực lại) |
+
+**Bổ sung khi triển khai (2026-10-17):** `WF-AUTH-INVALID` (401, sai email/mật khẩu — header `X-Attempts-Left` khi còn ≤ 3) · `WF-AUTH-CSRF` (403) · `WF-AUTH-MFA-INVALID` (401) · `WF-IDEMPOTENCY-REQUIRED` (428) · `WF-CONFLICT` (409, trùng/tham chiếu) · `WF-DOC-FUTURE` (422) · `WF-IMMUTABLE` (409, dữ liệu chỉ đổi qua nghiệp vụ) · `WF-USER-EMAIL-DUPLICATE` (409) · `WF-PASSWORD-WEAK` (422) · `WF-FILE-INVALID` (422) · `WF-FILE-TOO-LARGE` (413) · `WF-CUS-PHONE-DUPLICATE` (409, gửi lại `force=true` để vẫn tạo) · `WF-INTERNAL` (500).
 
 Thêm mã mới: thêm vào `errors.ts` (có mô tả tiếng Việt) + bảng này + test; không ném `Error` thường với câu dành cho người dùng. Mã đã hoãn (`WF-FIN-*`, `WF-RET-*`, `WF-PERIOD-*`, `WF-PUR-OVERPAY/HAS-PAYMENTS`, `WF-REP-PHOTO-REQUIRED`) ở archive.
 
@@ -63,6 +66,8 @@ Ký hiệu: **G** đọc · **P** tạo · **U** sửa nháp · **A** hành đ�
 | P `/auth/login` · P `/auth/logout` · P `/auth/refresh` · G `/auth/me` | Phiên | công khai / đã đăng nhập |
 | P `/auth/change-password` · P `/auth/mfa/{setup,verify,disable}` · P `/auth/reauth` | Mật khẩu, TOTP, xác thực lại | đã đăng nhập |
 | G `/auth/sessions` · A `/auth/sessions/{id}/revoke` | Phiên đăng nhập | đã đăng nhập |
+| P `/auth/mfa/verify` nhận thêm `trustDevice?: boolean` (chỉ hiệu lực khi 2FA đã bật từ trước và `security.trusted_device_days > 0`) ⇒ phản hồi `{ok, recoveryCodes, trusted}` + `Set-Cookie` thiết bị tin cậy (`__Secure-wf_td`, HttpOnly, SameSite=Strict, Path=/api/v1/auth, token 256-bit); P `/auth/login` phản hồi thêm `trustedDevice` (true ⇒ đã bỏ bước mã nhờ cookie, `mfaPending=false`) | Tin cậy thiết bị (BR-SEC-10) | đã đăng nhập / công khai |
+| G `/auth/trusted-devices` (`{days, items:[{id,label,createdAt,lastUsedAt,expiresAt,current}]}` — không lộ token/băm) · D `/auth/trusted-devices` (quên tất cả + gỡ cookie) · D `/auth/trusted-devices/{id}` (bỏ một thiết bị; 404 nếu không phải của mình/đã thu hồi) | Thiết bị tin cậy của **chính mình** | đã đăng nhập |
 | G/P/U `/users` · A `/users/{id}/{reset-password,set-status}` · U `/users/{id}/roles` | Người dùng | `user.manage` |
 | G/P/U `/roles` · U `/roles/{id}/permissions` · G `/permissions` | Vai trò, quyền | `role.manage` |
 | U `/users/{id}/collaborator-profile` | Hồ sơ CTV (SĐT, khu vực, ghi chú) | `collab.manage` |
@@ -71,9 +76,10 @@ Ký hiệu: **G** đọc · **P** tạo · **U** sửa nháp · **A** hành đ�
 | G/U `/settings` (U theo khóa) | `settings.view`/`settings.manage` |
 |---|---|
 | G `/audit` | `audit.view` |
-| P `/files` (tải ảnh) · G `/files/{id}` (URL ký/proxy) · G `/files/{id}/thumb` | theo thực thể |
+| G `/activity` (nhật ký hoạt động cấp request; lọc `userId`, `from`/`to` (YYYY-MM-DD, giờ VN), `result=ok\|error`, `area`, `q`, `sensitive=1`, con trỏ `before`, `limit` ≤ 100 ⇒ `{items, next}`) · G `/activity/logins` (lịch sử đăng nhập = `audit_logs auth.*`, cùng bộ lọc) · G `/activity/users` (người có hoạt động trong khoảng ngày, cho ô lọc) | `audit.view` (BR-SEC-11) |
+| P `/files` (tải ảnh; multipart `file`,`kind`,`entityTable?`,`entityId?`,`exifDate?` — ngày chụp EXIF do trình duyệt đọc trước khi nén, dạng `YYYY:MM:DD HH:MM:SS`, chỉ dùng khi ảnh gửi lên không còn EXIF) · G `/files/{id}` (URL ký/proxy) · G `/files/{id}/thumb` | theo thực thể |
 | G `/notifications` · A `/notifications/{id}/read`, `/read-all` | đã đăng nhập |
-| G `/health` · G `/health?deep=1` · G `/system/status` | công khai / `system.health` |
+| G `/health` · G `/health?deep=1` · G `/system/status` · G `/system/storage` (dung lượng kho, BR-BAK-04) | công khai / `system.health` |
 
 ### Catalog — `/api/v1/catalog`
 | G/P/U `/brands` · G/P/U `/models` · G `/models/{id}` | `catalog.view` / `catalog.manage` |
@@ -146,6 +152,40 @@ Ký hiệu: **G** đọc · **P** tạo · **U** sửa nháp · **A** hành đ�
 
 ### Cron & vận hành — `/api/cron/*`, `/api/v1/public/ops-heartbeat`
 Chỉ gọi bởi Vercel Cron (Bearer `CRON_SECRET`) hoặc repo sao lưu (heartbeat, `OPS_HEARTBEAT_SECRET`).
+
+### Báo lỗi trình duyệt — `POST /api/v1/public/client-error` (công khai)
+Body `{kind: boundary|global|window|promise, message≤500, digest?, path?≤300, stack?≤2000, version?≤32}` ⇒ `200 {ok:true}`. Kiểm `Origin` cùng nguồn (khác ⇒ 403 `WF-AUTH-CSRF`), sai kiểu/quá dài ⇒ 422 `WF-VALIDATION`, vượt 30/phút/IP-băm hoặc 600/giờ toàn hệ thống ⇒ 429 `WF-RATE-LIMIT`. Ghi `error_events` (`source=client`); chi tiết `security-model` §7. Phía trình duyệt: lỗi mạng/hết giờ khi gọi API ⇒ `ApiClientError(0, "WF-NETWORK", câu dễ hiểu)` (`src/lib/humanize-error.ts`; không phải mã do máy chủ trả); 5xx không có `detail` ⇒ câu theo mã HTTP.
+
+### Bổ sung khi triển khai (2026-10-17)
+| Endpoint | Mục đích | Quyền |
+|---|---|---|
+| P `/purchases/quick` | Nhập nhanh một chiếc (tạo + xác nhận cùng giao dịch) | `purchase.create` (+ `purchase.confirm` để xác nhận) |
+| G `/purchases/sources` | Gợi ý "Nguồn hàng" cho `Combobox`: tên nguồn đã dùng (RLS theo người gọi, gộp hoa/thường/dấu, mới nhất trước, tối đa 200; chỉ tên + số phiếu + ngày) | `purchase.create` hoặc `purchase.view` |
+| A `/catalog/units/{id}/identity` · A `/catalog/units/{id}/cost-adjust` | Sửa loại/serial (BR-UNIT-06) · điều chỉnh giá vốn | `catalog.manage` · `cost.adjust` |
+| A `/sales/{id}/print` | Ghi lần in; `reprint` từ lần 2 | `sale.view`/`sale.view_own` |
+| A `/reservations/{id}/cancel` (`mode=refund|forfeit`) · A `/reservations/{id}/convert` | Hủy giữ · tạo phiếu bán nháp từ giữ hàng | `reservation.manage` (+`forfeit`) · `sale.create_draft` |
+| P `/collab/me/sales` · G `/collab/me/{units,sales,stats}` | Màn CTV | `collab.view_own` |
+| P `/collaborators/{id}/assignments` · A `/assignments/{id}/void` · A `/collaborators/{id}/return` · G/P `/collaborators/{id}/settlements` · A `/settlements/{id}/void` | Giao/thu hồi/quyết toán | `collab.manage` |
+| A `/repairs/{id}/lines/{lineId}/{consume,unconsume}` · A `/repairs/{id}/approve-quote` | Dùng/bỏ dùng linh kiện · khách đồng ý báo giá | `repair.update` |
+| P `/stocktakes/{id}/lines` (mã/serial hoặc linh kiện + số đếm) | Ghi đếm | `stocktake.manage` |
+| G `/reports/{code}?from&to&group&days&format=json|xlsx` (`revenue, profit, moves, stock, aging, open-balances, repairs, collections, shrinkage, warranty`) | R1–R11; Excel cần `report.export`, 5 lần/giờ, audit | theo hàm `rpt_*` |
+| G `/files/{id}`, `/files/{id}/thumb` | Proxy tệp (không lộ URL Storage) | theo RLS `files` |
+
+### Tìm nhanh & điều hướng — `/api/v1/search`, `/api/v1/me/badges`, `/api/v1/system/status?summary=1` (FR-NAV-01…03)
+| Endpoint | Mục đích | Quyền / lưu ý |
+|---|---|---|
+| G `/search?q=` (2–60 ký tự, sau khi cắt khoảng trắng; ngắn/dài ⇒ 422 `WF-VALIDATION`) | Bảng lệnh Ctrl+K: gộp theo nhóm `units` (mã nội bộ, serial, tên/loại/thương hiệu), `customers` (tên, mã, SĐT), `sales`/`repairs`/`purchases`/`reservations` (theo mã phiếu), `parts`. Mỗi nhóm ≤ 5 dòng; `exactUnitId` ≠ null khi gõ đúng mã nội bộ/serial (client nhảy thẳng) | Mỗi nhóm CHỈ có khi người gọi có quyền xem (`catalog.view`/`collab.view_own`, `customer.view`/`view_own`, `sale.view`/`view_own`, `repair.view`, `purchase.view`, `reservation.manage`, `part.view`); không có quyền ⇒ khóa nhóm **vắng mặt**. Chạy dưới `wf_app` (RLS: CTV chỉ thấy chiếc đang giữ, khách của mình). Không trả giá vốn/giá; SĐT khách chỉ `phoneTail` (3 số cuối). Tìm không dấu: `search_text` + `pg_trgm`; ký tự `% _` bị thoát |
+| G `/me/badges` | Huy hiệu số việc: `{items:[{key,navId,label,count,overdue}], total, overdue}`; `navId` = id mục điều hướng (`nav.ts`). Đỏ khi `overdue > 0`, vàng khi chỉ `count` | Chỉ đếm loại việc mà người gọi có quyền (đơn CTV chờ xác nhận `sale.confirm`; khách đến hạn trả `debt.view`; giữ hàng sắp/quá hạn `reservation.manage`; máy mới/quá hẹn/xong chưa lấy `repair.view`; linh kiện sắp hết `part.view`; chiếc ở CTV quá hạn `collab.view`; bảo hành sắp hết `warranty.view`; kiểm kê đang mở `stocktake.manage`; CTV: đơn của mình chờ xác nhận `collab.view_own`). Chỉ số lượng, không tiền |
+| G `/system/status?summary=1` | Dải cảnh báo vận hành: `{level: ok\|warn\|error, issues:[{key,level,title}], checkedAt}` — cron quá hạn (>36 giờ)/lỗi/kẹt, sao lưu lỗi/quá hạn (`backup.heartbeat_max_hours`), lỗi hệ thống mới 24 giờ, dung lượng kho ảnh. Không trả chi tiết lỗi | **Chỉ `system.health`** (≠ `system.backup`; thiếu ⇒ 403 `WF-AUTH-FORBIDDEN`). Không có `summary` ⇒ bản đầy đủ như cũ (`system.health` hoặc `system.backup`) |
+
+### Nhập Excel hàng loạt — `/api/v1/import/{kind}` (`kind` = `customers` | `watches` | `parts`)
+Trình duyệt đọc tệp, máy chủ **không** nhận tệp (BR-IMP-01). Thân: `{ rows: [{ line, cells: { <khóa cột>: "<chuỗi>" } }] (1–300), options?, include?: number[] }`. Cần **đủ** quyền của loại đó (`src/lib/import/perms.ts`); thiếu ⇒ 403; `kind` lạ ⇒ 404; >300 dòng/thân sai ⇒ 422. Không thêm mã lỗi mới (dùng WF-VALIDATION, WF-UNIT-SERIAL-DUPLICATE… của hàm nhập).
+
+| Endpoint | Mục đích | Ghi chú |
+|---|---|---|
+| P `/import/{kind}/preview` | Xem trước từng dòng: `status` ok/warning/error/duplicate + `messages` + `include` mặc định; `notices` chung | **Không ghi gì**; `options` (đồng hồ): `createMissingModels`, `defaultLocationId` |
+| P `/import/{kind}/commit` | Ghi các dòng `include` (mặc định: ok + warning); kiểm tra lại từng ô | **Bắt buộc `Idempotency-Key`**; khách: điểm lưu từng dòng; đồng hồ/linh kiện: MỘT phiếu `opening` + `fn_confirm_purchase`; trả `{ receipt, items[{line,id,code,href}], failed, skipped }` |
+| G `/import/{kind}/template` | Tệp mẫu .xlsx (Dữ liệu / Hướng dẫn / Danh mục) | Cần quyền nhập loại đó |
 
 ## 3. Hợp đồng dữ liệu & kiểu
 

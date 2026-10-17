@@ -190,6 +190,9 @@
 | BR-SEC-06 | Đăng xuất thu hồi phiên và refresh token; token đã xoay bị dùng lại ⇒ thu hồi cả phiên. | `server/auth` | PT-07 |
 | BR-SEC-07 | Luôn còn ≥ 1 chủ cửa hàng hoạt động; không tự hạ quyền/khóa chính mình nếu là chủ cuối cùng. | FN | PT-10 |
 | BR-SEC-08 | Xem BR-COL-09: phạm vi dữ liệu của CTV. | RLS | PT-02, PT-03 |
+| BR-SEC-10 | **Tin cậy thiết bị 2FA:** người dùng tick "Tin cậy thiết bị này" ở bước nhập mã ⇒ lần đăng nhập sau trên đúng trình duyệt đó trong [`security.trusted_device_days`] ngày (0 = tắt) **chỉ bỏ bước mã 6 số — mật khẩu luôn phải đúng**; xác thực lại (thao tác nhạy cảm) vẫn cần mã. Token ngẫu nhiên 256-bit trong cookie httpOnly, DB chỉ giữ SHA-256, gắn một tài khoản, hạn cố định, trùng nhãn thiết bị. Tự thu hồi khi đổi/đặt lại mật khẩu, khóa tài khoản, tắt 2FA; người dùng tự "quên" thiết bị. | `server/auth` + trigger `users` | m11-trusted-device (PT) |
+| BR-SEC-11 | **Nhật ký hoạt động:** mọi thao tác ghi qua API (kể cả lỗi/bị từ chối) và các lần đọc nhạy cảm (xuất Excel, in, xem giá vốn, xem báo cáo, xem CCCD, xem nhật ký) được ghi "ai–làm gì–kết quả–từ máy nào" **sau** phản hồi, không nội dung/query/PII (route mẫu), chỉ `audit.view` đọc, append-only, giữ [`activity.retention_days`] ngày (sàn 30) rồi dọn qua hàm có kiểm. | `server/activity` + DB | m11-activity (PT) |
+| BR-SEC-09 | Tệp đã xóa phải bị **xóa thật** khỏi kho lưu trữ: ảnh giấy tờ (`id_document`) — kể cả khi ẩn danh khách (gắn khách, phiếu thu mua, phiếu bán) — ngay lượt tác vụ nền kế tiếp; ảnh thường sau [`storage.purge_after_days`] ngày. Tệp bất biến (`is_immutable`: nhận máy/chứng từ) **không bao giờ** tự bị xóa. Chỉ chốt `purged_at` sau khi kho xác nhận; đã xóa thật thì không khôi phục. | `files` trigger + `fn_storage_*` + job | PT-13 |
 
 ## BAK — Sao lưu
 
@@ -198,6 +201,18 @@
 | BR-BAK-01 | Sao lưu DB hằng đêm (mã hóa, giữ ≥ 90 ngày + bản tuần dài hạn); ảnh Storage sao lưu hằng tuần. RPO ≤ 24 giờ, RTO ≤ 4 giờ. | CI backup | UAT-09 |
 | BR-BAK-02 | Cảnh báo cho chủ khi bản sao lưu cũ hơn [`backup.heartbeat_max_hours`] giờ. | `/api/health?deep=1`, job | UAT-09 |
 | BR-BAK-03 | Diễn tập khôi phục vào DB tạm **trước go-live và mỗi quý**, có biên bản. | Quy trình | UAT-09 |
+| BR-BAK-04 | Theo dõi dung lượng kho lưu trữ: tổng theo bucket, tăng trưởng/ngày, ước tính ngày đầy so với [`storage.quota_mb`]; vượt [`storage.warn_percent`]/[`storage.critical_percent`] ⇒ thông báo cho người có `system.health` (mỗi mức một lần/tuần). | job + Quản trị → Hệ thống | PT-13 |
+
+## IMP — Nhập Excel hàng loạt (khách, đồng hồ tồn đầu kỳ, linh kiện)
+
+| ID | Quy tắc | Thực thi | Kiểm thử |
+|---|---|---|---|
+| BR-IMP-01 | Tệp .xlsx/.csv (≤ 5 MB, kiểm đuôi **và** magic bytes) được **đọc ở trình duyệt**; máy chủ chỉ nhận JSON ≤ 300 dòng (mỗi ô ≤ 2000 ký tự) và **kiểm tra lại từng ô** khi ghi (không tin kết quả xem trước). Quá 300 dòng/thân sai ⇒ 422. | `src/lib/import/*`, `src/server/import.ts` | UT-import, m11-import |
+| BR-IMP-02 | **Xem trước** (dry-run) không ghi gì: mỗi dòng hợp lệ / cảnh báo / lỗi kèm lý do / **trùng**; người dùng chọn dòng nào nhập (dòng trùng mặc định bỏ qua, dòng lỗi không bao giờ nhập). Ghi cần `Idempotency-Key` (bấm đúp không nhập hai lần). | API `/import/{kind}/preview` · `/commit` | m11-import |
+| BR-IMP-03 | **Khách:** trùng SĐT (chuẩn hóa như `app.norm_phone`) hoặc số giấy tờ (chỉ mục băm) với khách có sẵn/trong tệp ⇒ "trùng". SĐT Việt Nam chuẩn hóa về 10 số bắt đầu 0. CCCD mã hóa AES-256-GCM đúng như tạo khách (BR-SEC-03), **không bao giờ** hiện lại trong xem trước/kết quả/audit. Mỗi dòng ghi trong điểm lưu riêng. | `commitCustomers` | m11-import, PT-12 |
+| BR-IMP-04 | **Đồng hồ tồn đầu kỳ:** toàn bộ dòng hợp lệ ghi bằng **MỘT phiếu nhập `opening`** (nháp → `fn_confirm_purchase`, BR-PUR-04/11) trong một transaction ⇒ giá vốn = cột "Giá vốn (giá thu)", kho/audit nhất quán; không chèn thẳng bảng chiếc. Loại khớp theo mã hoặc tên (kèm hãng); chưa có loại ⇒ lỗi chỉ cách tạo, hoặc (tùy chọn, cần `catalog.manage`) tự tạo hãng/loại. Serial trùng (cùng hãng trong kho, hoặc trong tệp), giá âm/không nguyên, thiếu giá/tình trạng/vị trí ⇒ lỗi. Hàng **Cũ/Đã sửa luôn vào "Chờ kiểm tra"** (BR-UNIT-10: sẵn sàng bán cần hạng + ảnh); hàng Mới vào "Sẵn sàng bán". | `commitWatches` | m11-import, SC-01 |
+| BR-IMP-05 | **Linh kiện:** mã/tên/danh mục (danh mục phải có sẵn)/đơn vị/tồn đầu/giá vốn/ngưỡng cảnh báo. Linh kiện mới tạo (cần `part.manage`); tồn đầu > 0 ghi bằng một phiếu `opening` (giá vốn bình quân theo BR-PART/costing §4). Mã đã có ⇒ "trùng", mặc định bỏ qua; nếu người dùng chọn nhập thì **cộng** số lượng vào tồn. | `commitParts` | m11-import, SC-11 |
+| BR-IMP-06 | Quyền (cần đủ): khách `customer.create`; đồng hồ `purchase.create` + `purchase.confirm` + `catalog.view`; linh kiện `purchase.create` + `purchase.confirm` + `part.view` (+ `part.manage` cho mã mới). Mỗi lần nhập ghi **một** dòng audit tổng hợp `import.{kind}` (số đếm + mã phiếu, không dữ liệu cá nhân) qua `app.fn_audit_import`. | `src/lib/import/perms.ts`, 0019 | m11-import |
 
 ## Hoãn / thay thế (không còn trong phạm vi xây)
 

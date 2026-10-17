@@ -39,6 +39,9 @@ scripts/db/bundle.mjs                   dựng DB MỚI hoàn toàn từ đầu 
 
 (Số chỉ là gợi ý thứ tự; một mốc có thể tách nhiều file.)
 
+**Thực tế đã áp (2026-10-17):** `0001_foundation` · `0002_iam` · `0003_platform` · `0003a_definer_grants` · `0003b_worker_health` · `0004_catalog_parts` · `0004a_user_names` · `0005_partners` · `0005a_audit_mask_pii` · `0006_payments` · `0007_purchasing` · `0007a_purchase_recalc_flag` · `0007b_void_purchase_null_fix` · `0008_sales` · `0008a_trade_in_internal` · `0008b_collaborators` · `0009_repairs` · `0009a_internal_repair_status` · `0010_inventory_alerts` · `0011_reports` · `0012_print_marks` · `0013_hardening_iam` · `0013a_guard_last_owner_code` · `0013b_audit_mask_more_pii` · `0013c_grant_ceiling` · `0013d_my_discount_limit` · `0013e_collab_my_sale_lines` · `0020_push` (push_subscriptions/push_preferences/push_outbox, trigger `tg_notification_push`, `fn_register_push_subscription`/`fn_remove_push_subscription`/`fn_set_push_preferences`) 
+· `0014_storage_purge` (cột `files.purge_after/purged_at/thumb_size_bytes`, trigger vòng đời tệp, `fn_storage_*`, mở rộng `fn_anonymize_customer`, 4 cài đặt `storage.*`). Tệp hậu tố chữ là sửa lỗi/bổ sung bằng **file mới** (không sửa file đã áp — §1). Bài học rút ra: hàm/trigger đặt cờ phiên `app.in_fn` phải **khôi phục giá trị cũ** thay vì xóa (0007a); điều kiện `NOT (a = b)` trên cột có thể NULL phải bọc `coalesce(…, false)` (0007b); `BYPASSRLS` không thay được `GRANT` — `wf_definer` cần quyền DML trên bảng (0003a).
+
 ## 3. Vai trò & quyền cơ bản (0001)
 
 ```sql
