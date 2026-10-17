@@ -1,0 +1,66 @@
+# Sao lưu hằng ngày + diễn tập khôi phục + nhịp tim (BR-BAK-01..03). Chạy trong repo private watchflow-backups. (Chưa chạy thật — ⏭ cloud)
+name: backup
+on:
+  schedule:
+    - cron: "17 19 * * *" # 02:17 giờ VN
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      pg:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: drill
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/watchflow
+          path: app
+          token: ${{ secrets.APP_REPO_READ_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cài pg_dump 17
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 || sudo apt-get install -y -qq postgresql-client
+      - name: Dump + mã hóa
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          STAMP=$(TZ=Asia/Ho_Chi_Minh date +%Y%m%d-%H%M)
+          pg_dump -Fc --no-owner --no-acl -n public -n app -d "$BACKUP_DATABASE_URL" -f raw.dump
+          node -e "const b=require('fs').readFileSync('raw.dump');import('./app/scripts/db/backup.mjs').then(m=>require('fs').writeFileSync('watchflow-'+process.argv[1]+'.dump.enc', m.encrypt(b, process.env.BACKUP_PASSPHRASE)))" "$STAMP"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          echo "SIZE=$(stat -c%s raw.dump)" >> "$GITHUB_ENV"
+      - name: Diễn tập khôi phục
+        env:
+          DRILL_URL: postgres://postgres:drill@127.0.0.1:5432/postgres
+        run: |
+          set -euo pipefail
+          psql "$DRILL_URL" -c "CREATE DATABASE drill"
+          psql "postgres://postgres:drill@127.0.0.1:5432/drill" -f app/db/migrations/0001_foundation.sql
+          pg_restore -l raw.dump | grep -v " SCHEMA - public " > list.txt
+          pg_restore --no-owner --role=postgres -L list.txt -d "postgres://postgres:drill@127.0.0.1:5432/drill" raw.dump
+          psql "postgres://postgres:drill@127.0.0.1:5432/drill" -tAc "SELECT count(*) FROM public.app_migrations"
+          psql "postgres://postgres:drill@127.0.0.1:5432/drill" -tAc "SELECT CASE WHEN to_regprocedure('app.fn_consistency_check()') IS NULL THEN 0 ELSE (SELECT count(*) FROM app.fn_consistency_check()) END" | grep -qx 0
+          rm -f raw.dump
+      - uses: actions/upload-artifact@v4
+        with:
+          name: watchflow-${{ env.STAMP }}
+          path: watchflow-*.dump.enc
+          retention-days: 90
+      - name: Nhịp tim
+        env:
+          OPS_HEARTBEAT_URL: ${{ secrets.OPS_HEARTBEAT_URL }}
+          OPS_HEARTBEAT_SECRET: ${{ secrets.OPS_HEARTBEAT_SECRET }}
+        run: |
+          curl -fsS -X POST "$OPS_HEARTBEAT_URL" -H "Authorization: Bearer $OPS_HEARTBEAT_SECRET" -H "Content-Type: application/json" \
+            -d "{\"kind\":\"backup\",\"ok\":true,\"note\":\"$STAMP · $SIZE byte\"}"
