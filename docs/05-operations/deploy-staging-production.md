@@ -54,7 +54,7 @@ Kỳ vọng: toàn ✔ và dòng "Nối DB (staging) thành công" kèm `BYPASSR
 ```bash
 pnpm db:deploy:staging -- --seed --owner-email <email-của-bạn> --owner-name "Họ tên"
 ```
-- `--seed`: nạp dữ liệu demo (4 tài khoản, đồng hồ mẫu, khách mẫu).
+- `--seed`: nạp dữ liệu demo **đầy đủ để thử mọi luồng** — 5 tài khoản (chủ/bán hàng/kho/2 CTV), 17 chiếc đồng hồ + linh kiện (tồn đầu kỳ và một phiếu nhập mua vào có phân bổ phí vận chuyển), khách mẫu, 4 phiếu bán (tiền mặt, nợ có hẹn trả, 2 đơn CTV), 1 phiếu giữ hàng có cọc, 2 phiếu giao CTV (1 đơn đã quyết toán, 1 chờ quyết toán), 3 phiếu sửa (đã giao, chờ báo giá, bảo hành miễn phí). Tất cả đi qua hàm nghiệp vụ thật nên tiền/kho/giá vốn nhất quán. Chạy riêng: `pnpm db:seed:staging`.
 - `--owner-email/--owner-name`: tạo chủ cửa hàng; **mật khẩu tạm hiện MỘT lần** ở cuối bước 7 của lệnh — chép ngay. Lần đầu đăng nhập: đổi mật khẩu → bật TOTP → lưu mã khôi phục. (Nếu đã `--seed`, DB đã có chủ demo nên bước tạo chủ sẽ báo "đã có chủ" — bình thường.)
 - Chạy lại bao nhiêu lần cũng được (idempotent). Mỗi lần có migration mới, chỉ cần chạy lại **không kèm** `--seed`.
 
