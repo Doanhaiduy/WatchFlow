@@ -34,6 +34,22 @@ const PARTS = [
 ];
 const PNG_1PX = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 
+// Ghi ảnh demo vào kho tệp đúng driver: local → .local/storage; supabase (staging) → Storage REST (x-upsert để chạy lại được).
+async function putDemoPhoto(env, rel) {
+  if (env.STORAGE_DRIVER === "supabase") {
+    const r = await fetch(`${env.SUPABASE_URL}/storage/v1/object/unit-photos/${rel}`, {
+      method: "POST",
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`, "Content-Type": "image/png", "x-upsert": "true" },
+      body: new Uint8Array(PNG_1PX),
+    });
+    if (!r.ok) throw new Error(`Tải ảnh demo lên Storage lỗi ${r.status}`);
+    return;
+  }
+  const full = path.join(process.cwd(), ".local", "storage", "unit-photos", rel);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, PNG_1PX);
+}
+
 export default async function (c, ctx) {
   const owner = ctx.accounts.users.find((u) => u.role === "owner").id;
   await c.query("SELECT set_config('app.current_user_id',$1,true)", [owner]);
@@ -59,7 +75,12 @@ export default async function (c, ctx) {
       ON CONFLICT (upper(code)) DO UPDATE SET name = EXCLUDED.name RETURNING id, qty_on_hand`, [code, name, cat[catName], uom, sale, reorder]);
     partIds[code] = r.rows[0];
   }
-  if ((await c.query("SELECT count(*)::int n FROM public.purchase_receipts WHERE kind='opening'")).rows[0].n > 0) return;
+  if ((await c.query("SELECT count(*)::int n FROM public.purchase_receipts WHERE kind='opening'")).rows[0].n > 0) {
+    // Chạy lại: bảo đảm tệp ảnh demo thật sự có trong kho (lần trước từng ghi nhầm vào đĩa cục bộ khi driver là supabase)
+    const f = (await c.query("SELECT path FROM public.files WHERE bucket='unit-photos' AND path LIKE 'seed/%' LIMIT 1")).rows[0];
+    if (f) await putDemoPhoto(ctx.env, f.path);
+    return;
+  }
 
   // Phiếu tồn đầu kỳ (opening) — linh kiện + chiếc demo; một ảnh tình trạng cho hàng cũ sẵn sàng bán (BR-UNIT-10)
   const rec = (await c.query(`INSERT INTO public.purchase_receipts (kind, note, received_by, created_by) VALUES ('opening','Tồn đầu kỳ (dữ liệu demo)',$1,$1) RETURNING id`, [owner])).rows[0].id;
@@ -72,9 +93,7 @@ export default async function (c, ctx) {
       VALUES ($1,$2,'watch',$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [rec, ++no, model[m], serial, serial !== null, cond, grade, status, loc[l], price, cost]);
   }
   const rel = `seed/${crypto.randomUUID()}.png`;
-  const dir = path.join(process.cwd(), ".local", "storage", "unit-photos", "seed");
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(process.cwd(), ".local", "storage", "unit-photos", rel), PNG_1PX);
+  await putDemoPhoto(ctx.env, rel);
   await c.query(`INSERT INTO public.files (bucket, path, original_name, mime, size_bytes, sha256, kind, entity_table, entity_id, created_by)
     VALUES ('unit-photos',$1,'tinh-trang-demo.png','image/png',$2,$3,'condition','purchase_receipts',$4,$5)`,
     [rel, PNG_1PX.length, crypto.createHash("sha256").update(PNG_1PX).digest("hex"), rec, owner]);
