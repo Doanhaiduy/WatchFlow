@@ -75,3 +75,5 @@ Phần cloud trong `CLAUDE.md` (staging/production, Vercel, Supabase, "Quy trìn
 ## 6. Thứ tự mốc & điểm cần nhớ
 
 M0 (nền + Design System) → M1 → M2 → M3 → M4 → M5a → M5b/M6 → M7 → M8 → M9 (`build-plan` §0). **Bắt đầu từ M0.** Không dựng module đã hoãn (Thu chi, NCC, Đổi trả, Thợ, hoa hồng %, chế độ tối). Phiên bị ngắt (hết token/tắt máy): người dùng chỉ cần nói "tiếp tục" — đọc `PROGRESS.md` và làm tiếp đúng chỗ.
+
+**Mang kết quả về nhà:** người dùng tự chạy `node scripts/handoff/pack-changes.mjs` ở gốc repo (chỉ đọc git, đóng gói mọi thay đổi + file mới vào một file `.mjs`). Bạn chỉ chạy script này khi người dùng yêu cầu; nó là ngoại lệ duy nhất của điều cấm "gói/chuyển mã ra khỏi máy". Tránh tạo file rác ngoài `.gitignore` để gói gọn.
