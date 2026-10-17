@@ -1,0 +1,43 @@
+/* PWA: dải cảnh báo trình duyệt nhúng, thẻ gợi ý cài ứng dụng, khối cài đặt thông báo. Dùng token Glass (tokens.css), sáng + tối. */
+@layer components {
+  /* ===== Dải "đang mở trong Zalo/Facebook…" ===== */
+  .wf-pwa-bar { margin: 10px 14px 0; padding: 12px 8px 12px 14px; border-radius: 20px; border: 1px solid var(--wf-hold); background: var(--wf-hold-t); color: var(--wf-ink); font-size: 13.5px; line-height: 1.45; position: relative; z-index: var(--wf-z-sticky); }
+  .wf-auth-top .wf-pwa-bar { margin: 12px 14px 0; max-width: 560px; margin-inline: auto; }
+  .wf-pwa-bar .row { display: flex; align-items: flex-start; gap: 10px; }
+  .wf-pwa-bar .ic { flex: none; margin-top: 2px; color: var(--wf-hold-text); }
+  .wf-pwa-bar .tx { flex: 1; min-width: 0; }
+  .wf-pwa-bar .tx b { display: block; font-weight: 700; }
+  .wf-pwa-bar .tx span { color: var(--wf-nav); font-size: 12.5px; }
+  .wf-pwa-bar .acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 30px; }
+  .wf-pwa-bar .x { flex: none; width: 44px; height: 44px; margin: -6px 0 -6px 0; border-radius: 50%; display: grid; place-items: center; color: var(--wf-mute); background: none; border: 0; cursor: pointer; }
+  .wf-pwa-bar .x:hover { background: var(--wf-line); }
+
+  /* ===== Thẻ gợi ý cài ứng dụng (nổi, không chặn nội dung) ===== */
+  .wf-pwa-card { position: fixed; z-index: var(--wf-z-fab); left: 14px; right: 14px; bottom: calc(96px + var(--safe-bottom)); max-width: 420px; margin: 0 auto; padding: 14px; border-radius: var(--wf-r-card); animation: wf-pwa-in .35s var(--wf-ease); }
+  .wf-pwa-card .row { display: flex; align-items: flex-start; gap: 12px; }
+  .wf-pwa-card .ic { flex: none; width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--wf-grad); color: var(--wf-on-accent); }
+  .wf-pwa-card .tx { flex: 1; min-width: 0; }
+  .wf-pwa-card .tx b { display: block; font-size: 14.5px; font-weight: 700; }
+  .wf-pwa-card .tx span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--wf-mute); line-height: 1.45; }
+  .wf-pwa-card .x { flex: none; width: 44px; height: 44px; margin: -8px -6px -8px 0; border-radius: 50%; display: grid; place-items: center; color: var(--wf-mute); background: none; border: 0; cursor: pointer; }
+  .wf-pwa-card .acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 52px; }
+  .wf-pwa-help { margin: 10px 0 0 52px; padding: 10px 12px; border-radius: 16px; background: var(--wf-glass-field); border: 1px solid var(--wf-glass-line); font-size: 12.5px; line-height: 1.55; color: var(--wf-nav); }
+  @keyframes wf-pwa-in { from { opacity: 0; transform: translateY(14px); } }
+  @media (min-width: 1000px) { .wf-pwa-card { left: auto; right: 24px; bottom: 24px; width: 400px; margin: 0; } }
+
+  /* ===== Khối trong Cài đặt ===== */
+  .wf-pwa-set { display: grid; gap: 12px; }
+  .wf-pwa-set .note { font-size: 12.5px; color: var(--wf-mute); line-height: 1.5; margin: 0; }
+  .wf-pwa-quiet { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .wf-pwa-steps { margin: 6px 0 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: var(--wf-nav); }
+
+  @media (prefers-reduced-motion: reduce) { .wf-pwa-card { animation-duration: .001ms; } }
+  @media print { .wf-pwa-bar, .wf-pwa-card { display: none !important; } }
+}
+
+/* Trang đăng nhập: dải cảnh báo nằm trên cùng, thẻ đăng nhập chiếm phần còn lại (không sinh thanh cuộn thừa) */
+@layer components {
+  .wf-auth-wrap { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  .wf-auth-wrap > .wf-auth { flex: 1; min-height: 0; }
+  .wf-auth-wrap > .wf-pwa-bar { width: calc(100% - 28px); max-width: 560px; align-self: center; margin-top: calc(12px + var(--safe-top)); }
+}
