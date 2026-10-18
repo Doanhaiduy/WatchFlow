@@ -36,5 +36,9 @@ export { Skeleton, SkeletonGroup, SkeletonList, SkeletonKpis } from "./Skeleton"
 export { PageHeader } from "./PageHeader";
 export { ShellMetaProvider, useShellMeta } from "./shell-meta";
 export { OtpInput, LoginCard, MoneyAmountInput } from "../lucian";
-export { AreaChart, BarChart, Donut, Ring } from "../charts";
+export { AreaChart, BarChart, Donut, Ring, Sparkline, HBarList } from "../charts";
+export { WatchArt, artFor, artSeed } from "./WatchArt";
+export { Avatar, avatarTone, initialsOf } from "./Avatar";
+export { StatStrip, type Stat } from "./StatStrip";
+export { ShortcutGrid, type Shortcut } from "./ShortcutGrid";
 export { Pager } from "./Pager";

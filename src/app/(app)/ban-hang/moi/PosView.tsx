@@ -1,6 +1,6 @@
 "use client";
 import { joinTitle } from "@/components/catalog/types";
-import { Check, ClipboardList, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { Boxes, Check, ClipboardList, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
@@ -26,6 +26,7 @@ import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { Modal } from "@/components/ui/Modal";
 import { MoneyInput } from "@/components/ui/MoneyInput";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { WatchArt, artSeed } from "@/components/ui/WatchArt";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -33,14 +34,47 @@ import { DateInput } from "@/components/ui/DateInput";
 import { TextInput } from "@/components/ui/TextInput";
 import { useDirtyGuard } from "@/components/ui/useDirtyGuard";
 import { useToast } from "@/components/ui/Toast";
-import { api, newIdempotencyKey, swrFetcher } from "@/lib/api-client";
+import { ApiClientError, api, newIdempotencyKey, swrFetcher } from "@/lib/api-client";
 import { formatDateVn } from "@/lib/dates";
 import { formatVnd } from "@/lib/money";
 import { useSession } from "@/lib/session";
 
-type Line = { key: string; kind: "watch" | "part"; unitId?: string; partId?: string; label: string; code: string; qty: number; unitPrice: number | null };
+/** `art` = hãng/loại để vẽ ảnh đồng hồ khi chưa có ảnh thật (chỉ để hiển thị, không gửi lên máy chủ) */
+type Line = { key: string; kind: "watch" | "part"; unitId?: string; partId?: string; label: string; code: string; qty: number; unitPrice: number | null; art?: { brand: string; model: string } };
 let seq = 0;
 const nk = () => `c${++seq}`;
+
+/** Phần nội dung phiếu nháp người dùng sửa (state của màn hình) */
+type Draft = { lines: Line[]; customer: PickedCustomer | null; orderDiscount: number | null; dueDate: string; note: string; reservationId: string | null; tradeIns: TradeInValue[] };
+
+/** Nội dung gửi lên máy chủ khi lưu nháp — MỘT hàm duy nhất để so sánh "đã lưu chưa" luôn nhất quán */
+function toBody(s: Draft) {
+  return {
+    customerId: s.customer?.id ?? null,
+    reservationId: s.reservationId,
+    orderDiscount: s.orderDiscount ?? 0,
+    dueDate: s.dueDate || null,
+    note: s.note.trim() || null,
+    lines: s.lines.map((l) => (l.kind === "watch" ? { lineType: "watch" as const, unitId: l.unitId!, unitPrice: l.unitPrice ?? 0 } : { lineType: "part" as const, partId: l.partId!, qty: l.qty, unitPrice: l.unitPrice ?? 0 })),
+    tradeIns: s.tradeIns.map((t) => ({ credit: t.credit ?? 0, ...watchBody(t.v), modelId: t.v.modelId, locationId: t.v.locationId, listPrice: t.v.listPrice ?? null })),
+  };
+}
+
+/** Dựng lại state màn hình từ phiếu nháp máy chủ trả về */
+function draftFromDetail(d: SaleDetail): Draft {
+  return {
+    lines: d.lines.map((l) => ({ key: nk(), kind: l.lineType, unitId: l.unitId ?? undefined, partId: l.partId ?? undefined, label: l.lineType === "watch" ? joinTitle(l.brandName, l.modelName) : (l.partName ?? "Linh kiện"), code: l.assetCode ?? l.partCode ?? "", qty: l.qty, unitPrice: l.unitPrice, art: l.lineType === "watch" ? { brand: l.brandName ?? "", model: l.modelName ?? "" } : undefined })),
+    customer: d.customerId ? { id: d.customerId, fullName: d.customerName ?? "Khách", phone: d.customerPhone } : null,
+    orderDiscount: d.orderDiscount,
+    dueDate: d.dueDate ?? "",
+    note: d.note ?? "",
+    reservationId: d.reservationId,
+    tradeIns: d.tradeIns.filter((t) => t.draftLine).map((t) => ({ key: nk(), credit: t.credit, v: { modelId: t.draftLine!.modelId, serialNo: t.draftLine!.serialNo ?? "", hasSerial: t.draftLine!.hasSerial, condition: t.draftLine!.condition, conditionGrade: t.draftLine!.conditionGrade ?? "", conditionNote: t.draftLine!.conditionNote ?? "", initialStatus: t.draftLine!.initialStatus, locationId: t.draftLine!.locationId, listPrice: t.draftLine!.listPrice ?? null } })),
+  };
+}
+
+/** Dạng chuẩn của nội dung một phiếu máy chủ — để biết nội dung có thật sự khác với lần lưu gần nhất không */
+const canon = (d: SaleDetail) => JSON.stringify(toBody(draftFromDetail(d)));
 
 function PartPicker({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (p: Part) => void }) {
   const [q, setQ] = useState("");
@@ -76,6 +110,8 @@ export function PosView() {
   const [reservationId, setReservationId] = useState<string | null>(null);
   const [detent, setDetent] = useState<Detent>(0);
   const [err, setErr] = useState<string | null>(null);
+  /** Nội dung phiếu trên máy chủ đã bị đổi ở nơi khác ⇒ không tự ghi đè, hỏi người dùng tải lại */
+  const [conflict, setConflict] = useState(false);
   const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "error">("");
   const [partOpen, setPartOpen] = useState(false);
   const [tiOpen, setTiOpen] = useState(false);
@@ -87,23 +123,21 @@ export function PosView() {
   const [loading, setLoading] = useState(false);
   const confirmKey = useRef(newIdempotencyKey());
   const createKey = useRef(newIdempotencyKey());
+  /** Nội dung đã dùng khóa tạo phiếu — thử lại cùng nội dung thì giữ khóa (chống tạo trùng), nội dung khác thì đổi khóa */
+  const createJson = useRef("");
   const versionRef = useRef<number | undefined>(undefined);
-  const saving = useRef(false);
-  const dirty = useRef(false);
   const hydrated = useRef(false);
+  const saleIdRef = useRef<string | null>(null);
+  const doneRef = useRef(false);
+  /** Vòng lưu đang chạy (một lúc chỉ MỘT yêu cầu ghi nháp bay) + cờ "còn thay đổi cần lưu" */
+  const running = useRef<Promise<boolean> | null>(null);
+  const needSave = useRef(false);
+  /** Nội dung (dạng chuẩn) máy chủ có ở lần đồng bộ gần nhất — để phân biệt "chỉ lệch số phiên bản" với "người khác đã sửa" */
+  const syncedCanon = useRef("");
 
-  const body = useMemo(
-    () => ({
-      customerId: customer?.id ?? null,
-      reservationId,
-      orderDiscount: orderDiscount ?? 0,
-      dueDate: dueDate || null,
-      note: note.trim() || null,
-      lines: lines.map((l) => (l.kind === "watch" ? { lineType: "watch" as const, unitId: l.unitId!, unitPrice: l.unitPrice ?? 0 } : { lineType: "part" as const, partId: l.partId!, qty: l.qty, unitPrice: l.unitPrice ?? 0 })),
-      tradeIns: tradeIns.map((t) => ({ credit: t.credit ?? 0, ...watchBody(t.v), modelId: t.v.modelId, locationId: t.v.locationId })),
-    }),
-    [customer, reservationId, orderDiscount, dueDate, note, lines, tradeIns],
-  );
+  const body = useMemo(() => toBody({ customer, reservationId, orderDiscount, dueDate, note, lines, tradeIns }), [customer, reservationId, orderDiscount, dueDate, note, lines, tradeIns]);
+  const bodyRef = useRef(body);
+  bodyRef.current = body;
 
   const refresh = useCallback(async (id: string) => {
     const d = await sapi<SaleDetail>(`/api/v1/sales/${id}`);
@@ -112,74 +146,129 @@ export function PosView() {
     return d;
   }, []);
 
-  // Lưu nháp tuần tự (POST lần đầu, sau đó PATCH If-Match); xong thì lấy lại GET để có số do máy chủ tính
-  const flush = useCallback(async (): Promise<boolean> => {
-    if (saving.current) {
-      dirty.current = true;
-      return true;
-    }
-    if (body.lines.length === 0 && body.tradeIns.length === 0) return true;
-    saving.current = true;
+  const lastSent = useRef("");
+  // Ghi nháp có kiểm phiên bản (If-Match). 412 mà nội dung máy chủ không đổi (chỉ lệch số phiên bản: mất phản hồi lần trước, thao tác hai nơi…)
+  // ⇒ lấy lại phiên bản rồi lưu lại một lần; nội dung máy chủ đã khác ⇒ KHÔNG ghi đè, báo xung đột.
+  const patchDraft = useCallback(
+    async (id: string, b: ReturnType<typeof toBody>, json: string) => {
+      try {
+        await sapi(`/api/v1/sales/${id}`, { method: "PATCH", ifMatch: versionRef.current, body: b });
+      } catch (e) {
+        if (!(e instanceof ApiClientError) || e.status !== 412) throw e;
+        const d = await sapi<SaleDetail>(`/api/v1/sales/${id}`);
+        if (d.status !== "draft") {
+          doneRef.current = true;
+          router.replace(`/ban-hang/${id}`);
+          throw new ApiClientError(409, "WF-DOC-NOT-DRAFT", "Phiếu này đã được xác nhận hoặc hủy ở nơi khác.");
+        }
+        const dc = canon(d);
+        if (dc !== syncedCanon.current && dc !== json) {
+          setConflict(true);
+          throw new ApiClientError(412, "WF-CONFLICT-VERSION", "Phiếu này vừa được người khác sửa nên chưa lưu được thay đổi của bạn. Tải lại phiếu để thấy bản mới nhất.");
+        }
+        versionRef.current = d.version;
+        await sapi(`/api/v1/sales/${id}`, { method: "PATCH", ifMatch: d.version, body: b });
+      }
+    },
+    [router],
+  );
+
+  // Lưu một lần nội dung MỚI NHẤT (POST lần đầu, sau đó PATCH); xong thì lấy lại GET để có số do máy chủ tính
+  const saveOnce = useCallback(async (): Promise<boolean> => {
+    if (doneRef.current) return true;
+    const b = bodyRef.current;
+    const json = JSON.stringify(b);
+    if (json === lastSent.current) return true;
+    const known = saleIdRef.current;
+    if (!known && b.lines.length === 0 && b.tradeIns.length === 0) return true;
     setSaveState("saving");
+    lastSent.current = json;
     try {
-      let id = saleId;
+      let id = known;
       if (!id) {
-        id = (await sapi<{ id: string }>("/api/v1/sales", { body, idempotencyKey: createKey.current })).id;
+        if (createJson.current !== json) {
+          createKey.current = newIdempotencyKey();
+          createJson.current = json;
+        }
+        id = (await sapi<{ id: string }>("/api/v1/sales", { body: b, idempotencyKey: createKey.current })).id;
+        saleIdRef.current = id;
         setSaleId(id);
         window.history.replaceState(null, "", `/ban-hang/moi?sale=${id}`);
       } else {
-        await sapi(`/api/v1/sales/${id}`, { method: "PATCH", ifMatch: versionRef.current, body });
+        await patchDraft(id, b, json);
       }
-      await refresh(id);
+      const d = await refresh(id);
+      syncedCanon.current = canon(d);
       setErr(null);
+      setConflict(false);
       setSaveState("saved");
       return true;
     } catch (e) {
-      setErr(errMsg(e));
-      setSaveState("error");
-      return false;
-    } finally {
-      saving.current = false;
-      if (dirty.current) {
-        dirty.current = false;
-        setTimeout(() => void flushRef.current(), 50);
+      lastSent.current = "";
+      if (!doneRef.current) {
+        setErr(errMsg(e));
+        setSaveState("error");
       }
+      return false;
     }
-  }, [body, saleId, refresh]);
-  const flushRef = useRef(flush);
-  flushRef.current = flush;
+  }, [patchDraft, refresh]);
+
+  /** Chạy vòng lưu cho tới khi hết thay đổi; gọi lúc đang lưu ⇒ chờ vòng hiện tại rồi lưu nốt phần mới (không bao giờ hai yêu cầu cùng lúc) */
+  const runSave = useCallback((): Promise<boolean> => {
+    needSave.current = true;
+    if (running.current) return running.current;
+    const p = (async () => {
+      try {
+        let ok = true;
+        while (needSave.current) {
+          needSave.current = false;
+          ok = await saveOnce();
+          if (!ok) break;
+        }
+        return ok;
+      } finally {
+        running.current = null;
+      }
+    })();
+    running.current = p;
+    return p;
+  }, [saveOnce]);
 
   const dbody = useDebounced(JSON.stringify(body), 700);
-  const lastSent = useRef("");
   useEffect(() => {
     if (!hydrated.current || done) return;
     if (dbody === lastSent.current) return;
-    lastSent.current = dbody;
-    void flushRef.current();
-  }, [dbody, done]);
+    void runSave();
+  }, [dbody, done, runSave]);
 
   // Giỏ chưa kịp lưu nháp (chưa tạo phiếu, đang chờ/đang/lỗi lưu) mà rời trang ⇒ hỏi "Bỏ thay đổi chưa lưu?"
   const unsaved = !done && (lines.length > 0 || tradeIns.length > 0) && (!saleId || saveState === "saving" || saveState === "error" || JSON.stringify(body) !== dbody);
   const guard = useDirtyGuard(unsaved);
 
-  // Nạp nháp có sẵn (?sale=) hoặc thêm chiếc từ ?unit=
+  // Nạp nháp có sẵn (?sale=) hoặc thêm chiếc từ ?unit=. Nạp xong coi như ĐÃ ĐỒNG BỘ: không ghi lại lên máy chủ nếu người dùng chưa sửa gì.
   const loadSale = useCallback(
     async (id: string) => {
       setLoading(true);
       try {
         const d = await sapi<SaleDetail>(`/api/v1/sales/${id}`);
         if (d.status !== "draft") return void router.replace(`/ban-hang/${id}`);
+        const s = draftFromDetail(d);
+        saleIdRef.current = id;
         setSaleId(id);
         setDetail(d);
         versionRef.current = d.version;
-        setLines(d.lines.map((l) => ({ key: nk(), kind: l.lineType, unitId: l.unitId ?? undefined, partId: l.partId ?? undefined, label: l.lineType === "watch" ? joinTitle(l.brandName, l.modelName) : (l.partName ?? "Linh kiện"), code: l.assetCode ?? l.partCode ?? "", qty: l.qty, unitPrice: l.unitPrice })));
-        setCustomer(d.customerId ? { id: d.customerId, fullName: d.customerName ?? "Khách", phone: d.customerPhone } : null);
-        setOrderDiscount(d.orderDiscount);
-        setDueDate(d.dueDate ?? "");
-        setNote(d.note ?? "");
-        setReservationId(d.reservationId);
-        setTradeIns(d.tradeIns.filter((t) => t.draftLine).map((t) => ({ key: nk(), credit: t.credit, v: { modelId: t.draftLine!.modelId, serialNo: t.draftLine!.serialNo ?? "", hasSerial: t.draftLine!.hasSerial, condition: t.draftLine!.condition, conditionGrade: t.draftLine!.conditionGrade ?? "", conditionNote: t.draftLine!.conditionNote ?? "", initialStatus: t.draftLine!.initialStatus, locationId: t.draftLine!.locationId, listPrice: t.draftLine!.listPrice ?? null } })));
-        lastSent.current = "";
+        setLines(s.lines);
+        setCustomer(s.customer);
+        setOrderDiscount(s.orderDiscount);
+        setDueDate(s.dueDate);
+        setNote(s.note);
+        setReservationId(s.reservationId);
+        setTradeIns(s.tradeIns);
+        syncedCanon.current = JSON.stringify(toBody(s));
+        lastSent.current = syncedCanon.current;
+        setErr(null);
+        setConflict(false);
+        setSaveState("");
       } catch (e) {
         setErr(errMsg(e));
       } finally {
@@ -213,7 +302,7 @@ export function PosView() {
   };
   const addUnit = (u: UnitDto) => {
     touch();
-    setLines((l) => (l.some((x) => x.unitId === u.id) ? l : [...l, { key: nk(), kind: "watch", unitId: u.id, label: unitTitle(u), code: u.assetCode, qty: 1, unitPrice: u.effectivePrice }]));
+    setLines((l) => (l.some((x) => x.unitId === u.id) ? l : [...l, { key: nk(), kind: "watch", unitId: u.id, label: unitTitle(u), code: u.assetCode, qty: 1, unitPrice: u.effectivePrice, art: { brand: u.brand.name, model: u.model.name } }]));
     if (!desktop) setDetent((d) => (d === 0 ? 1 : d));
   };
   const addPart = (p: Part) => {
@@ -232,6 +321,7 @@ export function PosView() {
   const convert = async (r: Reservation) => {
     try {
       const x = await sapi<{ saleId: string }>(`/api/v1/reservations/${r.id}/convert`, { method: "POST", idempotencyKey: newIdempotencyKey() });
+      hydrated.current = false; // đang chuyển sang phiếu mới: đừng tự lưu cái giỏ tạm rỗng này
       setLines([]); setTradeIns([]);
       await loadSale(x.saleId);
     } catch (e) {
@@ -244,24 +334,32 @@ export function PosView() {
   const trade = detail?.tradeInTotal ?? 0;
   const depositUse = detail?.depositApplied ?? 0;
   const payable = detail ? Math.max(0, detail.payablePreview ?? grand - trade - depositUse) : 0;
-  const fresh = !!detail && !saving.current && saveState !== "saving";
+  // "Mới": đã lưu xong đúng nội dung đang hiển thị và đã lấy lại số do máy chủ tính (sửa giá xong chờ ~1 giây mới thanh toán được)
+  const fresh = !!detail && saveState !== "saving" && JSON.stringify(body) === lastSent.current;
   const needCustomer = tradeIns.length > 0 && !customer;
   // Giảm vượt hạn mức của mình ⇒ khóa sớm kèm lý do (máy chủ vẫn kiểm WF-SALE-DISCOUNT-LIMIT khi xác nhận)
   const overLimit = me?.maxDiscountPct !== undefined && (detail?.discountPct ?? 0) > me.maxDiscountPct;
   const canPay = lines.length > 0 && fresh && can("sale.confirm") && !needCustomer && !overLimit;
 
   const confirm = async (pl: PaymentLineInput[]) => {
-    if (!saleId) return;
+    const id = saleIdRef.current;
+    if (!id) return;
     setPaying(true);
     setErr(null);
     try {
-      if (!(await flush())) throw new Error("Chưa lưu được nháp");
+      // Chờ lưu xong mọi thay đổi (kể cả đang bay) rồi mới xác nhận trên đúng nội dung đó
+      if (!(await runSave())) {
+        setPayOpen(false);
+        toast.error("Chưa lưu được nháp", "Xem thông báo phía trên phiếu rồi thử lại.");
+        return;
+      }
       const cash = pl.find((x) => x.method === "cash");
-      const r = await sapi<SaleConfirmResult>(`/api/v1/sales/${saleId}/confirm`, {
+      const r = await sapi<SaleConfirmResult>(`/api/v1/sales/${id}/confirm`, {
         body: { payments: pl.map((x) => ({ method: x.method, amount: x.amount })), cashTendered: cash?.cashTendered ?? null },
         idempotencyKey: confirmKey.current,
       });
-      const sale = await sapi<SaleDetail>(`/api/v1/sales/${saleId}`);
+      doneRef.current = true;
+      const sale = await sapi<SaleDetail>(`/api/v1/sales/${id}`);
       setPayOpen(false);
       setDetent(0);
       setDone({ r, sale });
@@ -278,6 +376,7 @@ export function PosView() {
 
   const discard = async () => {
     setDiscarding(true);
+    doneRef.current = true; // đang bỏ phiếu: dừng tự lưu để không tạo/ghi lại nháp vừa xóa
     if (saleId) await sapi(`/api/v1/sales/${saleId}`, { method: "DELETE" }).catch(() => undefined);
     window.location.assign("/ban-hang/moi");
   };
@@ -288,7 +387,22 @@ export function PosView() {
     </div>
   );
 
-  const errBanner = err ? <div className="wf-lock" role="alert" style={{ background: "var(--wf-bad-t)", marginBottom: 12 }}>{err}</div> : null;
+  const reloadSale = () => {
+    const id = saleIdRef.current;
+    if (id) void loadSale(id);
+  };
+  const retrySave = () => {
+    lastSent.current = "";
+    setErr(null);
+    void runSave();
+  };
+  const errBanner = err ? (
+    <div className="wf-lock" role="alert" style={{ background: "var(--wf-bad-t)", marginBottom: 12, flexWrap: "wrap" }}>
+      <span style={{ flex: 1, minWidth: 180 }}>{err}</span>
+      {conflict && saleId && <Button sm onClick={reloadSale}>Tải lại phiếu</Button>}
+      {!conflict && saveState === "error" && <Button sm onClick={retrySave}>Thử lưu lại</Button>}
+    </div>
+  ) : null;
   const cart = (
     <div>
       {!desktop && detent > 0 && errBanner}
@@ -299,8 +413,9 @@ export function PosView() {
           const sv = detail?.lines[i];
           return (
             <div key={l.key} className="wf-cart-line">
-              <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
-                <span style={{ minWidth: 0 }}><b style={{ display: "block" }}>{l.label}</b><span className="wf-mute" style={{ fontSize: 12 }}>{l.code}{sv && sv.listPrice !== l.unitPrice ? ` · niêm yết ${formatVnd(sv.listPrice)}` : ""}</span></span>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                {l.art ? <span className="wf-th" aria-hidden="true"><WatchArt crop="head" seed={artSeed(l.art.brand, l.art.model)} brand={l.art.brand} model={l.art.model} /></span> : <span className="wf-ib" data-tone="repair" aria-hidden="true"><Boxes size={20} /></span>}
+                <span style={{ minWidth: 0, flex: 1 }}><b style={{ display: "block" }}>{l.label}</b><span className="wf-mute" style={{ fontSize: 12 }}>{l.code}{sv && sv.listPrice !== l.unitPrice ? ` · niêm yết ${formatVnd(sv.listPrice)}` : ""}</span></span>
                 <Button sm iconOnly aria-label={`Bỏ ${l.label} khỏi phiếu`} onClick={() => { touch(); setLines((a) => a.filter((x) => x.key !== l.key)); }}><Trash2 size={16} aria-hidden="true" /></Button>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: l.kind === "part" ? "90px 1fr" : "1fr", gap: 8, marginTop: 6 }}>
@@ -391,7 +506,7 @@ export function PosView() {
             <div className="wf-stack">
               <section aria-label="Thêm chiếc">
                 <UnitSearch onPick={addUnit} exclude={lines.filter((l) => l.unitId).map((l) => l.unitId!)} />
-                <div className="wf-dev-row">
+                <div className="wf-dev-row" style={{ marginTop: 10 }}>
                   {can("part.view") && <Button sm icon={<Plus size={14} aria-hidden="true" />} onClick={() => setPartOpen(true)}>Linh kiện lẻ</Button>}
                   {can("sale.create_draft") && <Button sm icon={<Plus size={14} aria-hidden="true" />} onClick={() => setTiOpen(true)}>Thêm máy cũ</Button>}
                 </div>

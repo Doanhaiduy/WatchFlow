@@ -1,5 +1,5 @@
 "use client";
-import { Eye, EyeOff, Pencil, Plus, ShieldOff } from "lucide-react";
+import { Eye, EyeOff, Pencil, Phone, Plus, ShieldOff } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import useSWR from "swr";
@@ -9,6 +9,7 @@ import { isReauthCancelled, useReauth } from "@/components/auth/useReauth";
 import type { Customer } from "@/components/catalog/types";
 import { CustomerModal } from "@/components/customers/CustomerModal";
 import { CustomerHistory } from "@/components/customers/CustomerHistory";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { KeyValue } from "@/components/ui/Display";
@@ -20,6 +21,7 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { WatchArt, artSeed } from "@/components/ui/WatchArt";
 import { Textarea, TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { newIdempotencyKey, swrFetcher } from "@/lib/api-client";
@@ -109,6 +111,19 @@ export default function CustomerDetailPage() {
           <div className="wf-stack">
             <section className="g wf-pad" aria-label="Thông tin khách">
               {isAnon && <div style={{ marginBottom: 8 }}><StatusChip tone="neutral">Đã ẩn danh {formatDateTimeVn(c.anonymizedAt)}</StatusChip></div>}
+              <div className="wf-prof">
+                <Avatar name={c.fullName} tone={isAnon ? "neutral" : undefined} className="lg" />
+                <div className="tx">
+                  <b>{c.fullName}</b>
+                  <span>{c.code}{c.groupName ? ` · ${c.groupName}` : ""}</span>
+                </div>
+                {c.phone && !isAnon && (
+                  <a className="wf-btn wf-btn-sm wf-touch" href={`tel:${c.phone}`}>
+                    <Phone size={16} aria-hidden="true" />
+                    Gọi
+                  </a>
+                )}
+              </div>
               <KeyValue
                 items={[
                   { label: "Họ tên", value: c.fullName },
@@ -145,7 +160,7 @@ export default function CustomerDetailPage() {
               {c.watches && c.watches.length > 0 ? (
                 <InsetList label="Đồng hồ của khách">
                   {c.watches.map((w) => (
-                    <InsetRow key={w.id} icon={<Watch size={20} aria-hidden="true" />} tone="check" title={`${w.brandText ?? ""} ${w.modelText ?? ""}`.trim() || "Đồng hồ"} subtitle={`${w.serialNo ? `SN ${w.serialNo}` : "Không có serial"}${w.note ? ` · ${w.note}` : ""}`} />
+                    <InsetRow key={w.id} thumb={<WatchArt crop="head" seed={artSeed(w.brandText, w.modelText)} brand={w.brandText} model={w.modelText} />} title={`${w.brandText ?? ""} ${w.modelText ?? ""}`.trim() || "Đồng hồ"} subtitle={`${w.serialNo ? `SN ${w.serialNo}` : "Không có serial"}${w.note ? ` · ${w.note}` : ""}`} />
                   ))}
                 </InsetList>
               ) : (

@@ -3,7 +3,7 @@ import { BarChart3, Handshake, Truck } from "lucide-react";
 import useSWR from "swr";
 import { errMsg } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
-import { initials } from "@/components/layout/MenuSheet";
+import { Avatar } from "@/components/ui/Avatar";
 import { n, type CollabRow } from "@/components/collab/types";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -40,8 +40,7 @@ export default function CollaboratorsPage() {
               <InsetRow
                 key={c.id}
                 href={`/cong-tac-vien/${c.id}`}
-                icon={<span aria-hidden="true">{initials(c.fullName)}</span>}
-                tone={c.isActive ? "check" : "neutral"}
+                lead={<Avatar name={c.fullName} tone={c.isActive ? undefined : "neutral"} />}
                 title={c.fullName}
                 subtitle={`Đang giữ ${c.holding} chiếc · ${formatVnd(n(c.holdingValue))} giá thu · chưa nộp ${formatVnd(n(c.unsettled))}`}
                 end={c.pendingOrders > 0 ? <StatusChip tone="hold">{c.pendingOrders} đơn chờ</StatusChip> : undefined}

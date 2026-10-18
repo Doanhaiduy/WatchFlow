@@ -8,6 +8,7 @@
 @import "@fontsource/be-vietnam-pro/800.css";
 @import "./tokens.css";
 @import "./glass.css";
+@import "./visuals.css";
 
 /* Tailwind v4: cấu hình bằng @theme (không có tailwind.config). Màu/bo góc/bóng trỏ về biến --wf-* ở tokens.css. */
 @theme inline {

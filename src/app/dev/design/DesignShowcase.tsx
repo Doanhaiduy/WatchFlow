@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
-import { BarChart3, Banknote, Boxes, Lock, PackageSearch, Watch } from "lucide-react";
+import { BarChart3, Banknote, Boxes, Bookmark, Lock, PackageCheck, PackageSearch, ShoppingBag, Wrench, Watch } from "lucide-react";
 import { AppShell, type DemoUser } from "@/components/layout/AppShell";
 import { PaymentSheet, type PaymentLineInput } from "@/components/payments";
 import { CopyCodeButton, QuantityStepper, FilterButton, ActiveFilterChips } from "@/components/lucian";
@@ -12,6 +12,7 @@ import {
   InsetList, InsetRow, KeyValue, KpiGrid, KpiTile, LockNote, LoginCard, Modal, ModalClose, MoneyAmountInput, MoneyInput, OfflineBanner, OtpInput, PageHeader,
   PhoneInput, ProductCard, ProgressRing, RadioGroup, Ring, SearchBar, SegmentedControl, Select, Skeleton, SkeletonKpis, SkeletonList, StatusChip, STATUS_MAP,
   Stepper, Switch, TextInput, ThemeSwitch, Textarea, Timeline, ToastProvider, useToast, warrantyStatus, type StatusKind,
+  Avatar, HBarList, ShortcutGrid, Sparkline, StatStrip, WatchArt, artSeed,
 } from "@/components/ui";
 
 // ---------- Dữ liệu giả (tiếng Việt) ----------
@@ -291,16 +292,17 @@ function Data() {
           action={{ label: "Xem báo cáo", href: "/bao-cao" }}
         />
         <KpiGrid>
-          <KpiTile label="Tồn kho" value="58" hint="9 ở CTV" icon={<Boxes size={16} />} tone="info" />
-          <KpiTile label="Giá trị tồn" value="412 tr" hint="+3,1%" hintTone="ok" icon={<Banknote size={16} />} tone="ok" />
-          <KpiTile label="Đã bán" value="17" hint="tháng này" icon={<Watch size={16} />} tone="check" />
+          <KpiTile label="Tồn kho" value="58 chiếc" hint="9 ở CTV" icon={<Boxes size={16} />} tone="info" />
+          <KpiTile label="Giá trị tồn" value="412 tr" delta={3.1} icon={<Banknote size={16} />} tone="ok" spark={[8, 9, 8, 11, 10, 13, 14]} />
+          <KpiTile label="Khách còn nợ" value="3,2 tr" delta={12.5} deltaInverse icon={<Bookmark size={16} />} tone="hold" />
+          <KpiTile label="Đã bán" value="17 chiếc" hint="tháng này" icon={<Watch size={16} />} tone="check" href="/dong-ho" />
         </KpiGrid>
         <InsetList label="Danh sách chiếc">
           {UNITS.map((u) => (
             <InsetRow
               key={u.code}
               href="/dong-ho"
-              thumb={<Watch size={26} aria-hidden="true" />}
+              thumb={<WatchArt crop="head" seed={artSeed(u.name.split(" ")[0], u.name)} brand={u.name.split(" ")[0]} model={u.name} />}
               title={u.name}
               subtitle={u.code}
               end={formatVnd(u.price)}
@@ -317,7 +319,7 @@ function Data() {
               code={u.code}
               price={u.price}
               status={u.status}
-              placeholder={<Watch size={56} aria-hidden="true" style={{ color: "var(--wf-accent)" }} />}
+              placeholder={<WatchArt seed={artSeed(u.name.split(" ")[0], u.name)} brand={u.name.split(" ")[0]} model={u.name} />}
               onAdd={() => setCart(cart === u.code ? null : u.code)}
               inCart={cart === u.code}
             />
@@ -366,6 +368,58 @@ function Charts() {
             <AreaChart data={[]} ariaLabel="Chưa có dữ liệu" />
           </div>
         </GlassCard>
+      </div>
+    </Sec>
+  );
+}
+
+function Visuals() {
+  const [f, setF] = useState("in_stock");
+  const watches: Array<[string, string]> = [["Seiko", "Seiko 5 Sports SRPD55"], ["Casio", "G-Shock GA-2100-1A1"], ["Citizen", "Citizen NH8350-83L"], ["Orient", "Orient Bambino Version 7"], ["Tissot", "Tissot PRX Quartz"], ["Omega", "Omega Seamaster Diver 300M"]];
+  return (
+    <Sec id="s-visual" title="Hình ảnh: WatchArt · StatStrip · Sparkline · HBarList · ShortcutGrid · Avatar · biểu đồ 2 lớp">
+      <div className="wf-stack">
+        <Cap>WatchArt — ảnh đồng hồ vẽ SVG khi chưa có ảnh thật (kiểu dáng ổn định theo hãng + loại)</Cap>
+        <div className="wf-dev-row">
+          {watches.map(([b, m]) => (
+            <div key={m} style={{ width: 92, height: 120 }}><WatchArt seed={artSeed(b, m)} brand={b} model={m} /></div>
+          ))}
+          <div style={{ width: 92, height: 92 }}><WatchArt crop="head" seed={artSeed("Casio", "G-Shock GA-2100-1A1")} brand="Casio" model="G-Shock GA-2100-1A1" /></div>
+        </div>
+        <Cap>StatStrip — dải số liệu đầu trang danh sách (điện thoại: cuộn ngang; thẻ có onClick = lọc)</Cap>
+        <StatStrip
+          items={[
+            { label: "Sẵn sàng bán", value: 6, icon: <PackageCheck size={16} />, tone: "ok", hint: "có thể bán ngay", onClick: () => setF("in_stock"), active: f === "in_stock" },
+            { label: "Đã giữ", value: 2, icon: <Bookmark size={16} />, tone: "hold", hint: "khách đã cọc", onClick: () => setF("reserved"), active: f === "reserved" },
+            { label: "Đang sửa", value: 3, icon: <Wrench size={16} />, tone: "repair", hint: "kiểm tra + sửa", onClick: () => setF("in_repair"), active: f === "in_repair" },
+            { label: "Doanh thu hôm nay", value: "17,9 tr", icon: <ShoppingBag size={16} />, tone: "info", delta: 8.7, hint: "so với hôm qua" },
+          ]}
+        />
+        <div className="wf-dev-grid">
+          <GlassCard padded>
+            <Cap>Sparkline</Cap>
+            <Sparkline values={[3, 5, 4, 8, 7, 11, 13, 12]} />
+            <Sparkline values={[9, 8, 8, 6, 7, 4, 3, 3]} color="var(--wf-bad)" />
+          </GlassCard>
+          <GlassCard padded>
+            <Cap>HBarList</Cap>
+            <HBarList ariaLabel="Tồn theo hãng" items={[{ label: "Seiko", value: 38, display: "38 chiếc", tone: "accent" }, { label: "Casio", value: 27, display: "27 chiếc", tone: "ok" }, { label: "Orient", value: 16, display: "16 chiếc", tone: "repair" }]} />
+          </GlassCard>
+          <GlassCard padded>
+            <Cap>Biểu đồ vùng 2 đường + cột đôi</Cap>
+            <AreaChart data={REVENUE} data2={REVENUE.map((d) => ({ ...d, value: Math.round(d.value * 0.26) }))} legend={["Doanh thu", "Lãi gộp"]} format={formatVndShort} ariaLabel="Doanh thu và lãi gộp" />
+            <div style={{ height: 14 }} />
+            <BarChart data={BARS.map((d) => ({ ...d, value2: Math.round(d.value * 0.26) }))} legend={["Doanh thu", "Lãi gộp"]} format={formatVndShort} ariaLabel="Theo tháng" height={110} />
+          </GlassCard>
+          <GlassCard padded>
+            <Cap>Avatar · ShortcutGrid</Cap>
+            <div className="wf-dev-row" style={{ marginBottom: 12 }}>
+              {["Nguyễn Văn An", "Trần Thị Bình", "Lê Hoàng Nam", "Phạm Minh Châu", "Đặng Thu Hà"].map((n) => <Avatar key={n} name={n} />)}
+              <Avatar name="Vũ Quốc Bảo" tone="neutral" />
+            </div>
+            <ShortcutGrid ariaLabel="Lối tắt mẫu" items={[{ href: "/ban-hang/moi", label: "Bán hàng", icon: <ShoppingBag size={22} />, tone: "ok" }, { href: "/giu-hang", label: "Giữ hàng", icon: <Bookmark size={22} />, tone: "hold", badge: 3 }]} />
+          </GlassCard>
+        </div>
       </div>
     </Sec>
   );
@@ -709,6 +763,7 @@ function Content() {
       <Nav />
       <Data />
       <Charts />
+      <Visuals />
       <Overlays />
       <GuardsDemo />
       <Toasts />

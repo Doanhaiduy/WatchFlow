@@ -1,5 +1,5 @@
 "use client";
-import { FileSpreadsheet, Plus, Tags, Users } from "lucide-react";
+import { Bookmark, FileSpreadsheet, Plus, Receipt, Tags, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
@@ -7,7 +7,7 @@ import { errMsg, sapi } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
 import type { Customer, CustomerGroup } from "@/components/catalog/types";
 import { CustomerModal } from "@/components/customers/CustomerModal";
-import { initials } from "@/components/layout/MenuSheet";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Switch } from "@/components/ui/Checkbox";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -17,11 +17,14 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pager } from "@/components/ui/Pager";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { Select, TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { swrFetcher } from "@/lib/api-client";
+import { formatVndShort } from "@/lib/money";
+import { hasKpi, useDashKpis } from "@/lib/use-dashboard";
 import { useSession } from "@/lib/session";
 
 type Res = { items: Customer[]; total: number; page: number; pageSize: number };
@@ -92,6 +95,7 @@ export default function CustomersPage() {
   const groups = useSWR<{ items: CustomerGroup[] }>(allowed ? "/api/v1/customer-groups" : null, swrFetcher);
   const [form, setForm] = useState(false);
   const [gm, setGm] = useState(false);
+  const { kpis } = useDashKpis(allowed);
 
   // Mở sẵn form khi vào từ nút "+" (?moi=1)
   useEffect(() => {
@@ -106,6 +110,14 @@ export default function CustomersPage() {
         actions={(<>{can("customer.manage") && <Button sm icon={<Tags size={16} aria-hidden="true" />} onClick={() => setGm(true)}>Nhóm</Button>}{can("customer.create") && <Button sm href="/nhap-excel?loai=khach" icon={<FileSpreadsheet size={16} aria-hidden="true" />}>Nhập Excel</Button>}{can("customer.create") && <Button sm variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => setForm(true)}>Thêm</Button>}</>)}
       />
       <RequirePerm perm={["customer.view", "customer.view_own"]}>
+        <StatStrip
+          items={[
+            data && { label: "Khách hàng", value: data.total, icon: <Users size={16} />, tone: "info", hint: dq || group ? "khớp bộ lọc" : "đang quản lý" },
+            hasKpi(kpis, "customerDue") && { label: "Khách còn nợ", value: formatVndShort(kpis.customerDue!), icon: <Receipt size={16} />, tone: "hold", hint: "tổng các phiếu nợ", href: can("sale.view") ? "/ban-hang" : undefined },
+            hasKpi(kpis, "depositsHeld") && { label: "Cọc đang giữ", value: formatVndShort(kpis.depositsHeld!), icon: <Bookmark size={16} />, tone: "check", hint: "giữ hàng cho khách", href: can("reservation.manage") ? "/giu-hang" : undefined },
+            groups.data && { label: "Nhóm khách", value: groups.data.items.length, icon: <Tags size={16} />, tone: "repair", hint: "VIP, khách quen…" },
+          ]}
+        />
         <SearchBar value={q} onChange={setQ} placeholder="Tìm tên hoặc số điện thoại…" />
         <div style={{ marginBottom: 12 }}>
           <Select aria-label="Lọc theo nhóm" placeholder="Mọi nhóm khách" value={group} onChange={(e) => setGroup(e.target.value)} options={(groups.data?.items ?? []).map((g) => ({ value: g.id, label: g.name }))} />
@@ -123,8 +135,7 @@ export default function CustomersPage() {
                 <InsetRow
                   key={c.id}
                   href={`/khach-hang/${c.id}`}
-                  icon={<span aria-hidden="true">{initials(c.fullName)}</span>}
-                  tone={c.isActive ? "info" : "neutral"}
+                  lead={<Avatar name={c.fullName} tone={c.isActive ? undefined : "neutral"} />}
                   title={c.fullName}
                   subtitle={`${c.phone ?? "Chưa có SĐT"}${c.groupName ? ` · ${c.groupName}` : ""}`}
                   end={c.anonymizedAt ? <StatusChip tone="neutral">Đã ẩn danh</StatusChip> : c.code}

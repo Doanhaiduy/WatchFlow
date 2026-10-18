@@ -1,6 +1,6 @@
 "use client";
 import { joinTitle } from "@/components/catalog/types";
-import { Ban, HandCoins, Printer } from "lucide-react";
+import { Ban, Banknote, Boxes, HandCoins, Printer, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useRef, useState } from "react";
@@ -16,8 +16,10 @@ import { KeyValue, LockNote } from "@/components/ui/Display";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { WatchArt, artSeed } from "@/components/ui/WatchArt";
 import { useToast } from "@/components/ui/Toast";
 import { newIdempotencyKey, swrFetcher } from "@/lib/api-client";
 import { formatDateTimeVn, formatDateVn } from "@/lib/dates";
@@ -93,11 +95,18 @@ export default function SaleDetailPage() {
         ) : (
           <div className="wf-stack">
             <section className="g wf-pad" aria-label="Thông tin phiếu">
-              <div className="wf-dev-row" style={{ marginBottom: 8 }}>
-                <StatusChip kind="doc" status={s.status} />
-                {(s.balance?.due ?? 0) > 0 && <StatusChip kind="doc" status="debt" label={`Còn nợ ${formatVnd(s.balance!.due)}`} />}
+              <div className="wf-sale-hd">
+                <div style={{ minWidth: 0 }}>
+                  <div className="wf-dev-row" style={{ marginBottom: 8 }}>
+                    <StatusChip kind="doc" status={s.status} />
+                    {(s.balance?.due ?? 0) > 0 && <StatusChip kind="doc" status="debt" label={`Còn nợ ${formatVnd(s.balance!.due)}`} />}
+                  </div>
+                  <div className="wf-uprice">{formatVnd(s.grandTotal)}</div>
+                </div>
+                {s.status === "confirmed" && s.balance && s.balance.payable > 0 && (
+                  <ProgressRing value={(s.balance.paidNet / s.balance.payable) * 100} size={64} stroke={7} tone={s.balance.due > 0 ? "hold" : "ok"} label={s.balance.due > 0 ? `${Math.round((s.balance.paidNet / s.balance.payable) * 100)}%` : "Đủ"} ariaLabel={`Đã thu ${formatVnd(s.balance.paidNet)} trên ${formatVnd(s.balance.payable)}`} />
+                )}
               </div>
-              <div className="wf-uprice">{formatVnd(s.grandTotal)}</div>
               <KeyValue
                 items={[
                   { label: "Khách", value: s.customerName ? (s.customerId && can(["customer.view", "customer.view_own"]) ? <Link href={`/khach-hang/${s.customerId}`} style={{ color: "var(--wf-accent-text)", fontWeight: 600 }}>{s.customerName}{s.customerPhone ? ` · ${s.customerPhone}` : ""}</Link> : `${s.customerName}${s.customerPhone ? ` · ${s.customerPhone}` : ""}`) : "Khách lẻ" },
@@ -129,6 +138,7 @@ export default function SaleDetailPage() {
               <InsetList>
                 {s.lines.map((l) => (
                   <InsetRow key={l.id} href={l.unitId ? `/dong-ho/${l.unitId}` : undefined}
+                    {...(l.lineType === "watch" ? { thumb: <WatchArt crop="head" seed={artSeed(l.brandName, l.modelName)} brand={l.brandName} model={l.modelName} /> } : { icon: <Boxes size={20} aria-hidden="true" />, tone: "repair" as const })}
                     title={l.lineType === "watch" ? joinTitle(l.brandName, l.modelName) : `${l.partName} × ${l.qty}`}
                     subtitle={`${l.assetCode ?? l.partCode ?? ""}${l.cost != null ? ` · giá vốn ${formatVnd(l.cost)}` : ""}${l.basePrice != null ? ` · giá thu CTV ${formatVnd(l.basePrice)} · CTV hưởng ${formatVnd(l.collabEarn ?? 0)}` : ""}`}
                     end={formatVnd(l.lineTotal)} endSub={l.listPrice !== l.unitPrice ? `Niêm yết ${formatVnd(l.listPrice)}` : undefined} />
@@ -139,21 +149,21 @@ export default function SaleDetailPage() {
 
             {s.tradeIns.length > 0 && (
               <section aria-label="Máy cũ thu về"><div className="wf-sec"><h3>Máy cũ thu về</h3></div>
-                <InsetList>{s.tradeIns.map((t) => <InsetRow key={t.id} title={t.assetCode ?? "Máy cũ (chờ xác nhận)"} end={formatVnd(t.credit)} />)}</InsetList>
+                <InsetList>{s.tradeIns.map((t) => <InsetRow key={t.id} icon={<RefreshCw size={20} aria-hidden="true" />} tone="check" title={t.assetCode ?? "Máy cũ (chờ xác nhận)"} end={formatVnd(t.credit)} />)}</InsetList>
               </section>
             )}
 
             <section aria-label="Thanh toán"><div className="wf-sec"><h3>Lịch sử thanh toán</h3></div>
               {s.payments.length === 0 ? <div className="g wf-pad"><p className="wf-mute">Chưa có khoản thu nào.</p></div> : (
                 <InsetList>
-                  {s.payments.map((p) => <InsetRow key={p.id} title={`${METHOD_LABELS[p.method]} · ${p.code}`} subtitle={`${formatDateTimeVn(p.createdAt)} · ${p.createdByName ?? ""}${p.voidReason ? ` · ${p.voidReason}` : ""}`} end={formatVnd(p.amount)} endSub={p.status === "voided" ? <StatusChip tone="bad">Đã hủy</StatusChip> : undefined} />)}
+                  {s.payments.map((p) => <InsetRow key={p.id} icon={p.method === "cash" ? <Banknote size={20} aria-hidden="true" /> : <QrCode size={20} aria-hidden="true" />} tone={p.status === "voided" ? "bad" : p.method === "cash" ? "ok" : "info"} title={`${METHOD_LABELS[p.method]} · ${p.code}`} subtitle={`${formatDateTimeVn(p.createdAt)} · ${p.createdByName ?? ""}${p.voidReason ? ` · ${p.voidReason}` : ""}`} end={formatVnd(p.amount)} endSub={p.status === "voided" ? <StatusChip tone="bad">Đã hủy</StatusChip> : undefined} />)}
                 </InsetList>
               )}
             </section>
 
             {s.warranties.length > 0 && (
               <section aria-label="Bảo hành"><div className="wf-sec"><h3>Bảo hành</h3></div>
-                <InsetList>{s.warranties.map((w) => <InsetRow key={w.id} title={w.code} subtitle={`${formatDateVn(w.startDate)} – ${formatDateVn(w.endDate)}`} end={<StatusChip kind="warranty" status={w.status} />} />)}</InsetList>
+                <InsetList>{s.warranties.map((w) => <InsetRow key={w.id} icon={<ShieldCheck size={20} aria-hidden="true" />} tone="ok" title={w.code} subtitle={`${formatDateVn(w.startDate)} – ${formatDateVn(w.endDate)}`} end={<StatusChip kind="warranty" status={w.status} />} />)}</InsetList>
               </section>
             )}
           </div>

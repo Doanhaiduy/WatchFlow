@@ -1,5 +1,5 @@
 "use client";
-import { Boxes, FileSpreadsheet, Plus, Tags } from "lucide-react";
+import { AlertTriangle, Boxes, Coins, FileSpreadsheet, Plus, Tags } from "lucide-react";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { errMsg, sapi } from "@/components/auth/helpers";
@@ -17,12 +17,14 @@ import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pager } from "@/components/ui/Pager";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { Select, TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { swrFetcher } from "@/lib/api-client";
-import { formatVnd } from "@/lib/money";
+import { formatVnd, formatVndShort } from "@/lib/money";
+import { hasKpi, useDashKpis } from "@/lib/use-dashboard";
 import { useSession } from "@/lib/session";
 
 type Res = { items: Part[]; total: number; page: number; pageSize: number };
@@ -96,6 +98,7 @@ export default function PartsPage() {
   const [catsOpen, setCatsOpen] = useState(false);
   const manage = can("part.manage");
   const hasCost = data?.items.some((x) => x.avgCost !== undefined);
+  const { kpis } = useDashKpis(allowed);
 
   return (
     <>
@@ -105,6 +108,13 @@ export default function PartsPage() {
         actions={manage ? (<>{can("purchase.create") && can("purchase.confirm") && <Button sm href="/nhap-excel?loai=linh-kien" icon={<FileSpreadsheet size={16} aria-hidden="true" />}>Nhập Excel</Button>}<Button sm icon={<Tags size={16} aria-hidden="true" />} onClick={() => setCatsOpen(true)}>Loại</Button><Button sm variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => setForm(true)}>Thêm</Button></>) : undefined}
       />
       <RequirePerm perm="part.view">
+        <StatStrip
+          items={[
+            data && { label: "Linh kiện", value: data.total, icon: <Boxes size={16} />, tone: "repair", hint: dq || cat || low ? "khớp bộ lọc" : "đang theo dõi" },
+            hasKpi(kpis, "partsLow") && { label: "Sắp hết", value: kpis.partsLow!, icon: <AlertTriangle size={16} />, tone: (kpis.partsLow ?? 0) > 0 ? "hold" : "ok", hint: "bấm để lọc", onClick: () => setLow(!low), active: low },
+            hasKpi(kpis, "stockValueParts") && { label: "Giá trị tồn", value: formatVndShort(kpis.stockValueParts!), icon: <Coins size={16} />, tone: "info", hint: "theo giá vốn bình quân" },
+          ]}
+        />
         <SearchBar value={q} onChange={setQ} placeholder="Tìm mã hoặc tên linh kiện…" />
         <div className="wf-dev-row" style={{ marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 180 }}>

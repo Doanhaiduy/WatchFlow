@@ -19,13 +19,14 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { FilterChips } from "@/components/ui/FilterChips";
 import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ProgressRing } from "@/components/ui/ProgressRing";
 import { Pager } from "@/components/ui/Pager";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { warrantyStatus } from "@/components/ui/status";
 import { ApiClientError, newIdempotencyKey, swrFetcher } from "@/lib/api-client";
-import { formatDateVn } from "@/lib/dates";
+import { diffDays, formatDateVn } from "@/lib/dates";
 import { useSession } from "@/lib/session";
 import { fetchStoreInfo } from "@/lib/store-info";
 
@@ -64,8 +65,9 @@ export default function WarrantiesPage() {
                   <InsetRow
                     key={w.id}
                     onClick={() => setSel(w)}
-                    icon={<ShieldCheck size={20} aria-hidden="true" />}
-                    tone={st === "active" ? "ok" : st === "expiring" ? "hold" : st === "voided" ? "bad" : "neutral"}
+                    {...(w.effectiveStatus === "active"
+                      ? { thumb: <ProgressRing value={Math.max(6, Math.min(100, (w.daysLeft / Math.max(1, diffDays(w.startDate, w.endDate))) * 100))} size={46} stroke={5} tone={st === "expiring" ? "hold" : "ok"} label={w.daysLeft > 999 ? "999+" : `${w.daysLeft}n`} ariaLabel={`Còn ${w.daysLeft} ngày bảo hành`} /> }
+                      : { icon: <ShieldCheck size={20} aria-hidden="true" />, tone: st === "voided" ? ("bad" as const) : ("neutral" as const) })}
                     title={w.modelName ?? ([w.brandText, w.modelText].filter(Boolean).join(" ") || "Đồng hồ")}
                     subtitle={[w.code, w.assetCode, w.customerName ?? "Khách lẻ", w.customerPhone, `đến ${formatDateVn(w.endDate)}`].filter(Boolean).join(" · ")}
                     end={<StatusChip kind="warranty" status={st} />}

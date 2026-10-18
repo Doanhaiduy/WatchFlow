@@ -1,11 +1,11 @@
 "use client";
-import { Watch } from "lucide-react";
 import { useState } from "react";
 import useSWR from "swr";
 import { swrFetcher } from "@/lib/api-client";
 import { formatVnd } from "@/lib/money";
 import { unitTitle, type UnitDto, type UnitList } from "../catalog/types";
 import { ScanDialog } from "../catalog/ScanDialog";
+import { UnitThumb } from "../catalog/UnitArt";
 import { InsetList, InsetRow } from "../ui/InsetList";
 import { SearchBar } from "../ui/SearchBar";
 import { StatusChip } from "../ui/StatusChip";
@@ -27,7 +27,7 @@ export function UnitSearch({ onPick, status = "in_stock", exclude = [], placehol
       ) : (
         <InsetList label="Chiếc tìm được">
           {items.map((u) => (
-            <InsetRow key={u.id} onClick={() => onPick(u)} icon={<Watch size={20} aria-hidden="true" />} tone="check" title={unitTitle(u)} subtitle={`${u.assetCode}${u.serialNo ? ` · ${u.serialNo}` : ""}`} end={formatVnd(u.effectivePrice)} endSub={<StatusChip kind="unit" status={u.status} />} />
+            <InsetRow key={u.id} wrap onClick={() => onPick(u)} thumb={<UnitThumb u={u} />} title={unitTitle(u)} subtitle={`${u.assetCode}${u.serialNo ? ` · ${u.serialNo}` : ""}`} end={formatVnd(u.effectivePrice)} endSub={<StatusChip kind="unit" status={u.status} />} />
           ))}
         </InsetList>
       )}

@@ -1,5 +1,5 @@
 "use client";
-import { Bookmark, Plus } from "lucide-react";
+import { AlertTriangle, Banknote, Bookmark, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
@@ -18,14 +18,16 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { Modal } from "@/components/ui/Modal";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ProgressRing } from "@/components/ui/ProgressRing";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { Textarea } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { newIdempotencyKey, swrFetcher } from "@/lib/api-client";
-import { formatDateVn } from "@/lib/dates";
-import { formatVnd } from "@/lib/money";
+import { diffDays, formatDateVn, todayVn } from "@/lib/dates";
+import { formatVnd, formatVndShort } from "@/lib/money";
 import { useSession } from "@/lib/session";
 
 const GROUPS: Record<string, string> = { open: "active,expired", done: "converted", closed: "cancelled,forfeited" };
@@ -82,6 +84,14 @@ function CancelModal({ r, onClose, onDone }: { r: Reservation | null; onClose: (
   );
 }
 
+/** Vòng còn lại của thời hạn giữ: đầy = mới giữ, cạn = sắp hết hạn; chữ giữa = số ngày còn lại (hoặc ! khi quá hạn) */
+function HoldRing({ r }: { r: Reservation }) {
+  const left = diffDays(todayVn(), r.holdUntil);
+  const total = Math.max(1, diffDays(r.docDate, r.holdUntil));
+  const bad = r.overdue || left < 0;
+  return <ProgressRing value={bad ? 100 : Math.max(6, Math.min(100, (left / total) * 100))} size={46} stroke={5} tone={bad ? "bad" : left <= 2 ? "hold" : "ok"} label={bad ? "!" : `${left}n`} ariaLabel={bad ? "Đã quá hạn giữ" : `Còn ${left} ngày giữ`} />;
+}
+
 export default function ReservationsPage() {
   const { can } = useSession();
   const router = useRouter();
@@ -109,6 +119,15 @@ export default function ReservationsPage() {
     <>
       <PageHeader title="Giữ hàng" description="Đặt cọc giữ chiếc cho khách" actions={can("reservation.manage") ? <Button sm variant="primary" icon={<Plus size={16} aria-hidden="true" />} onClick={() => setCreate(true)}>Giữ hàng</Button> : undefined} />
       <RequirePerm perm={["reservation.manage", "sale.view"]}>
+        {grp === "open" && data && data.items.length > 0 && (
+          <StatStrip
+            items={[
+              { label: "Đang giữ", value: data.items.length, icon: <Bookmark size={16} />, tone: "hold", hint: "chiếc đã cọc" },
+              { label: "Quá hạn", value: data.items.filter((r) => r.overdue).length, icon: <AlertTriangle size={16} />, tone: data.items.some((r) => r.overdue) ? "bad" : "ok", hint: "cần liên hệ khách" },
+              { label: "Tiền cọc", value: formatVndShort(data.items.reduce((a, r) => a + (r.held ?? 0), 0)), icon: <Banknote size={16} />, tone: "info", hint: "đang giữ hộ khách" },
+            ]}
+          />
+        )}
         <FilterChips ariaLabel="Nhóm giữ hàng" value={g} onChange={(v) => setG(v.length ? v : ["open"])} options={[{ value: "open", label: "Đang giữ" }, { value: "done", label: "Đã chuyển bán" }, { value: "closed", label: "Đã hủy" }]} />
         {isLoading ? <SkeletonList rows={5} /> : error ? (
           <div className="g wf-pad"><ErrorState description={errMsg(error)} onRetry={async () => (await mutate()) !== undefined} /></div>
@@ -120,8 +139,7 @@ export default function ReservationsPage() {
               <InsetRow
                 key={r.id}
                 onClick={() => setSel(r)}
-                icon={<Bookmark size={20} aria-hidden="true" />}
-                tone={r.overdue ? "bad" : r.status === "active" ? "hold" : r.status === "converted" ? "ok" : "neutral"}
+                {...(["active", "expired"].includes(r.status) ? { thumb: <HoldRing r={r} /> } : { icon: <Bookmark size={20} aria-hidden="true" />, tone: r.status === "converted" ? "ok" as const : "neutral" as const })}
                 title={r.modelName}
                 subtitle={[r.assetCode, r.customerName, r.customerPhone, `đến ${formatDateVn(r.holdUntil)}`].filter(Boolean).join(" · ")}
                 end={formatVnd(r.held ?? r.received ?? 0)}

@@ -1,0 +1,150 @@
+/* WatchFlow — lớp hình ảnh bổ sung cho Glass: ảnh đồng hồ vẽ SVG, đường xu hướng, cột đôi, thanh ngang, lối tắt, việc cần xử lý, thẻ biểu đồ, dải số liệu đầu trang.
+   Chỉ dùng biến --wf-* / --ux-* (tokens.css), có cả bản sáng/tối. Đặt trong @layer components như glass.css. */
+@layer components {
+  /* ===== Ảnh đồng hồ vẽ SVG (WatchArt) ===== */
+  .wf-watchart { display: block; width: 100%; height: 100%; }
+  .wf-pc .im .wf-watchart { filter: drop-shadow(0 8px 10px rgba(20, 23, 28, .22)); }
+  .wf-th { padding: 2px; }
+  .wf-th .wf-watchart { filter: none; }
+  .wf-art { display: grid; place-items: center; width: 100%; height: 100%; }
+
+  /* ===== Đường xu hướng nhỏ trong thẻ số liệu ===== */
+  .wf-spark { display: block; width: 100%; overflow: visible; }
+  .wf-kpi .sp { position: absolute; right: 12px; bottom: 10px; width: 38%; max-width: 96px; pointer-events: none; opacity: .95; }
+
+  /* ===== Hero: dòng ghi chú dưới số lớn ===== */
+  .wf-hero .nt { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; font-weight: 600; margin: -4px 0 12px; }
+  .wf-hero .nt span { background: rgba(255, 255, 255, .22); border-radius: var(--wf-r-pill); padding: 3px 10px; }
+
+  /* ===== Cột đôi (hai chỉ số mỗi kỳ) ===== */
+  .wf-bars[data-two="true"] .b { gap: 2px; }
+  .wf-bars[data-two="true"] .b i { flex: 1; border-radius: 6px 6px 3px 3px; }
+  .wf-bars[data-two="true"] .b i:first-child { background: color-mix(in srgb, var(--wf-accent) 42%, transparent); }
+  .wf-bars i.b2 { background: color-mix(in srgb, var(--wf-ok) 55%, transparent); }
+  .wf-bars [data-hl="true"] i.b2, .wf-bars [data-sel="true"] i.b2, .wf-bars button:hover i.b2 { background: var(--wf-ok); }
+  .wf-bars[data-two="true"] [data-hl="true"] i:first-child, .wf-bars[data-two="true"] [data-sel="true"] i:first-child { background: var(--wf-grad); }
+
+  /* ===== Thanh ngang xếp hạng ===== */
+  .wf-hbars { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .wf-hbars .t { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .wf-hbars .t span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--wf-nav); font-weight: 600; }
+  .wf-hbars .t b { flex: none; font-weight: 800; }
+  .wf-hbars .tr { height: 8px; margin-top: 6px; border-radius: 6px; background: var(--wf-line); overflow: hidden; }
+  .wf-hbars .tr i { display: block; height: 100%; border-radius: 6px; transition: width .6s var(--wf-ease); }
+  .wf-hbars small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--wf-mute); }
+
+  /* ===== Lối tắt ===== */
+  .wf-sc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (min-width: 560px) and (max-width: 999px) { .wf-sc { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .wf-sc-i { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px; border-radius: var(--wf-r-list); color: inherit; text-decoration: none; min-height: 44px; transition: background .2s var(--wf-ease), transform .2s var(--wf-ease); }
+  .wf-sc-i:hover { background: var(--wf-glass-strong); }
+  .wf-sc-i:active { transform: scale(.98); }
+  .wf-sc-i b { font-size: 13.5px; font-weight: 700; line-height: 1.25; }
+  .wf-sc-i .wf-nb { position: absolute; top: 12px; right: 12px; font-style: normal; box-shadow: none; }
+
+  /* ===== Việc cần xử lý (có vạch màu bên trái) ===== */
+  .wf-card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 16px 6px; }
+  .wf-card-h h2, .wf-card-h h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+  .wf-card-h .n { min-width: 24px; height: 24px; padding: 0 8px; border-radius: var(--wf-r-pill); display: inline-grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--wf-accent-t); color: var(--wf-accent-text); font-variant-numeric: tabular-nums; }
+  .wf-td { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 22px; min-height: 60px; width: 100%; color: inherit; text-decoration: none; text-align: left; }
+  .wf-td::before { content: ''; position: absolute; left: 9px; top: 14px; bottom: 14px; width: 3px; border-radius: 3px; background: var(--tc, var(--wf-accent)); }
+  .wf-td + .wf-td { border-top: 1px solid var(--wf-line); }
+  .wf-td:hover { background: var(--wf-glass-flat); }
+  .wf-td .m { flex: 1; min-width: 0; }
+  .wf-td .m b { display: block; font-size: 14px; font-weight: 600; }
+  .wf-td .m small { display: block; font-size: 12px; color: var(--wf-mute); }
+  .wf-td .n { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--tc) 58%, var(--wf-ink)); }
+  .wf-td .wf-cv { flex: none; color: var(--wf-mute-2); }
+  .wf-ok-all { display: flex; align-items: center; gap: 12px; padding: 8px 16px 18px; color: var(--wf-mute); font-size: 13.5px; }
+
+  /* ===== Thẻ biểu đồ ===== */
+  .wf-ch { display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 2px; }
+  .wf-ch h3 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+  .wf-ch .sub { display: block; font-size: 12px; font-weight: 500; color: var(--wf-mute); letter-spacing: 0; }
+  .wf-ch .wf-seg { flex: none; max-width: 100%; }
+  .wf-dcards { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 700px) { .wf-dcards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+  .wf-dcards > section { min-width: 0; }
+  .wf-dcards h3 { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+  .wf-dcards .wf-donut { gap: 14px; }
+
+  /* ===== Dải số liệu đầu trang danh sách ===== */
+  .wf-strip { margin-bottom: 12px; }
+  .wf-strip .wf-kpi { padding: 12px 14px; }
+  .wf-strip .wf-kpi b { font-size: 18px; margin-top: 4px; }
+  @media (min-width: 1000px) { .wf-strip .wf-kpi b { font-size: 22px; } }
+  .wf-strip .wf-kpis { margin-bottom: 0; }
+
+  /* ===== Avatar chữ cái đầu (khách hàng, người dùng) ===== */
+  .wf-av { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; font-size: 15px; font-weight: 800; color: var(--wf-on-accent); background: var(--wf-grad-fab); box-shadow: 0 6px 14px var(--ux-shadow); letter-spacing: -.02em; }
+  .wf-av[data-tone="ok"] { background: linear-gradient(140deg, var(--wf-ok), color-mix(in srgb, var(--wf-ok) 55%, #0a7)); }
+  .wf-av[data-tone="hold"] { background: linear-gradient(140deg, var(--wf-hold), color-mix(in srgb, var(--wf-hold) 60%, #b60)); }
+  .wf-av[data-tone="repair"] { background: linear-gradient(140deg, var(--wf-repair), color-mix(in srgb, var(--wf-repair) 60%, #c32)); }
+  .wf-av[data-tone="check"] { background: linear-gradient(140deg, var(--wf-check), color-mix(in srgb, var(--wf-check) 60%, #62d)); }
+  .wf-av[data-tone="info"] { background: linear-gradient(140deg, var(--wf-info), color-mix(in srgb, var(--wf-info) 60%, #26c)); }
+}
+
+@layer components {
+  /* ===== Tổng quan: điện thoại xếp một cột theo `order` (việc cần xử lý lên trên biểu đồ); máy tính tách cột trái/phải ===== */
+  .wf-dash { display: flex; flex-direction: column; gap: 12px; }
+  .wf-dcol { display: contents; }
+  .wf-dcol .wf-kpis { margin-bottom: 0; }
+  .wf-o2 { order: 2; }
+  @media (min-width: 1000px) {
+    .wf-dash { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+    .wf-dcol { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  }
+  .wf-dcards { align-items: start; }
+}
+
+@layer components {
+  /* thẻ số liệu dạng nút (lọc theo con số) */
+  button.wf-kpi { text-align: left; width: 100%; font: inherit; cursor: pointer; transition: transform .2s var(--wf-ease), background .2s var(--wf-ease), box-shadow .2s var(--wf-ease); }
+  button.wf-kpi:hover { background: var(--wf-glass-strong); }
+  button.wf-kpi:active { transform: scale(.98); }
+  button.wf-kpi[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--wf-accent), var(--wf-glass-shadow); background: var(--wf-glass-strong); }
+  /* dải số liệu: điện thoại/tablet = một hàng cuộn ngang (không chiếm chỗ của danh sách); máy tính = lưới 4 (hoặc 2–3) cột */
+  @media (max-width: 999px) {
+    .wf-strip .wf-kpis { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding: 0 14px; margin: 0 -14px; padding: 2px 14px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .wf-strip .wf-kpis::-webkit-scrollbar { display: none; }
+    .wf-strip .wf-kpi { flex: 0 0 156px; scroll-snap-align: start; }
+  }
+  @media (min-width: 1000px) { .wf-strip[data-n="3"] .wf-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .wf-strip[data-n="2"] .wf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+}
+
+@layer components {
+  .wf-av[data-tone="neutral"] { background: var(--wf-neutral-t); color: var(--wf-mute); box-shadow: none; }
+}
+
+@layer components {
+  /* Báo cáo: biểu đồ bên trái, tồn kho theo hãng + danh sách báo cáo bên phải (máy tính) */
+  .wf-rep { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1000px) { .wf-rep { grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; } }
+}
+
+@layer components {
+  /* đầu phiếu bán: tổng tiền bên trái, vòng % đã thu bên phải */
+  .wf-sale-hd { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 4px; }
+}
+
+@layer components {
+  /* đầu hồ sơ: avatar lớn + tên + mã */
+  .wf-prof { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--wf-line); }
+  .wf-prof .tx { flex: 1; min-width: 0; }
+  .wf-prof .tx b { display: block; font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; overflow-wrap: anywhere; }
+  .wf-prof .tx span { display: block; font-size: 12.5px; color: var(--wf-mute); margin-top: 2px; }
+  .wf-av.lg { width: 64px; height: 64px; font-size: 26px; }
+}
+
+@layer components {
+  .wf-sc-i small { display: block; font-size: 12px; line-height: 1.4; color: var(--wf-mute); margin-top: -6px; }
+  @media (min-width: 700px) { .wf-sc[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  /* thẻ hồ sơ tài khoản dạng hero */
+  .wf-hero-prof .top { display: flex; align-items: center; gap: 14px; }
+  .wf-hero-prof .av { flex: none; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; font-weight: 800; background: rgba(255, 255, 255, .24); }
+  .wf-hero-prof .tx { min-width: 0; }
+  .wf-hero-prof .tx b { display: block; font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; overflow-wrap: anywhere; }
+  .wf-hero-prof .tx small { display: block; font-size: 13px; opacity: .9; margin-top: 2px; overflow-wrap: anywhere; }
+  .wf-hero-prof .roles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .wf-hero-prof .roles span { background: rgba(255, 255, 255, .22); border-radius: var(--wf-r-pill); padding: 4px 12px; font-size: 12px; font-weight: 600; }
+}

@@ -87,6 +87,7 @@ Mỗi bảng mới **bắt buộc**: `ENABLE` + `FORCE ROW LEVEL SECURITY`, `OWN
 - Pooler cổng 5432 = session mode → cạn kết nối khi nhiều hàm serverless; dùng 6543 và mỗi instance tối đa ~3 kết nối.
 - Tài khoản dùng mật khẩu tạm / vai trò bắt buộc MFA chưa bật bị chặn mọi API trừ `/api/v1/auth/*`.
 - Trigger dùng chung hai bảng: dùng `IF/ELSIF`, đừng dùng `CASE` tham chiếu `OLD.cột` của bảng kia.
+- Lớp CSS bổ trợ (modifier) **không đặt trùng tiện ích Tailwind** (`inline`, `block`, `hidden`, `flex`, `grid`, `table`, `static`…): layer `utilities` thắng layer `components` ⇒ quy tắc của mình bị đè (huy hiệu sidebar từng mất `inline-grid` nên số lệch lên góc). Dùng tiền tố `wf-…`.
 - Job phân vùng/dọn dẹp thiếu quyền `CREATE`/`USAGE` làm hỏng ngầm — mọi job định kỳ phải có test chạy thật dưới đúng vai trò.
 - Docs bị lệch thực tế (README nói một đằng, `.env.local` làm một nẻo) → mỗi PR đổi hành vi đổi docs; hết hạn "kiểm lần cuối" ghi ở đầu mỗi file docs.
 - Next.js App Router: thư mục bắt đầu bằng `_` là **private** (không thành route) — đừng đặt trang như `/_design`; dùng `/dev/design`.

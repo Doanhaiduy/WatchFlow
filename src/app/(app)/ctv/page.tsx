@@ -13,10 +13,10 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { WatchArt, artSeed } from "@/components/ui/WatchArt";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { swrFetcher } from "@/lib/api-client";
 import { useSession } from "@/lib/session";
-import { Watch } from "lucide-react";
 
 /** Màn của CTV: hàng đang giữ kèm GIÁ THU (không có giá vốn). */
 function CtvHomeView() {
@@ -49,7 +49,7 @@ function CtvHomeView() {
                 code={`${u.assetCode} · giữ ${u.daysHeld} ngày`}
                 price={u.basePrice}
                 imageSrc={u.thumbUrl ?? undefined}
-                placeholder={<Watch size={52} aria-hidden="true" style={{ color: "var(--wf-accent)", opacity: 0.8 }} />}
+                placeholder={<WatchArt seed={artSeed(u.brandName, u.modelName)} brand={u.brandName} model={u.modelName} />}
               />
             ))}
           </div>

@@ -98,21 +98,17 @@ export default function MePage() {
     <>
       <PageHeader title="Tài khoản" description="Hồ sơ, bảo mật và các thiết bị đăng nhập" />
       <div className="wf-stack" style={{ marginTop: 12 }}>
-        <section className="g wf-pad" aria-label="Hồ sơ">
-          <div className="wf-me" style={{ marginBottom: 8, background: "none", padding: 0 }}>
-            <span className="av" aria-hidden="true" style={{ width: 52, height: 52, fontSize: 20 }}>
-              {initials(user.fullName)}
-            </span>
-            <span className="tx">
-              <b style={{ fontSize: 17 }}>{user.fullName}</b>
+        <section className="wf-hero wf-hero-prof" aria-label="Hồ sơ">
+          <div className="top">
+            <span className="av" aria-hidden="true">{initials(user.fullName)}</span>
+            <div className="tx">
+              <b>{user.fullName}</b>
               <small>{user.email}</small>
-            </span>
+            </div>
           </div>
-          <div className="wf-dev-row" style={{ marginBottom: 6 }}>
+          <div className="roles">
             {user.roles.map((r) => (
-              <StatusChip key={r} tone="info">
-                {roleLabel(r)}
-              </StatusChip>
+              <span key={r}>{roleLabel(r)}</span>
             ))}
           </div>
         </section>

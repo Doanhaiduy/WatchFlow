@@ -25,6 +25,7 @@ export function humanizeHttpStatus(status: number): string {
   if (status >= 500) return MSG.server;
   if (status === 404) return "Không tìm thấy nội dung yêu cầu. Hãy tải lại trang.";
   if (status === 403) return "Bạn không có quyền thực hiện thao tác này.";
+  if (status === 409 || status === 412) return "Dữ liệu vừa được thay đổi ở nơi khác. Hãy tải lại trang rồi làm lại.";
   return MSG.generic;
 }
 

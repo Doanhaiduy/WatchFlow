@@ -1,6 +1,6 @@
 # Hệ thống giao diện — phong cách Glass
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (khách chốt mẫu **v6-glass**, CF-09) · ADR-026, ADR-027
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (khách chốt mẫu **v6-glass**, CF-09) · ADR-026, ADR-027
 > Tài liệu này là **đặc tả để AI/dev dựng giao diện**. Nguồn hình ảnh tham chiếu: `design/ui-preview/v6-glass.html` (+ `assets/shared.js`: dữ liệu minh họa, biểu tượng, hàm vẽ biểu đồ). Mâu thuẫn giữa đặc tả này và mẫu ⇒ **đặc tả này thắng** (mẫu còn các màn đã bị loại và dữ liệu minh họa). Cách đọc nhanh: mở `design/ui-preview/v6-glass.html` trong trình duyệt (điện thoại 390px và máy tính ≥ 1000px).
 
 ## 1. Nguyên tắc
@@ -117,7 +117,12 @@ Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, 
 | `GlassCard` | Khối kính `.g`: nền `--wf-glass`, viền `--wf-glass-line`, bóng `--wf-glass-shadow`, blur, bo 26 | Nền mờ phải có phương án dự phòng (§7) |
 | `StatusChip` | `.wf-chip[data-tone]` — viên thuốc 11px/600 | Nhận `status` + loại → tự ánh xạ nhãn/tone (§3) |
 | `HeroCard` | `.wallet` — thẻ gradient lớn: nhãn, số cỡ 34/48px, thanh tiến độ, hàng 3 ô số nhỏ, nút phụ tối | Dùng cho Doanh thu ở Tổng quan; **không** có ngữ nghĩa "ví/quỹ" |
-| `KpiTile` | `.g-kpi` / `.kt .g` — nhãn nhỏ + số 800 + chú thích | Lưới 3 cột (mobile) / 4 cột (desktop) |
+| `KpiTile` | `.wf-kpi` — ô biểu tượng màu (`tone`) + nhãn nhỏ + số 800 + (▲▼ % so kỳ trước: `delta`, `deltaInverse` khi giảm là tốt) + chú thích + đường xu hướng `spark`; có `href` ⇒ cả thẻ là liên kết, có `onClick` ⇒ nút lọc (`active` = đang chọn) | Lưới 2 cột (mobile) / 4 cột (desktop) trong `KpiGrid`. Số do máy chủ trả, KHÔNG tính tiền ở UI |
+| `StatStrip` | Dải 2–4 `KpiTile` ở đầu trang danh sách (Đồng hồ, Sửa chữa, Bán hàng, Khách hàng, Giữ hàng, Linh kiện) | Mobile: một hàng cuộn ngang (không chiếm chỗ danh sách); desktop: lưới. Số lấy từ `counts` của danh sách hoặc `useDashKpis()` (cùng khóa SWR với Tổng quan); thiếu khóa/quyền ⇒ không vẽ thẻ |
+| `WatchArt` / `UnitArt` / `UnitThumb` | Ảnh đồng hồ **vẽ SVG** khi chiếc chưa có ảnh thật (port từ `WF.watch` của mẫu đã duyệt, viết lại bằng JSX): vỏ thép/vàng/hồng/đen, mặt (roman/vạch/chấm/số), dây da/cao su/kim loại/NATO, G-Shock điện tử; `crop="head"` cho ảnh nhỏ | Kiểu dáng suy ra từ chữ mô tả (màu mặt, chất liệu vỏ, loại dây) nếu có, còn lại băm theo `artSeed(hãng, loại)` ⇒ **mọi nơi** vẽ cùng một kiểu cho cùng một loại. Có ảnh thật thì dùng ảnh thật |
+| `Avatar` | Hình tròn chữ cái đầu, gradient theo màu ổn định của tên (`neutral` cho tài khoản ngưng) | Khách hàng, CTV, người dùng, đầu hồ sơ (`InsetRow lead=`) |
+| `ShortcutGrid` | Lưới ô biểu tượng màu + nhãn (+ mô tả, + số việc) | Tổng quan "Làm nhanh", trang Quản trị |
+| `Sparkline`, `HBarList` | Đường xu hướng nhỏ; thanh ngang xếp hạng | Thẻ KPI; tồn theo hãng, thực thu theo hình thức |
 | `InsetList` + `InsetRow` | `.ig`/`.ir` — danh sách kính liền khối: ô biểu tượng 44px (tone) hoặc ảnh chiếc 48px, tiêu đề, phụ đề, cột phải số/chip, kẻ chia lùi 72px | Dùng cho danh sách chiếc, phiếu, khách; thẻ cho desktop |
 | `ProductCard` | `.pc` — ảnh vuông gradient nhạt + chip trạng thái, tên, mã, giá 800, nút tròn "+" | Lưới 2 cột (mobile) / 4 cột (desktop) |
 | `SegmentedControl` | `.seg` — nền kính, viên trắng trượt | Chọn kỳ (Hôm nay/7 ngày/Tháng/Quý/Năm), tab (Doanh thu/Lãi gộp/Thực thu) |
@@ -142,7 +147,7 @@ Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, 
 | `ProgressRing` | `chart.ring` — vòng % + số giữa | Tiến độ sửa chữa |
 | `LockNote` | `.lock` — dải vàng nhạt "Chỉ người có quyền xem giá vốn mới thấy mục này" | Gắn cạnh mọi khối giá vốn/lãi |
 | `Toast`, `EmptyState`, `ErrorState`, `OfflineBanner`, `Skeleton` | Không có trong mẫu — dựng theo Glass hoặc phần tử Lucian (§8) | Văn bản tiếng Việt, hành động tiếp theo rõ ràng |
-| `Chart` (area/bars/donut/ring) | Mẫu dùng SVG tự vẽ (`WF.chart.*`) | Tooltip kéo (scrub), nhãn trục nhỏ; màu: tím `--wf-accent` (doanh thu), xanh lá `--wf-ok` (lãi gộp) |
+| `Chart` (area/bars/donut/ring) | Mẫu dùng SVG tự vẽ (`WF.chart.*`) | Tooltip kéo (scrub), nhãn trục nhỏ trải đều; màu: tím `--wf-accent` (doanh thu), xanh lá `--wf-ok` (lãi gộp). `AreaChart` hỗ trợ **2 đường** (`data2`, `legend`), `BarChart` hỗ trợ **cột đôi** (`value2`) |
 
 Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permission="cost.view"` và kèm `LockNote`; người không có quyền **không render và không gọi API** (FR-DASH-11).
 
@@ -254,6 +259,7 @@ Giữ nguyên khối quy tắc nền `.ux` (box-sizing, focus ring `outline:2px 
 | Lỗi tải widget / 404 | Widget, trang không tồn tại | `error state` | #090, #089 |
 | Skeleton tải | Danh sách, Tổng quan | `skeleton loading` | #079 |
 | Wizard nhận máy / form nhiều bước | Nhận máy sửa, giao hàng CTV, **Nhập Excel hàng loạt** (`/nhap-excel`: Chọn tệp → Xem trước → Kết quả; khu thả tệp tự dựng theo Glass — không có trong Lucian) | `stepper wizard` | #042 (+#047 lọc dòng) |
+| Tab nhóm nội dung (Điện thoại / Máy tính, loại tệp Excel…) | Hướng dẫn sử dụng (`/huong-dan`; còn lại — hero, thẻ mục, bước, ghi chú, bảng, sơ đồ luồng, minh họa — tự dựng theo Glass ở `src/components/guide/`) | `segmented control` | #047 |
 | Bottom sheet nhiều độ cao (giỏ POS) | POS | `bottom sheet` | #336 |
 | Drawer bộ lọc có đếm kết quả | Đồng hồ, Phiếu | `filter drawer` | #305 |
 | Tải ảnh (kéo thả, tiến trình) | Ảnh chiếc, ảnh nhận máy, giấy tờ | `image upload` | #032, #075 |

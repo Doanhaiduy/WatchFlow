@@ -1,11 +1,12 @@
 "use client";
-import { ArrowRightLeft, BadgeCheck, Ban, Bookmark, Handshake, Pencil, Printer, RotateCcw, ShoppingBag, Tag, Watch } from "lucide-react";
+import { ArrowRightLeft, BadgeCheck, Ban, Bookmark, Handshake, Pencil, Printer, RotateCcw, ShoppingBag, Tag } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import useSWR from "swr";
 import { errMsg, fieldErrors, sapi } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
 import { isReauthCancelled, useReauth } from "@/components/auth/useReauth";
+import { UnitArt } from "@/components/catalog/UnitArt";
 import { useLocations } from "@/components/catalog/useLists";
 import { unitTitle, type UnitDetail } from "@/components/catalog/types";
 import type { RepairListItem } from "@/components/repairs/types";
@@ -142,7 +143,7 @@ function UnitBody({
           {photo ? (
             <ZoomableImage src={photo.url} alt={`Ảnh ${unitTitle(u)}`} viewer={u.photos.map((p) => ({ src: p.url, alt: `Ảnh ${unitTitle(u)}` }))} index={Math.max(0, u.photos.indexOf(photo))} />
           ) : (
-            <Watch size={96} aria-hidden="true" style={{ color: "var(--wf-accent)", opacity: 0.6 }} />
+            <div className="wf-art"><UnitArt u={u} /></div>
           )}
           <span className="st">
             <StatusChip kind="unit" status={u.status} />

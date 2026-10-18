@@ -1,8 +1,29 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
-/** Dựng "markdown nhẹ" (đoạn, ##, -, 1., **đậm**) thành phần tử React — KHÔNG dùng dangerouslySetInnerHTML nên an toàn với mọi chuỗi. */
-function inline(s: string, key: string): ReactNode[] {
-  return s.split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith("**") && p.endsWith("**") && p.length > 4 ? <strong key={`${key}${i}`}>{p.slice(2, -2)}</strong> : p));
+/**
+ * Dựng "markdown nhẹ" thành phần tử React — KHÔNG dùng dangerouslySetInnerHTML nên an toàn với mọi chuỗi.
+ * Dòng/đoạn: "## " tiêu đề nhỏ, "- " gạch đầu dòng, "1. " đánh số, còn lại là đoạn (đoạn cách nhau dòng trống).
+ * Trong dòng: **đậm**, *nghiêng*, `mã`, [chữ](/duong-dan-noi-bo) (chỉ nhận đường dẫn nội bộ "/…" hoặc "#…"; liên kết khác hiện như chữ thường).
+ * Kiểu dáng ở src/components/guide/guide.css (lớp .wf-gd-*).
+ */
+const TOKEN = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)\s]+\)|\*[^*\s][^*]*\*)/g;
+
+export function Inline({ text }: { text: string }): ReactNode {
+  return text.split(TOKEN).map((p, i) => {
+    if (!p) return null;
+    if (p.startsWith("**") && p.endsWith("**") && p.length > 4) return <strong key={i}>{p.slice(2, -2)}</strong>;
+    if (p.startsWith("`") && p.endsWith("`") && p.length > 2) return <code key={i} className="wf-gd-code">{p.slice(1, -1)}</code>;
+    const link = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(p);
+    if (link) {
+      const href = link[2]!;
+      if (href.startsWith("/") && !href.startsWith("//")) return <Link key={i} href={href} className="wf-gd-a">{link[1]}</Link>;
+      if (href.startsWith("#")) return <a key={i} href={href} className="wf-gd-a">{link[1]}</a>;
+      return link[1];
+    }
+    if (p.length > 2 && p.startsWith("*") && p.endsWith("*") && !p.startsWith("**")) return <em key={i}>{p.slice(1, -1)}</em>;
+    return p;
+  });
 }
 
 export function MiniMarkdown({ text }: { text: string }) {
@@ -14,20 +35,20 @@ export function MiniMarkdown({ text }: { text: string }) {
     while (i < lines.length) {
       const l = lines[i]!;
       if (l.startsWith("## ")) {
-        out.push(<h4 key={`${bi}-${i}`} style={{ fontSize: 15, fontWeight: 700, margin: "12px 0 4px" }}>{inline(l.slice(3), `h${bi}${i}`)}</h4>);
+        out.push(<h4 key={`${bi}-${i}`} className="wf-gd-h4"><Inline text={l.slice(3)} /></h4>);
         i++;
       } else if (/^- /.test(l)) {
         const items: string[] = [];
         while (i < lines.length && /^- /.test(lines[i]!)) items.push(lines[i++]!.slice(2));
-        out.push(<ul key={`${bi}-${i}`} style={{ listStyle: "disc", paddingLeft: 20, margin: "6px 0" }}>{items.map((t, k) => <li key={k} style={{ margin: "3px 0" }}>{inline(t, `u${bi}${i}${k}`)}</li>)}</ul>);
+        out.push(<ul key={`${bi}-${i}`} className="wf-gd-ul">{items.map((t, k) => <li key={k}><Inline text={t} /></li>)}</ul>);
       } else if (/^\d+\. /.test(l)) {
         const items: string[] = [];
         while (i < lines.length && /^\d+\. /.test(lines[i]!)) items.push(lines[i++]!.replace(/^\d+\. /, ""));
-        out.push(<ol key={`${bi}-${i}`} style={{ listStyle: "decimal", paddingLeft: 22, margin: "6px 0" }}>{items.map((t, k) => <li key={k} style={{ margin: "3px 0" }}>{inline(t, `o${bi}${i}${k}`)}</li>)}</ol>);
+        out.push(<ol key={`${bi}-${i}`} className="wf-gd-ol">{items.map((t, k) => <li key={k}><Inline text={t} /></li>)}</ol>);
       } else {
         const para: string[] = [];
         while (i < lines.length && !/^(## |- |\d+\. )/.test(lines[i]!)) para.push(lines[i++]!);
-        out.push(<p key={`${bi}-${i}`} style={{ margin: "6px 0" }}>{inline(para.join(" "), `p${bi}${i}`)}</p>);
+        out.push(<p key={`${bi}-${i}`} className="wf-gd-p"><Inline text={para.join(" ")} /></p>);
       }
     }
   });

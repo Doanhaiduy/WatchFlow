@@ -94,7 +94,7 @@ export function Badge({ info, inline, className }: { info: NavBadgeInfo | null; 
   if (!info) return null;
   const urgent = info.overdue > 0;
   return (
-    <span className={cx("wf-nb", urgent ? "bad" : "warn", inline && "inline", className)} title={summarize(info)}>
+    <span className={cx("wf-nb", urgent ? "bad" : "warn", inline && "wf-nb-row", className)} title={summarize(info)}>
       <span aria-hidden="true">{info.count > 99 ? "99+" : info.count}</span>
       <span className="wf-sr">
         {" "}

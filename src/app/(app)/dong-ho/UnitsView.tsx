@@ -1,5 +1,5 @@
 "use client";
-import { FileSpreadsheet, Layers, PackagePlus, Watch } from "lucide-react";
+import { Bookmark, ClipboardCheck, FileSpreadsheet, Handshake, Layers, PackageCheck, PackagePlus, Watch } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
@@ -8,6 +8,7 @@ import { errMsg } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
 import { ScanDialog } from "@/components/catalog/ScanDialog";
 import { useBrands, useLocations, useModels } from "@/components/catalog/useLists";
+import { UnitArt } from "@/components/catalog/UnitArt";
 import { unitTitle, type UnitList } from "@/components/catalog/types";
 import { ActiveFilterChips, FilterButton, FilterDrawer, FilterSection } from "@/components/lucian/FilterDrawer";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +19,7 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { Select } from "@/components/ui/TextInput";
 import { Checkbox } from "@/components/ui/Checkbox";
@@ -131,6 +133,16 @@ export function UnitsView() {
         }
       />
       <RequirePerm perm="catalog.view">
+        {data && (
+          <StatStrip
+            items={[
+              { label: "Sẵn sàng bán", value: counts.in_stock ?? 0, icon: <PackageCheck size={16} />, tone: "ok", hint: "có thể bán ngay", onClick: () => setF({ ...f, status: "in_stock" }), active: f.status === "in_stock" },
+              { label: "Đã giữ", value: counts.reserved ?? 0, icon: <Bookmark size={16} />, tone: "hold", hint: "khách đã cọc", onClick: () => setF({ ...f, status: "reserved" }), active: f.status === "reserved" },
+              { label: "Đang ở CTV", value: counts.with_collaborator ?? 0, icon: <Handshake size={16} />, tone: "info", hint: "cộng tác viên giữ", onClick: () => setF({ ...f, status: "with_collaborator" }), active: f.status === "with_collaborator" },
+              { label: "Chờ kiểm tra", value: counts.inspecting ?? 0, icon: <ClipboardCheck size={16} />, tone: "check", hint: "hàng cũ / thu cũ", onClick: () => setF({ ...f, status: "inspecting" }), active: f.status === "inspecting" },
+            ]}
+          />
+        )}
         <SearchBar value={q} onChange={setQ} placeholder="Tìm mã nội bộ, serial, tên đồng hồ…" autoFocus={sp.get("tim") === "1"} />
         <FilterChips
           ariaLabel="Lọc theo trạng thái"
@@ -187,7 +199,7 @@ export function UnitsView() {
                   price={u.effectivePrice > 0 ? u.effectivePrice : null}
                   status={u.status}
                   imageSrc={u.thumbUrl ?? undefined}
-                  placeholder={<Watch size={52} aria-hidden="true" style={{ color: "var(--wf-accent)", opacity: 0.8 }} />}
+                  placeholder={<UnitArt u={u} />}
                 />
               ))}
             </div>

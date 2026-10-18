@@ -4,6 +4,28 @@ export type ChangelogEntry = { version: string; date: string; title: string; ite
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.15.0",
+    date: "2026-10-17",
+    title: "Giao diện sinh động hơn: Tổng quan có biểu đồ, thẻ số liệu có biểu tượng, ảnh đồng hồ vẽ, dải số liệu ở các trang danh sách",
+    items: [
+      "Tổng quan làm lại theo mẫu đã duyệt: thẻ doanh thu có so sánh với kỳ trước (▲/▼), thẻ số liệu có biểu tượng màu và đường xu hướng, biểu đồ doanh thu & lãi gộp (kể cả hôm nay — các ngày không bán được điền 0 nên biểu đồ không còn bị ẩn), biểu đồ bán hàng so với sửa chữa, tồn kho theo trạng thái và theo hãng, thực thu theo hình thức, “Làm nhanh”. Trên điện thoại, “Việc cần xử lý” nằm ngay sau thẻ số liệu.",
+      "Đồng hồ chưa có ảnh thật hiện ảnh vẽ theo hãng/loại (đồng hồ thép, vàng, G-Shock…) ở danh sách, tìm kiếm khi bán hàng, giỏ phiếu bán, chi tiết chiếc và hồ sơ khách — cùng một loại luôn cùng một kiểu.",
+      "Các trang Đồng hồ, Sửa chữa, Bán hàng, Khách hàng, Giữ hàng, Linh kiện có dải số liệu đầu trang (bấm vào thẻ để lọc); giữ hàng và bảo hành có vòng thời hạn còn lại; phiếu bán có vòng % đã thu và biểu tượng cho từng khoản thanh toán.",
+      "Khách hàng, cộng tác viên, người dùng có avatar màu; hồ sơ khách và trang Tài khoản có thẻ đầu trang; trang Quản trị dạng ô biểu tượng; trang Báo cáo có biểu đồ doanh thu & lãi gộp, cột theo tháng, tồn theo hãng và biểu tượng màu cho từng báo cáo.",
+    ],
+  },
+  {
+    version: "0.14.2",
+    date: "2026-10-17",
+    title: "Sửa huy hiệu số việc, tự lưu nháp POS bền hơn, làm lại trang Hướng dẫn",
+    items: [
+      "Sửa viên số việc cần xử lý ở thanh bên/Menu: số không còn bị lệch lên góc trên viên tròn.",
+      "Bán hàng: tự lưu nháp ổn định hơn — mở lại phiếu nháp không còn tự ghi lại; nếu lệch phiên bản do mất mạng giữa chừng thì tự lưu lại êm, còn khi người khác sửa thật thì báo rõ và có nút “Tải lại phiếu” thay vì kẹt lỗi. Nút Thanh toán chỉ mở khi phiếu đã lưu khớp với màn hình.",
+      "Bán hàng: nút “Linh kiện lẻ / Thêm máy cũ” không còn dính sát danh sách chiếc; tên đồng hồ trong danh sách tìm được xuống dòng thay vì bị cắt; thanh cuộn của phiếu bán gọn hơn; ô tìm nhanh trên thanh trên co lại vừa phải ở màn hẹp.",
+      "Trang Hướng dẫn sử dụng làm lại cho trực quan: thẻ “Bắt đầu nhanh”, tìm không dấu, công tắc “Dành cho tôi / Tất cả mục”, mục lục dính, các bước có đánh số, ghi chú theo mức độ, đường dẫn menu, bảng, sơ đồ luồng, hình minh họa giao diện, liên kết sâu tới từng mục và nút In / Lưu PDF.",
+    ],
+  },
+  {
     version: "0.14.1",
     date: "2026-10-17",
     title: "Sửa đua dữ liệu hủy đơn CTV và quyết toán; công cụ triển khai staging/production",

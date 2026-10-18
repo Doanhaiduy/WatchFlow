@@ -34,6 +34,8 @@ describe("humanizeError", () => {
     expect(humanizeHttpStatus(504)).toBe(MSG.timeout);
     expect(humanizeHttpStatus(500)).toBe(MSG.server);
     expect(humanizeHttpStatus(429)).toBe(MSG.tooMany);
+    expect(humanizeHttpStatus(412)).toMatch(/tải lại/);
+    expect(humanizeHttpStatus(409)).toMatch(/tải lại/);
     expect(humanizeError({ status: 503, code: "WF-UNKNOWN" })).toBe(MSG.unavailable);
   });
 });

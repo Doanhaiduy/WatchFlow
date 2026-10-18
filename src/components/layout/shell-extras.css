@@ -8,8 +8,9 @@
   /* Dock: nằm góc trên-phải biểu tượng */
   .wf-dock a .wf-nb, .wf-dock .wf-dk .wf-nb { position: absolute; top: 5px; left: calc(50% + 7px); }
   .wf-dock .wf-dk .wf-nb { z-index: 1; }
-  /* Sidebar / menu: nằm cuối hàng */
-  .wf-nb.inline { position: static; margin-left: auto; box-shadow: none; }
+  /* Sidebar / menu: nằm cuối hàng. Không đặt tên lớp là `inline`: trùng tiện ích Tailwind `.inline { display: inline }` (layer utilities
+     thắng layer components) ⇒ mất `inline-grid` và số bị đẩy lệch lên góc trên viên. */
+  .wf-nb.wf-nb-row { position: static; margin-left: auto; box-shadow: none; }
   .wf-ire .wf-nb { box-shadow: none; }
 
   /* ===== Nút mở bảng lệnh ở thanh trên (desktop): dáng ô tìm nhưng là nút ===== */

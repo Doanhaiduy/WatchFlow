@@ -1,6 +1,6 @@
 # Toàn vẹn dữ liệu & xử lý đồng thời
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đáp ứng yêu cầu III.1, III.6 (kho và tiền luôn khớp) · Test: CT-01…CT-13, `fn_consistency_check`
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đáp ứng yêu cầu III.1, III.6 (kho và tiền luôn khớp) · Test: CT-01…CT-13, `fn_consistency_check`
 
 Bài học từ dự án mẫu: các lỗi nặng nhất (trùng chỗ, thất thoát tiền qua đường vòng, ghi lọt vào dữ liệu đã chốt) **chỉ lộ khi chạy hai phiên song song** — đọc tài liệu không thấy. Vì vậy phần này vừa là quy tắc thiết kế vừa là danh sách ca đồng thời bắt buộc.
 
@@ -86,6 +86,11 @@ Bắt buộc cho: xác nhận/hủy mọi chứng từ, ghi thanh toán, giữ h
 ## 6. Khóa lạc quan (sửa nháp)
 
 Chứng từ nháp và danh mục có `version`; `PATCH` gửi `If-Match: <version>`; lệch ⇒ `WF-CONFLICT-VERSION` (412) kèm bản mới nhất để người dùng hợp nhất. Tránh hai người sửa đè lên nhau trên cùng một phiếu nháp.
+
+**Tự lưu nháp ở POS (`/ban-hang/moi`)** tuân theo khóa này như sau (đã kiểm bằng kịch bản trình duyệt giả lập máy chủ):
+- Một lúc chỉ **một** yêu cầu ghi nháp bay (vòng lưu tuần tự, luôn gửi nội dung mới nhất); thanh toán chờ vòng lưu xong rồi mới xác nhận.
+- **Mở** một nháp có sẵn không ghi lại gì; chỉ ghi khi người dùng sửa.
+- Gặp 412: lấy lại phiếu. Nếu **nội dung máy chủ không đổi** so với lần đồng bộ gần nhất (chỉ lệch số phiên bản — ví dụ mất phản hồi của lần lưu trước) ⇒ nhận phiên bản mới và lưu lại một lần. Nếu **nội dung đã khác** (người khác sửa thật) ⇒ **không ghi đè**, báo xung đột kèm nút **Tải lại phiếu**. Phiếu đã xác nhận/hủy ở nơi khác ⇒ chuyển sang trang chi tiết phiếu.
 
 ## 7. Bộ kiểm bất biến định kỳ `app.fn_consistency_check()`
 

@@ -24,7 +24,7 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
-import { initials } from "@/components/layout/MenuSheet";
+import { Avatar } from "@/components/ui/Avatar";
 import { newIdempotencyKey, swrFetcher } from "@/lib/api-client";
 import { useSession } from "@/lib/session";
 import { formatDateTimeVn } from "@/lib/dates";
@@ -298,8 +298,7 @@ export default function UsersPage() {
                 <InsetRow
                   key={u.id}
                   onClick={() => setSelId(u.id)}
-                  icon={<span aria-hidden="true">{initials(u.fullName)}</span>}
-                  tone={u.status === "active" ? "info" : "bad"}
+                  lead={<Avatar name={u.fullName} tone={u.status === "active" ? undefined : "neutral"} />}
                   title={u.fullName}
                   subtitle={`${u.email} · ${u.roles.map(roleName).join(", ") || "Chưa có vai trò"}`}
                   end={<StatusChip tone={u.status === "active" ? "ok" : "bad"}>{u.status === "active" ? "Hoạt động" : "Đã khóa"}</StatusChip>}

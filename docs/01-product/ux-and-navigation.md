@@ -1,6 +1,6 @@
 # Trải nghiệm & điều hướng
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt phần khung (chốt phong cách **Glass**, CF-09); chi tiết từng màn chốt khi dựng giao diện ở mỗi mốc · Thiết bị: điện thoại + máy tính, chỉ trình duyệt (PWA)
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt phần khung (chốt phong cách **Glass**, CF-09); chi tiết từng màn chốt khi dựng giao diện ở mỗi mốc · Thiết bị: điện thoại + máy tính, chỉ trình duyệt (PWA)
 > Phong cách, token, thành phần, dock/sidebar: **`03-architecture/ui-design-system.md`** (đặc tả để dựng). File này nói về **người dùng làm gì ở màn nào**.
 
 ## 1. Nguyên tắc "dễ dùng"
@@ -122,4 +122,6 @@ PDF sinh phía máy chủ (`pdfmake`) để cùng quyền và cùng số liệu;
 
 ## 8. Hướng dẫn trong ứng dụng
 
-Mục **Hướng dẫn sử dụng** lọc theo vai trò (nội dung ở `src/content/guide.ts`, nguồn của `docs/07-user-guide`); gợi ý ngữ cảnh (dấu "?") ở các màn hình nghiệp vụ quan trọng; lần đăng nhập đầu có tour 4 bước cho mỗi vai trò.
+Các trang danh sách chính (Đồng hồ, Sửa chữa, Bán hàng, Khách hàng, Giữ hàng, Linh kiện) có **dải số liệu** đầu trang (thẻ bấm được để lọc); đồng hồ chưa có ảnh thật hiện ảnh vẽ SVG theo hãng/loại; khách/CTV/người dùng có avatar màu; giữ hàng và bảo hành có vòng thời hạn. Chi tiết: `03-architecture/ui-design-system.md` §5.
+
+Mục **Hướng dẫn sử dụng** (`/huong-dan`) lọc theo **quyền** của người xem (nội dung dạng khối có kiểu ở `src/content/guide.ts` — bước có đánh số, ghi chú theo mức độ, đường dẫn menu, bảng, sơ đồ luồng, minh họa giao diện; là nguồn của `docs/07-user-guide`). Trang có: thẻ "Bắt đầu nhanh", ô tìm không dấu (tìm trong mọi mục), công tắc **Dành cho tôi / Tất cả mục**, mục lục dính có đánh dấu mục đang đọc (thanh chip cuộn ngang trên điện thoại), liên kết sâu `/huong-dan#ban-hang`, nút **In / Lưu PDF** (mở hết tab/mục xổ khi in); gợi ý ngữ cảnh (dấu "?") ở các màn hình nghiệp vụ quan trọng; lần đăng nhập đầu có tour 4 bước cho mỗi vai trò.

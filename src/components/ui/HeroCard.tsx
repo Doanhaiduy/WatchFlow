@@ -4,6 +4,10 @@ import { cx } from "./cx";
 
 type Props = {
   label: ReactNode;
+  /** Biểu tượng nhỏ trước nhãn */
+  icon?: ReactNode;
+  /** Dòng ngay dưới số lớn, vd. "▲ 8,1% so với hôm qua" */
+  note?: ReactNode;
   /** Số lớn đã định dạng, vd. "148.600.000" */
   value: string;
   /** Đơn vị nhỏ cạnh số, vd. "₫" */
@@ -18,15 +22,19 @@ type Props = {
 };
 
 /** `.wallet` — thẻ gradient lớn: nhãn, số 34/48px, thanh tiến độ, 3 ô số nhỏ. KHÔNG có ngữ nghĩa "ví/quỹ". */
-export function HeroCard({ label, value, unit, progress, progressLabels, stats, action, className }: Props) {
+export function HeroCard({ label, icon, note, value, unit, progress, progressLabels, stats, action, className }: Props) {
   const p = progress === undefined ? undefined : Math.max(0, Math.min(100, progress));
   return (
     <section className={cx("wf-hero", className)}>
-      <div className="l">{label}</div>
+      <div className="l">
+        {icon}
+        {label}
+      </div>
       <div className="n">
         {value}
         {unit && <small> {unit}</small>}
       </div>
+      {note && <div className="nt">{note}</div>}
       {p !== undefined && (
         <>
           <div className="pb" role="progressbar" aria-label="Tiến độ" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(p)}>

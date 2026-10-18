@@ -1,6 +1,6 @@
 # Báo cáo & tổng quan (dashboard)
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Định nghĩa tiền: `glossary` §2, `money-and-payments`, `costing-and-profit`
+> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Định nghĩa tiền: `glossary` §2, `money-and-payments`, `costing-and-profit`
 
 ## 1. Nguyên tắc
 
@@ -66,6 +66,13 @@ Phiếu nhập gần đây; hàng chờ kiểm tra (`inspecting`); linh kiện s
 **Hàng đang giữ** (lưới ảnh + giá thu), đơn nháp của tôi, thống kê của tôi (số chiếc bán, phần tôi hưởng, đã/chưa nộp).
 
 Quy tắc hiển thị: widget thiếu quyền **không render và không gọi API** (FR-DASH-11); mọi thẻ số gọi `GET /api/v1/reports/dashboard` trả đúng những khóa người dùng được phép.
+
+**Dữ liệu trả thêm cho giao diện (2026-10-17):**
+- `prev` — các khóa số (`revenue`, `salesRevenue`, `repairRevenue`, `grossProfit`, `collections`, `invoiceCount`, `unitsSold`) của **kỳ liền trước** (hôm nay → hôm qua; 7 ngày → 7 ngày trước đó; tháng/quý/năm → cùng khoảng của kỳ trước; khoảng tùy chọn → khoảng liền trước cùng số ngày), chỉ khóa mà hàm DB trả cho người gọi. UI tính "▲/▼ x% so với kỳ trước" từ `kpis` và `prev` (`src/lib/series.ts` · `deltaPct`).
+- `series.revenue` / `series.profit` — chuỗi theo ngày (hôm nay: 7 ngày gần nhất) hoặc theo tháng (quý/năm), **đã điền kỳ không phát sinh bằng 0** (`fillSeries`) để biểu đồ luôn đủ điểm; mỗi dòng doanh thu có `salesRevenue`/`repairRevenue` để vẽ cột bán hàng vs sửa chữa.
+- `stockByBrand` — số chiếc tồn theo hãng (chỉ cần `catalog.view`, không chứa giá vốn).
+
+Bố cục Tổng quan: hero doanh thu (kèm so sánh kỳ trước) → thẻ KPI có biểu tượng/xu hướng → biểu đồ doanh thu & lãi gộp (tab Doanh thu / Lãi gộp / Cả hai) → bán hàng vs sửa chữa, tồn kho theo trạng thái, tồn theo hãng, thực thu theo hình thức → bán gần đây; cột phải: việc cần xử lý, làm nhanh, đang sửa. Điện thoại xếp một cột và đưa "Việc cần xử lý" lên ngay sau thẻ KPI.
 
 ## 5. Hiệu năng & caching
 

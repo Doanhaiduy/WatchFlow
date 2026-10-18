@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Wrench } from "lucide-react";
+import { Boxes, Inbox, PackageCheck, Plus, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { errMsg } from "@/components/auth/helpers";
@@ -14,6 +14,7 @@ import { FilterChips } from "@/components/ui/FilterChips";
 import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { statusInfo } from "@/components/ui/status";
@@ -45,6 +46,16 @@ export default function RepairsPage() {
     <>
       <PageHeader title="Sửa chữa" description="Nhận máy, theo dõi tiến độ, giao máy" actions={can("repair.create") ? <Button sm variant="primary" href="/sua-chua/moi" icon={<Plus size={16} aria-hidden="true" />}>Nhận máy</Button> : undefined} />
       <RequirePerm perm="repair.view">
+        {data && (
+          <StatStrip
+            items={[
+              { label: "Mới nhận", value: counts.received ?? 0, icon: <Inbox size={16} />, tone: "info", hint: "chưa kiểm tra", onClick: () => setSt(["received"]), active: s0 === "received" },
+              { label: "Đang sửa", value: (counts.repairing ?? 0) + (counts.inspecting ?? 0), icon: <Wrench size={16} />, tone: "repair", hint: "kiểm tra + sửa", onClick: () => setSt(["repairing"]), active: s0 === "repairing" },
+              { label: "Chờ linh kiện", value: counts.waiting_parts ?? 0, icon: <Boxes size={16} />, tone: "hold", hint: "đang đợi hàng về", onClick: () => setSt(["waiting_parts"]), active: s0 === "waiting_parts" },
+              { label: "Chờ giao", value: counts.completed ?? 0, icon: <PackageCheck size={16} />, tone: "ok", hint: "xong, khách chưa lấy", onClick: () => setSt(["completed"]), active: s0 === "completed" },
+            ]}
+          />
+        )}
         <SearchBar value={q} onChange={setQ} placeholder="Tìm mã phiếu, khách, SĐT, serial…" />
         <FilterChips ariaLabel="Lọc trạng thái" value={st} onChange={(v) => setSt(v.length ? v : ["open"])} options={[{ value: "open", label: "Đang xử lý", count: open }, ...STATUSES.map((s) => ({ value: s, label: statusInfo("repair", s).label, count: counts[s] ?? 0 }))]} />
         <FilterChips ariaLabel="Lọc loại phiếu" value={kind} onChange={setKind} options={[{ value: "customer", label: "Máy khách" }, { value: "internal", label: "Sửa nội bộ" }]} />

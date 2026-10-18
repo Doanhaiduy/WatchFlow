@@ -1,5 +1,5 @@
 "use client";
-import { ClipboardList, Plus } from "lucide-react";
+import { BarChart3, ClipboardList, Handshake, Plus, Receipt, ShoppingBag } from "lucide-react";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { errMsg } from "@/components/auth/helpers";
@@ -14,11 +14,14 @@ import { InsetList, InsetRow } from "@/components/ui/InsetList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Pager } from "@/components/ui/Pager";
 import { SearchBar } from "@/components/ui/SearchBar";
+import { StatStrip } from "@/components/ui/StatStrip";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { swrFetcher } from "@/lib/api-client";
 import { formatDateVn } from "@/lib/dates";
-import { formatVnd } from "@/lib/money";
+import { formatVnd, formatVndShort } from "@/lib/money";
+import { deltaPct } from "@/lib/series";
+import { hasKpi, useDashKpis } from "@/lib/use-dashboard";
 import { useSession } from "@/lib/session";
 
 const PAGE = 25;
@@ -38,11 +41,20 @@ export default function SalesPage() {
   else if (f[0]) p.set("status", f[0]);
   if (!can("sale.view")) p.set("mine", "1");
   const { data, error, isLoading, mutate } = useSWR<Res>(can(["sale.view", "sale.view_own"]) ? `/api/v1/sales?${p}` : null, swrFetcher, { keepPreviousData: true });
+  const { kpis, prev } = useDashKpis(can(["sale.view", "sale.view_own"]));
 
   return (
     <>
       <PageHeader title="Bán hàng" description="Phiếu bán, công nợ và thu thêm" actions={can("sale.create_draft") ? <Button sm variant="primary" href="/ban-hang/moi" icon={<Plus size={16} aria-hidden="true" />}>Bán hàng</Button> : undefined} />
       <RequirePerm perm={["sale.view", "sale.view_own"]}>
+        <StatStrip
+          items={[
+            hasKpi(kpis, "revenue") && { label: "Doanh thu hôm nay", value: formatVndShort(kpis.revenue!), icon: <BarChart3 size={16} />, tone: "ok", delta: deltaPct(kpis.revenue, prev.revenue), hint: "so với hôm qua" },
+            hasKpi(kpis, "invoiceCount") && { label: "Phiếu hôm nay", value: kpis.invoiceCount!, icon: <ShoppingBag size={16} />, tone: "info", hint: hasKpi(kpis, "unitsSold") ? `${kpis.unitsSold} chiếc đã bán` : undefined },
+            hasKpi(kpis, "customerDue") && { label: "Khách còn nợ", value: formatVndShort(kpis.customerDue!), icon: <Receipt size={16} />, tone: "hold", hint: "bấm để lọc phiếu nợ", onClick: () => setF(f[0] === "due" ? [] : ["due"]), active: f[0] === "due" },
+            hasKpi(kpis, "collabPendingOrders") && { label: "Đơn CTV chờ", value: kpis.collabPendingOrders!, icon: <Handshake size={16} />, tone: "check", hint: "chờ xác nhận", onClick: () => setF(f[0] === "ctv" ? [] : ["ctv"]), active: f[0] === "ctv" },
+          ]}
+        />
         <SearchBar value={q} onChange={setQ} placeholder="Tìm mã phiếu, tên hoặc SĐT khách…" />
         <FilterChips ariaLabel="Lọc phiếu bán" value={f} onChange={setF} options={[{ value: "confirmed", label: "Đã xác nhận" }, { value: "draft", label: "Nháp" }, { value: "voided", label: "Đã hủy" }, { value: "due", label: "Còn nợ" }, { value: "ctv", label: "Đơn CTV chờ xác nhận" }]} />
         {f[0] === "due" && data && <div className="g wf-pad" style={{ marginBottom: 12 }}><p className="wf-mute">Tổng còn nợ (theo bộ lọc)</p><div className="wf-uprice" style={{ color: "var(--wf-hold-text)" }}>{formatVnd(data.dueTotal)}</div></div>}
