@@ -12,7 +12,7 @@ export const SETTINGS = {
   "store.receipt_footer": { group: "Cửa hàng", label: "Chân phiếu bán", schema: z.string().max(500) },
   "store.warranty_terms": { group: "Cửa hàng", label: "Điều khoản bảo hành", schema: z.string().max(3000) },
   "store.repair_terms": { group: "Cửa hàng", label: "Điều khoản nhận sửa", schema: z.string().max(3000) },
-  "sales.void_window_hours": { group: "Bán hàng", label: "Cửa sổ hủy phiếu bán (giờ)", schema: int(0, 720) },
+  "sales.void_window_hours": { group: "Bán hàng", label: "Được hủy đơn bán trong (giờ)", schema: int(0, 720) },
   "sales.allow_walkin_debt": { group: "Bán hàng", label: "Cho nợ với khách vãng lai", schema: z.boolean() },
   "sales.default_due_days": { group: "Bán hàng", label: "Hạn hẹn trả mặc định (ngày)", schema: int(0, 365) },
   "reservation.hold_days": { group: "Bán hàng", label: "Hạn giữ hàng mặc định (ngày)", schema: int(1, 365) },
@@ -64,3 +64,15 @@ export const SETTING_KEYS = Object.keys(SETTINGS) as SettingKey[];
 export function isSettingKey(k: string): k is SettingKey {
   return Object.prototype.hasOwnProperty.call(SETTINGS, k);
 }
+
+/**
+ * Cài đặt của tính năng đã bỏ ở bản gọn (CF-14…CF-18): vẫn còn trong DB/danh mục (khớp seed) nhưng KHÔNG hiện ở trang Cài đặt.
+ * Giá trị mặc định vẫn có hiệu lực cho các hàm DB cũ.
+ */
+export const RETIRED_SETTINGS: ReadonlySet<string> = new Set([
+  "sales.allow_walkin_debt", "sales.default_due_days", "reservation.hold_days", "reservation.min_deposit_pct", "reservation.max_hold_days",
+  "warranty.expiry_alert_days", "collab.hold_alert_days", "collab.warn_below_cost", "inventory.aging_days", "purchase.require_seller_id",
+  "unit.require_photo_on_buyback", "purchase.default_cost_allocation", "unit.search_min_chars", "repair.require_quote_approval", "repair.allow_delivery_with_debt",
+  "payment.bank_bin", "payment.account_no", "payment.account_name", "payment.transfer_template", "security.pii_reveal_requires_reason",
+  "ui.disabled_modules", "feature.ai.enabled",
+]);

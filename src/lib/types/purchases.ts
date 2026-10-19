@@ -1,9 +1,8 @@
 import { z } from "zod";
 
-export const PURCHASE_KINDS = ["purchase", "customer_buyback", "opening"] as const; // trade_in chỉ sinh từ phiếu bán (M5a)
-export const KIND_LABELS: Record<string, string> = { purchase: "Mua vào", customer_buyback: "Thu mua từ khách", trade_in: "Thu cũ đổi mới", opening: "Tồn đầu kỳ" };
+// Thêm đồng hồ vào kho (từng chiếc hoặc Nhập từ Excel) vẫn đi qua phiếu nhập 1 dòng — chỉ để lưu nguồn gốc; bản gọn (CF-14) không còn màn Nhập hàng.
+export const PURCHASE_KINDS = ["purchase", "opening"] as const;
 export const COST_KINDS = ["shipping", "inspection", "repair", "customs", "other"] as const;
-export const COST_LABELS: Record<(typeof COST_KINDS)[number], string> = { shipping: "Vận chuyển", inspection: "Kiểm định", repair: "Sửa trước nhập", customs: "Thuế/phí", other: "Khác" };
 
 const money = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ");
@@ -49,14 +48,3 @@ export const PurchaseBody = z.object({
   lines: z.array(PurchaseLineInput).max(200),
   costs: z.array(PurchaseCostInput).max(20).default([]),
 });
-export const PurchaseListQuery = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  q: z.string().trim().max(100).optional(),
-  status: z.enum(["draft", "confirmed", "voided"]).optional(),
-  kind: z.enum(["purchase", "customer_buyback", "trade_in", "opening"]).optional(),
-  from: isoDate.optional(),
-  to: isoDate.optional(),
-});
-export const VoidBody = z.object({ reason: z.string().trim().min(10, "Lý do ít nhất 10 ký tự").max(500) });
-export const CostAdjustBody = z.object({ amount: z.number().int().refine((x) => x !== 0, "Khác 0"), reason: z.string().trim().min(10).max(500) });

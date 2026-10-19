@@ -8,7 +8,7 @@ import type { Permission } from "@/lib/permissions";
 const ENTITY_TABLES = ["watch_units", "watch_models", "repair_orders", "purchase_receipts", "customers", "settings", "sales"] as const;
 
 // POST multipart: file, kind, entityTable?, entityId?
-export const POST = api({ perm: ["catalog.manage", "repair.update", "repair.create", "purchase.create", "settings.manage", "customer.manage", "sale.create_draft"] }, async ({ req, user, db, can }) => {
+export const POST = api({ perm: ["catalog.manage", "repair.update", "repair.create", "purchase.create", "settings.manage", "customer.manage", "sale.confirm"] }, async ({ req, user, db, can }) => {
   await hitDb("upload", user.userId);
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
@@ -23,9 +23,9 @@ export const POST = api({ perm: ["catalog.manage", "repair.update", "repair.crea
   if (!meta.success) throw new ApiError(422, "WF-VALIDATION", "Thông tin tệp không hợp lệ.");
   const kind = meta.data.kind as FileKind;
   const need: Record<FileKind, Permission[]> = {
-    product: ["catalog.manage"], condition: ["catalog.manage", "purchase.create", "repair.create", "sale.create_draft"], other: ["catalog.manage"],
+    product: ["catalog.manage"], condition: ["catalog.manage", "purchase.create", "repair.create", "sale.confirm"], other: ["catalog.manage"],
     intake: ["repair.create", "repair.update"], evidence: ["purchase.create", "repair.update"],
-    id_document: ["purchase.create", "customer.manage", "sale.create_draft"], logo: ["settings.manage"],
+    id_document: ["purchase.create", "customer.manage", "sale.confirm"], logo: ["settings.manage"],
   };
   if (!can(need[kind])) throw new ApiError(403, "WF-AUTH-FORBIDDEN", "Bạn không có quyền tải loại tệp này.");
   // Ngày chụp từ trình duyệt ("YYYY:MM:DD HH:MM:SS", giờ địa phương của máy chụp ⇒ coi là giờ Việt Nam) — ảnh đã nén ở client mất EXIF

@@ -4,13 +4,12 @@
 
 export const IMPORT_MAX_ROWS = 300;
 export const IMPORT_MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const IMPORT_KINDS = ["customers", "watches", "parts"] as const;
+export const IMPORT_KINDS = ["customers", "watches"] as const;
 export type ImportKind = (typeof IMPORT_KINDS)[number];
 
 export const IMPORT_KIND_INFO: Record<ImportKind, { label: string; short: string; slug: string; sheetFile: string }> = {
   customers: { label: "Khách hàng", short: "Khách", slug: "khach", sheetFile: "Mau_nhap_khach_hang.xlsx" },
-  watches: { label: "Đồng hồ tồn đầu kỳ", short: "Đồng hồ", slug: "dong-ho", sheetFile: "Mau_nhap_dong_ho_ton_dau.xlsx" },
-  parts: { label: "Linh kiện (tồn đầu kỳ)", short: "Linh kiện", slug: "linh-kien", sheetFile: "Mau_nhap_linh_kien.xlsx" },
+  watches: { label: "Đồng hồ", short: "Đồng hồ", slug: "dong-ho", sheetFile: "Mau_nhap_dong_ho.xlsx" },
 };
 
 export type ImportColumn = {
@@ -30,11 +29,8 @@ export type ImportColumn = {
 export const CUSTOMER_COLUMNS: readonly ImportColumn[] = [
   { key: "fullName", title: "Họ và tên", required: true, aliases: ["ho ten", "ho va ten", "ten", "ten khach", "ten khach hang", "khach hang", "full name", "name"], examples: ["Nguyễn Văn Mẫu", "Trần Thị Ví Dụ"], note: "Bắt buộc, tối đa 120 ký tự.", width: 26 },
   { key: "phone", title: "Số điện thoại", aliases: ["sdt", "so dt", "dien thoai", "so dien thoai", "phone", "mobile", "di dong", "tel"], examples: ["0900 000 001", "+84 900 000 002"], note: "SĐT Việt Nam (10 số, 0 đầu hoặc +84). Excel làm mất số 0 đầu vẫn được nhận. Trùng SĐT với khách có sẵn/trong tệp ⇒ báo trùng, mặc định bỏ qua.", width: 18 },
-  { key: "email", title: "Email", aliases: ["mail", "e mail", "thu dien tu", "email"], examples: ["mau@example.com", ""], note: "Tùy chọn.", width: 26 },
   { key: "address", title: "Địa chỉ", aliases: ["dia chi", "address"], examples: ["12 Đường Giả, Quận 1", ""], note: "Tùy chọn, tối đa 300 ký tự.", width: 36 },
-  { key: "group", title: "Nhóm khách", aliases: ["nhom", "nhom khach", "loai khach", "phan loai", "group"], examples: ["Khách quen", ""], note: "Tên nhóm đã có (xem sheet “Danh mục”). Không khớp ⇒ để trống nhóm và cảnh báo.", width: 18 },
   { key: "note", title: "Ghi chú", aliases: ["ghi chu", "note", "ghi chu khac"], examples: ["[VÍ DỤ] Xóa dòng này trước khi nhập", "[VÍ DỤ] Xóa dòng này trước khi nhập"], note: "Tùy chọn, tối đa 1000 ký tự.", width: 34 },
-  { key: "idNumber", title: "CCCD/CMND", aliases: ["cccd", "cmnd", "can cuoc", "can cuoc cong dan", "so cccd", "so cmnd", "cccd cmnd", "cmnd cccd", "so giay to", "giay to"], examples: ["", ""], note: "Tùy chọn. 6–20 chữ/số. Được mã hóa khi lưu (như khi tạo khách ở màn Khách hàng); không hiện lại trên màn xem trước.", width: 18 },
 ];
 
 export const WATCH_COLUMNS: readonly ImportColumn[] = [
@@ -43,25 +39,12 @@ export const WATCH_COLUMNS: readonly ImportColumn[] = [
   { key: "serial", title: "Serial", aliases: ["serial", "so serial", "seri", "so seri", "ma serial", "serial no", "sn"], examples: ["MAU-0001", "MAU-0002"], note: "Số serial. Để trống = đồng hồ không có serial (cảnh báo). Trùng serial trong kho (cùng hãng) hoặc trong tệp ⇒ báo lỗi.", width: 18 },
   { key: "condition", title: "Tình trạng", required: true, aliases: ["tinh trang", "tinh trang may", "condition", "moi cu", "trang thai may"], examples: ["Mới", "Cũ"], note: "Bắt buộc: Mới / Cũ / Đã sửa (làm mới). Hàng Cũ và Đã sửa luôn vào kho ở trạng thái “Chờ kiểm tra” (cần hạng + ảnh mới chuyển được sang Sẵn sàng bán).", width: 14 },
   { key: "grade", title: "Hạng tình trạng", aliases: ["hang tinh trang", "xep hang", "cap do", "grade", "do moi", "hang cu"], exact: ["hạng"], examples: ["", "B"], note: "Tùy chọn: A, B, C hoặc % mới (vd. 95%).", width: 16 },
-  { key: "cost", title: "Giá vốn (giá thu)", required: true, aliases: ["gia von", "gia thu", "gia nhap", "gia mua", "gia von gia thu", "gia thu vao", "cost"], examples: ["6000000", "1200000"], note: "Bắt buộc. Số nguyên đồng, không âm (6000000 hoặc 6.000.000). Đây là giá vốn của chiếc.", width: 18 },
-  { key: "listPrice", title: "Giá niêm yết", aliases: ["gia niem yet", "gia ban", "gia ban niem yet", "gia ban le", "list price"], examples: ["7500000", "1500000"], note: "Tùy chọn. Số nguyên đồng. Để trống = 0 (đặt giá sau ở màn đồng hồ).", width: 16 },
+  { key: "listPrice", title: "Giá niêm yết", aliases: ["gia niem yet", "gia ban", "gia ban niem yet", "gia ban le", "list price"], examples: ["7500000", "1500000"], note: "Tùy chọn. Số nguyên đồng. Để trống = 0 (đặt giá sau ở màn đồng hồ). Giá niêm yết là giá mặc định khi ghi đơn bán / xác nhận CTV bán.", width: 16 },
   { key: "location", title: "Vị trí kho", aliases: ["vi tri", "vi tri kho", "kho", "noi cat", "location"], examples: ["Tủ trưng bày 1", "Két sắt"], note: "Tên vị trí đã có (xem sheet “Danh mục”). Để trống ⇒ dùng vị trí mặc định chọn lúc nhập.", width: 20 },
   { key: "note", title: "Ghi chú", aliases: ["ghi chu", "note", "ghi chu khac", "mo ta"], examples: ["[VÍ DỤ] Xóa dòng này trước khi nhập", "[VÍ DỤ] Xóa dòng này trước khi nhập"], note: "Tùy chọn, tối đa 500 ký tự.", width: 34 },
 ];
 
-export const PART_COLUMNS: readonly ImportColumn[] = [
-  { key: "code", title: "Mã linh kiện", required: true, aliases: ["ma", "ma lk", "ma linh kien", "code", "sku"], examples: ["PIN-377", "KINH-SAP-28"], note: "Bắt buộc. Chữ, số và . _ / - (tối đa 41 ký tự). Mã đã có ⇒ báo trùng (mặc định bỏ qua).", width: 18 },
-  { key: "name", title: "Tên linh kiện", required: true, aliases: ["ten", "ten lk", "ten linh kien", "name", "linh kien"], examples: ["Pin 377", "Kính sapphire 28mm"], note: "Bắt buộc, tối đa 160 ký tự.", width: 28 },
-  { key: "category", title: "Danh mục", required: true, aliases: ["danh muc", "nhom", "nhom linh kien", "loai", "category"], examples: ["Pin", "Kính"], note: "Bắt buộc. Tên danh mục đã có (xem sheet “Danh mục”).", width: 18 },
-  { key: "uom", title: "Đơn vị", aliases: ["don vi", "dvt", "don vi tinh", "unit", "uom"], examples: ["viên", "cái"], note: "Tùy chọn, mặc định “cái”.", width: 12 },
-  { key: "qty", title: "Tồn đầu", aliases: ["ton dau", "ton dau ky", "ton", "ton kho", "so luong", "sl", "qty"], examples: ["50", "10"], note: "Số nguyên ≥ 0. 0/để trống = chỉ tạo linh kiện, không nhập kho.", width: 12 },
-  { key: "cost", title: "Giá vốn (đ/đơn vị)", aliases: ["gia von", "gia nhap", "don gia", "gia mua", "gia thu", "cost"], examples: ["15000", "120000"], note: "Số nguyên đồng/đơn vị. Bắt buộc khi Tồn đầu > 0.", width: 18 },
-  { key: "reorder", title: "Ngưỡng cảnh báo", aliases: ["nguong canh bao", "nguong", "ton toi thieu", "muc canh bao", "canh bao", "reorder", "min"], examples: ["10", "3"], note: "Tùy chọn. Tồn ≤ ngưỡng ⇒ cảnh báo sắp hết. Mặc định 0.", width: 16 },
-  { key: "salePrice", title: "Giá bán", aliases: ["gia ban", "gia", "don gia ban", "sale price"], examples: ["30000", "250000"], note: "Tùy chọn. Số nguyên đồng. Mặc định 0.", width: 14 },
-  { key: "note", title: "Ghi chú", aliases: ["ghi chu", "note", "mo ta", "quy cach"], examples: ["[VÍ DỤ] Xóa dòng này trước khi nhập", "[VÍ DỤ] Xóa dòng này trước khi nhập"], note: "Tùy chọn (lưu vào quy cách linh kiện mới).", width: 34 },
-];
-
-export const IMPORT_COLUMNS: Record<ImportKind, readonly ImportColumn[]> = { customers: CUSTOMER_COLUMNS, watches: WATCH_COLUMNS, parts: PART_COLUMNS };
+export const IMPORT_COLUMNS: Record<ImportKind, readonly ImportColumn[]> = { customers: CUSTOMER_COLUMNS, watches: WATCH_COLUMNS };
 
 /** Bỏ dấu tiếng Việt, đ→d, chữ thường, chỉ giữ chữ-số cách nhau một dấu cách */
 export function foldText(s: string): string {
@@ -203,16 +186,6 @@ export function parseMoneyVnd(raw: string): { value: number | null; error?: stri
   return { value: n };
 }
 
-/** Số nguyên không âm (số lượng, ngưỡng) */
-export function parseCount(raw: string, max = 100000): { value: number | null; error?: string } {
-  const s = raw.trim().replace(/\s+/g, "").replace(/[.,]0+$/, "");
-  if (!s) return { value: null };
-  if (!/^\d+$/.test(s)) return { value: null, error: "Phải là số nguyên không âm" };
-  const n = Number(s);
-  if (n > max) return { value: null, error: `Quá lớn (tối đa ${max.toLocaleString("vi-VN")})` };
-  return { value: n };
-}
-
 export type WatchCondition = "new" | "used" | "refurbished";
 export function parseCondition(raw: string): WatchCondition | null {
   const f = foldText(raw);
@@ -231,16 +204,6 @@ export function parseGrade(raw: string): { value: string | null; error?: string 
   const m = /^(\d{1,3})%$/.exec(s);
   if (m && Number(m[1]) <= 100) return { value: `${Number(m[1])}%` };
   return { value: null, error: "Hạng phải là A, B, C hoặc % mới (vd. 95%)" };
-}
-
-/** CCCD/CMND: bỏ khoảng trắng; Excel làm mất số 0 đầu (11→12 số, 8→9 số) thì thêm lại. */
-export function normalizeIdNumber(raw: string): { value: string | null; error?: string; fixed?: boolean } {
-  let s = raw.replace(/[\s.-]/g, "").toUpperCase();
-  if (!s) return { value: null };
-  let fixed = false;
-  if (/^\d+$/.test(s) && (s.length === 11 || s.length === 8)) { s = "0" + s; fixed = true; }
-  if (!/^[0-9A-Z]{6,20}$/.test(s)) return { value: null, error: "Số giấy tờ phải gồm 6–20 chữ/số" };
-  return { value: s, fixed };
 }
 
 /** Serial chuẩn hóa như app.norm_serial: bỏ khoảng trắng - _ / . và viết hoa */

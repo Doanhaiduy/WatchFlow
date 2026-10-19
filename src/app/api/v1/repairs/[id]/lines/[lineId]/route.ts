@@ -1,12 +1,14 @@
+import { z } from "zod";
 import { api } from "@/server/http";
 import { ApiError } from "@/server/errors";
-import { RepairLineBody } from "@/lib/types/repairs";
 
-export const PATCH = api({ perm: "repair.update", body: RepairLineBody.partial() }, async ({ params, body, db, can }) => {
-  if (body.unitPrice !== undefined && body.unitPrice !== null && !can("repair.price.edit")) throw new ApiError(403, "WF-AUTH-FORBIDDEN", "Bạn không có quyền sửa giá.");
+const PatchLine = z.object({ description: z.string().trim().max(300).nullable().optional(), unitPrice: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional() });
+
+export const PATCH = api({ perm: "repair.update", body: PatchLine }, async ({ params, body, db, can }) => {
+  if (body.unitPrice !== undefined && !can("repair.price.edit")) throw new ApiError(403, "WF-AUTH-FORBIDDEN", "Bạn không có quyền sửa giá.");
   const r = await db((tx) =>
-    tx.one(`UPDATE public.repair_lines SET description = coalesce($3, description), qty = coalesce($4, qty), unit_price_vnd = coalesce($5, unit_price_vnd)
-            WHERE id = $2 AND order_id = $1 RETURNING id`, [params.id, params.lineId, body.description ?? null, body.qty ?? null, body.unitPrice ?? null]),
+    tx.one(`UPDATE public.repair_lines SET description = coalesce($3, description), unit_price_vnd = coalesce($4, unit_price_vnd)
+            WHERE id = $2 AND order_id = $1 RETURNING id`, [params.id, params.lineId, body.description ?? null, body.unitPrice ?? null]),
   );
   if (!r) throw new ApiError(404, "WF-NOT-FOUND", "Không tìm thấy dòng.");
   return { ok: true };

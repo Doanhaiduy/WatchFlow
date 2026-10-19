@@ -1,18 +1,16 @@
 import "server-only";
 // Nhập Excel hàng loạt (FR-IMP-01…04). Trình duyệt đọc tệp và gửi các dòng dạng JSON (≤ 300); máy chủ KHÔNG mở tệp.
 // Hai bước: xem trước (chỉ đọc, không ghi gì) → ghi (kiểm tra lại từng dòng, không tin kết quả xem trước).
-//  - Khách: INSERT từng dòng trong điểm lưu riêng (một dòng hỏng không làm hỏng lô), CCCD mã hóa như khi tạo khách.
-//  - Đồng hồ / linh kiện: MỘT phiếu nhập loại `opening` (nháp → app.fn_confirm_purchase) trong cùng transaction ⇒ giá vốn/kho/audit nhất quán.
+//  - Khách: INSERT từng dòng trong điểm lưu riêng (một dòng hỏng không làm hỏng lô).
+//  - Đồng hồ: MỘT phiếu nhập loại `opening` (nháp → app.fn_confirm_purchase) trong cùng transaction ⇒ kho/audit nhất quán. Bản gọn không nhập giá vốn (CF-14).
 import { z } from "zod";
 import type { Tx } from "./db";
 import { ApiError, mapDbError } from "./errors";
-import { piiColumns } from "./customers";
-import { blindIndex } from "./pii";
 import { saveDraft } from "./purchases";
 import type { PurchaseBody } from "@/lib/types/purchases";
 import type { CommitItem, CommitResult, Preview, PreviewRow, RowStatus } from "@/lib/import/types";
 import {
-  IMPORT_MAX_ROWS, foldText, normSerial, normalizeIdNumber, normalizePhoneVN, parseCondition, parseCount, parseGrade, parseMoneyVnd,
+  IMPORT_MAX_ROWS, foldText, normSerial, normalizePhoneVN, parseCondition, parseGrade, parseMoneyVnd,
   type ImportKind, type WatchCondition,
 } from "@/lib/import/columns";
 
@@ -55,16 +53,13 @@ const vnd = (n: number) => n.toLocaleString("vi-VN") + "đ";
 
 // ============================================================================================ KHÁCH HÀNG
 
-type CustomerPlan = { line: number; fullName: string; phone: string | null; email: string | null; address: string | null; groupId: string | null; note: string | null; idNumber: string | null };
+type CustomerPlan = { line: number; fullName: string; phone: string | null; address: string | null; note: string | null };
 
 async function analyzeCustomers(tx: Tx, rows: ImportRows) {
-  const groups = await tx.q<{ id: string; name: string }>("SELECT id, name FROM public.customer_groups WHERE is_active");
-  const groupBy = new Map(groups.map((g) => [foldText(g.name), g]));
-  // Trùng với khách có sẵn: theo SĐT chuẩn hóa và theo chỉ mục băm số giấy tờ (không giải mã gì) — trong phạm vi khách người gọi được thấy (RLS)
+  // Trùng với khách có sẵn: theo SĐT chuẩn hóa — trong phạm vi khách người gọi được thấy (RLS)
   const plans: (CustomerPlan | null)[] = [];
   const out: PreviewRow[] = [];
   const phones = new Set<string>();
-  const bidxs = new Set<string>();
   for (const r of rows) {
     const c = r.cells;
     const msgs: string[] = [];
@@ -77,37 +72,19 @@ async function analyzeCustomers(tx: Tx, rows: ImportRows) {
     const ph = normalizePhoneVN(getRaw(c, "phone"));
     if (ph.error) err(ph.error);
     if (ph.fixed) warn("SĐT thiếu số 0 đầu — đã thêm lại.");
-    const emailRaw = get(c, "email").toLowerCase();
-    if (emailRaw && (emailRaw.length > 200 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw))) err("Email không hợp lệ.");
     const address = get(c, "address");
     if (address.length > 300) err("Địa chỉ quá dài (tối đa 300 ký tự).");
     const note = getRaw(c, "note");
     if (note.length > 1000) err("Ghi chú quá dài (tối đa 1000 ký tự).");
-    let groupId: string | null = null;
-    const groupName = get(c, "group");
-    if (groupName) {
-      const g = groupBy.get(foldText(groupName));
-      if (g) groupId = g.id;
-      else warn(`Chưa có nhóm khách “${groupName}” — để trống nhóm.`);
-    }
-    const idn = normalizeIdNumber(getRaw(c, "idNumber"));
-    if (idn.error) err(idn.error);
-    if (idn.fixed) warn("CCCD/CMND thiếu số 0 đầu — đã thêm lại.");
     if (ph.phone) phones.add(ph.phone);
-    if (idn.value) bidxs.add(blindIndex(idn.value));
-    out.push({ line: r.line, label: fullName || "(chưa có tên)", detail: [ph.phone, groupName, idn.value ? "có CCCD" : ""].filter(Boolean).join(" · "), status, messages: msgs, include: false });
-    plans.push(status === "error" ? null : { line: r.line, fullName, phone: ph.phone, email: emailRaw || null, address: address || null, groupId, note: note || null, idNumber: idn.value });
+    out.push({ line: r.line, label: fullName || "(chưa có tên)", detail: [ph.phone, address].filter(Boolean).join(" · "), status, messages: msgs, include: false });
+    plans.push(status === "error" ? null : { line: r.line, fullName, phone: ph.phone, address: address || null, note: note || null });
   }
   const dbPhones = phones.size
     ? await tx.q<{ phone_norm: string; code: string; full_name: string }>(
         "SELECT phone_norm, code, full_name FROM public.customers WHERE phone_norm = ANY($1::text[]) AND anonymized_at IS NULL", [[...phones]])
     : [];
-  const dbIds = bidxs.size
-    ? await tx.q<{ id_number_bidx: string; code: string; full_name: string }>(
-        "SELECT id_number_bidx, code, full_name FROM public.customers WHERE id_number_bidx = ANY($1::text[]) AND anonymized_at IS NULL", [[...bidxs]])
-    : [];
   const seenPhone = new Map<string, number>();
-  const seenId = new Map<string, number>();
   out.forEach((o, i) => {
     const p = plans[i];
     if (p) {
@@ -118,14 +95,6 @@ async function analyzeCustomers(tx: Tx, rows: ImportRows) {
         const first = seenPhone.get(p.phone);
         if (first !== undefined) dup(`Trùng SĐT với dòng ${first} trong tệp.`);
         else seenPhone.set(p.phone, p.line);
-      }
-      if (p.idNumber) {
-        const b = blindIndex(p.idNumber);
-        const d = dbIds.find((x) => x.id_number_bidx === b);
-        if (d) dup(`Trùng số giấy tờ với khách có sẵn: ${d.full_name} (${d.code}).`);
-        const first = seenId.get(b);
-        if (first !== undefined) dup(`Trùng số giấy tờ với dòng ${first} trong tệp.`);
-        else seenId.set(b, p.line);
       }
     }
     o.include = defaultInclude(o.status);
@@ -148,13 +117,11 @@ export async function commitCustomers(tx: Tx, rows: ImportRows, include?: number
     const o = a.out[i]!;
     const p = a.plans[i];
     if (!p || !want.has(o.line)) { skipped++; continue; }
-    const pii = piiColumns(p.idNumber);
     await tx.q("SAVEPOINT imp_row");
     try {
       const r = await tx.one<{ id: string; code: string }>(
-        `INSERT INTO public.customers (full_name, phone, email, address, group_id, note, id_number_enc, id_number_bidx, id_number_last3, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, app.current_user_id()) RETURNING id, code`,
-        [p.fullName, p.phone, p.email, p.address, p.groupId, p.note, pii.enc, pii.bidx, pii.last3],
+        `INSERT INTO public.customers (full_name, phone, address, note, created_by) VALUES ($1,$2,$3,$4, app.current_user_id()) RETURNING id, code`,
+        [p.fullName, p.phone, p.address, p.note],
       );
       await tx.q("RELEASE SAVEPOINT imp_row");
       items.push({ line: p.line, id: r!.id, code: r!.code, label: p.fullName, href: `/khach-hang/${r!.id}` });
@@ -173,7 +140,7 @@ export async function commitCustomers(tx: Tx, rows: ImportRows, include?: number
 type ModelRow = { id: string; code: string; name: string; brandId: string; brand: string };
 type WatchPlan = {
   line: number; label: string; modelId: string | null; newModel: { key: string; brandName: string; name: string } | null; brandId: string | null;
-  serial: string | null; condition: WatchCondition; grade: string | null; initialStatus: "in_stock" | "inspecting"; cost: number; listPrice: number | null;
+  serial: string | null; condition: WatchCondition; grade: string | null; initialStatus: "in_stock" | "inspecting"; listPrice: number | null;
   locationId: string | null; note: string | null;
 };
 
@@ -238,10 +205,6 @@ async function analyzeWatches(tx: Tx, rows: ImportRows, opt: ImportOptions, can:
     else if (!condition) err(`Tình trạng “${getRaw(c, "condition")}” không hợp lệ — dùng Mới / Cũ / Đã sửa.`);
     const gr = parseGrade(getRaw(c, "grade"));
     if (gr.error) err(gr.error);
-    const cost = parseMoneyVnd(getRaw(c, "cost"));
-    if (!getRaw(c, "cost")) err("Thiếu giá vốn (giá thu).");
-    else if (cost.error) err(`Giá vốn: ${cost.error}.`);
-    else if (cost.value === 0) warn("Giá vốn bằng 0đ.");
     const lp = parseMoneyVnd(getRaw(c, "listPrice"));
     if (lp.error) err(`Giá niêm yết: ${lp.error}.`);
     if (!getRaw(c, "listPrice")) noPrice++;
@@ -262,11 +225,11 @@ async function analyzeWatches(tx: Tx, rows: ImportRows, opt: ImportOptions, can:
     if (initialStatus === "inspecting") inspecting++;
     out.push({
       line: r.line, label,
-      detail: [serialRaw ? `S/N ${serialRaw}` : "không serial", condition ? CONDITION_VI[condition] + (gr.value ? ` ${gr.value}` : "") : "", cost.value !== null ? `vốn ${vnd(cost.value)}` : ""].filter(Boolean).join(" · "),
+      detail: [serialRaw ? `S/N ${serialRaw}` : "không serial", condition ? CONDITION_VI[condition] + (gr.value ? ` ${gr.value}` : "") : "", lp.value ? `niêm yết ${vnd(lp.value)}` : ""].filter(Boolean).join(" · "),
       status, messages: msgs, include: false,
     });
-    plans.push(status === "error" || !condition || cost.value === null ? null : {
-      line: r.line, label, modelId, newModel, brandId, serial: serialRaw || null, condition, grade: gr.value, initialStatus, cost: cost.value,
+    plans.push(status === "error" || !condition ? null : {
+      line: r.line, label, modelId, newModel, brandId, serial: serialRaw || null, condition, grade: gr.value, initialStatus,
       listPrice: lp.value, locationId, note: note || null,
     });
   }
@@ -346,11 +309,12 @@ export async function commitWatches(tx: Tx, rows: ImportRows, opt: ImportOptions
   }
   const body = {
     kind: "opening" as const,
-    note: `Nhập tồn đầu kỳ từ Excel (${chosen.length} chiếc)`,
+    sourceName: "Nhập từ Excel",
+    note: `Nhập từ Excel (${chosen.length} chiếc)`,
     lines: chosen.map((p) => ({
       lineType: "watch" as const, modelId: (p.modelId ?? modelOf.get(p.newModel!.key))!, serialNo: p.serial, hasSerial: !!normSerial(p.serial),
       condition: p.condition, conditionGrade: p.grade, conditionNote: p.note, initialStatus: p.initialStatus, locationId: p.locationId,
-      listPrice: p.listPrice, unitPrice: p.cost, note: null,
+      listPrice: p.listPrice, unitPrice: 0, note: null,
     })),
     costs: [],
   } as unknown as z.infer<typeof PurchaseBody>;
@@ -363,130 +327,5 @@ export async function commitWatches(tx: Tx, rows: ImportRows, opt: ImportOptions
     return { line: p.line, id: u.unitId, code: u.assetCode, label: p.label, href: `/dong-ho/${u.unitId}`, note: p.initialStatus === "inspecting" ? "Chờ kiểm tra" : undefined };
   });
   await tx.fn("app.fn_audit_import", ["watches", { rows: rows.length, created: items.length, skipped, receipt: conf.code }]);
-  return { kind: "watches", receipt: { id: conf.id, code: conf.code, href: `/nhap-hang/${conf.id}` }, items, failed: [], skipped };
-}
-
-// ============================================================================================ LINH KIỆN
-
-type PartPlan = {
-  line: number; label: string; existingId: string | null; code: string; name: string; categoryId: string | null; uom: string; qty: number; cost: number | null;
-  reorder: number; salePrice: number; note: string | null;
-};
-
-async function analyzeParts(tx: Tx, rows: ImportRows, can: (p: "part.manage") => boolean) {
-  const cats = await tx.q<{ id: string; name: string }>("SELECT id, name FROM public.part_categories WHERE is_active");
-  const catBy = new Map(cats.map((c) => [foldText(c.name), c]));
-  const codes = rows.map((r) => get(r.cells, "code").toUpperCase()).filter(Boolean);
-  const existing = codes.length
-    ? await tx.q<{ id: string; code: string; name: string }>("SELECT id, code, name FROM public.parts WHERE upper(code) = ANY($1::text[])", [codes])
-    : [];
-  const exBy = new Map(existing.map((p) => [p.code.toUpperCase(), p]));
-  const canManage = can("part.manage");
-  const out: PreviewRow[] = [];
-  const plans: (PartPlan | null)[] = [];
-  const seen = new Map<string, number>();
-  let zero = 0;
-  for (const r of rows) {
-    const c = r.cells;
-    const msgs: string[] = [];
-    let status = "ok" as RowStatus;
-    const err = (m: string) => { msgs.push(m); status = worst(status, "error"); };
-    const dup = (m: string) => { msgs.push(m); status = worst(status, "duplicate"); };
-    const code = get(c, "code");
-    const name = get(c, "name");
-    if (!code) err("Thiếu mã linh kiện.");
-    else if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,40}$/.test(code)) err("Mã chỉ gồm chữ, số và . _ / - (tối đa 41 ký tự).");
-    const ex = code ? exBy.get(code.toUpperCase()) : undefined;
-    if (code) {
-      const first = seen.get(code.toUpperCase());
-      if (first !== undefined) err(`Mã ${code} trùng với dòng ${first} trong tệp.`);
-      else seen.set(code.toUpperCase(), r.line);
-    }
-    if (!ex) {
-      if (!name) err("Thiếu tên linh kiện.");
-      else if (name.length > 160) err("Tên quá dài (tối đa 160 ký tự).");
-    }
-    const catName = get(c, "category");
-    let categoryId: string | null = null;
-    if (!ex) {
-      if (!catName) err("Thiếu danh mục.");
-      else {
-        const cat = catBy.get(foldText(catName));
-        if (cat) categoryId = cat.id;
-        else err(`Chưa có danh mục “${catName}” — tạo ở Linh kiện → Danh mục.`);
-      }
-      if (!canManage) err("Bạn không có quyền tạo linh kiện mới (part.manage).");
-    }
-    const uom = get(c, "uom") || "cái";
-    if (uom.length > 20) err("Đơn vị quá dài (tối đa 20 ký tự).");
-    const qty = parseCount(getRaw(c, "qty"));
-    if (qty.error) err(`Tồn đầu: ${qty.error}.`);
-    const cost = parseMoneyVnd(getRaw(c, "cost"));
-    if (cost.error) err(`Giá vốn: ${cost.error}.`);
-    const q = qty.value ?? 0;
-    if (q > 0 && cost.value === null && !cost.error) err("Thiếu giá vốn (bắt buộc khi có tồn đầu).");
-    const re = parseCount(getRaw(c, "reorder"));
-    if (re.error) err(`Ngưỡng cảnh báo: ${re.error}.`);
-    const sp = parseMoneyVnd(getRaw(c, "salePrice"));
-    if (sp.error) err(`Giá bán: ${sp.error}.`);
-    if (q === 0) zero++;
-    if (ex) dup(`Mã đã có: ${ex.name}. ${q > 0 ? `Chọn nhập để CỘNG ${q} vào tồn hiện có (giá vốn bình quân tự tính lại); thông tin khác giữ nguyên.` : "Không có tồn đầu để cộng — bỏ qua."}`);
-    const note = getRaw(c, "note");
-    if (note.length > 1000) err("Ghi chú quá dài (tối đa 1000 ký tự).");
-    out.push({
-      line: r.line, label: `${code || "?"} — ${ex?.name ?? (name || "(chưa có tên)")}`,
-      detail: [ex ? "đã có" : "tạo mới", q > 0 ? `tồn ${q.toLocaleString("vi-VN")} ${uom}` : "chưa nhập kho", cost.value !== null ? `vốn ${vnd(cost.value)}/${uom}` : ""].filter(Boolean).join(" · "),
-      status, messages: msgs, include: false,
-    });
-    plans.push(status === "error" ? null : {
-      line: r.line, label: `${code} — ${ex?.name ?? name}`, existingId: ex?.id ?? null, code, name, categoryId, uom, qty: q, cost: cost.value, reorder: re.value ?? 0, salePrice: sp.value ?? 0, note: note || null,
-    });
-  }
-  out.forEach((o) => (o.include = defaultInclude(o.status)));
-  const notices: string[] = [];
-  if (zero) notices.push(`${zero} dòng không có tồn đầu: chỉ tạo linh kiện, không tạo phiếu nhập kho cho dòng đó.`);
-  return { out, plans, notices };
-}
-
-export async function previewParts(tx: Tx, rows: ImportRows, can: (p: "part.manage") => boolean): Promise<Preview> {
-  const a = await analyzeParts(tx, rows, can);
-  return mkPreview("parts", a.out, a.notices);
-}
-
-export async function commitParts(tx: Tx, rows: ImportRows, include: number[] | undefined, can: (p: "part.manage") => boolean): Promise<CommitResult> {
-  const a = await analyzeParts(tx, rows, can);
-  const want = new Set(include ?? a.out.filter((o) => defaultInclude(o.status)).map((o) => o.line));
-  const chosen = a.plans.filter((p): p is PartPlan => !!p && want.has(p.line));
-  const skipped = a.out.length - chosen.length;
-  // Dòng "đã có" không có tồn đầu thì không còn việc gì
-  const work = chosen.filter((p) => !(p.existingId && p.qty === 0));
-  if (!work.length) throw new ApiError(422, "WF-VALIDATION", "Không có dòng hợp lệ nào để nhập. Hãy sửa lỗi trong tệp rồi xem trước lại.");
-  const ids = new Map<number, string>();
-  const created: number[] = [];
-  for (const p of work) {
-    if (p.existingId) { ids.set(p.line, p.existingId); continue; }
-    const r = await tx.one<{ id: string }>(
-      `INSERT INTO public.parts (code, name, category_id, uom, specs, sale_price_vnd, reorder_level, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7, app.current_user_id()) RETURNING id`,
-      [p.code, p.name, p.categoryId, p.uom, p.note, p.salePrice, p.reorder]);
-    ids.set(p.line, r!.id);
-    created.push(p.line);
-  }
-  const stockLines = work.filter((p) => p.qty > 0);
-  let receipt: CommitResult["receipt"] = null;
-  if (stockLines.length) {
-    const body = {
-      kind: "opening" as const, note: `Nhập tồn đầu kỳ linh kiện từ Excel (${stockLines.length} mã)`,
-      lines: stockLines.map((p) => ({ lineType: "part" as const, partId: ids.get(p.line)!, qty: p.qty, unitPrice: p.cost!, note: null })), costs: [],
-    } as unknown as z.infer<typeof PurchaseBody>;
-    const id = await saveDraft(tx, null, body);
-    let conf: { id: string; code: string };
-    try { conf = await tx.fn("app.fn_confirm_purchase", [id]); } catch (e) { remapLine(e, stockLines.map((p) => p.line)); }
-    receipt = { id: conf.id, code: conf.code, href: `/nhap-hang/${conf.id}` };
-  }
-  const items: CommitItem[] = work.map((p) => ({
-    line: p.line, id: ids.get(p.line)!, code: p.code, label: p.label, href: `/linh-kien/${ids.get(p.line)!}`,
-    note: `${created.includes(p.line) ? "Tạo mới" : "Cộng tồn"}${p.qty > 0 ? ` · +${p.qty.toLocaleString("vi-VN")} ${p.uom}` : ""}`,
-  }));
-  await tx.fn("app.fn_audit_import", ["parts", { rows: rows.length, created: created.length, stocked: stockLines.length, skipped, receipt: receipt?.code ?? null }]);
-  return { kind: "parts", receipt, items, failed: [], skipped };
+  return { kind: "watches", receipt: { id: conf.id, code: conf.code, href: "/dong-ho" }, items, failed: [], skipped };
 }

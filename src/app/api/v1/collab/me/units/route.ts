@@ -1,8 +1,12 @@
 import { api } from "@/server/http";
-import { UNITS_COLLAB_SELECT } from "@/server/collab";
 
-// CTV: hàng đang giữ kèm giá thu giao — KHÔNG giá vốn (PT-02)
+// CTV: chiếc được giao cho tôi — giá niêm yết tham khảo, KHÔNG giá vốn/doanh thu (PT-02). Hàm DB chỉ trả cột an toàn.
 export const GET = api({ perm: "collab.view_own" }, async ({ db }) => {
-  const items = await db((tx) => tx.q(`${UNITS_COLLAB_SELECT} WHERE v.held_by_collaborator_id = app.current_user_id() ORDER BY v.assigned_date`));
-  return { items };
+  const rows = await db((tx) => tx.q<Record<string, unknown>>("SELECT * FROM app.fn_my_offers()"));
+  return {
+    items: rows.map((r) => ({
+      id: r.unit_id, assetCode: r.asset_code, serialNo: r.serial_no, condition: r.condition, conditionGrade: r.condition_grade, modelName: r.model_name, brandName: r.brand_name,
+      listPrice: r.list_price_vnd, offeredAt: r.offered_at, claimId: r.claim_id, taken: r.taken, thumbUrl: r.photo_id ? `/api/v1/files/${r.photo_id}/thumb` : null,
+    })),
+  };
 });

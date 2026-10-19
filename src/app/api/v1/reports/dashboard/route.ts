@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { api } from "@/server/http";
+import { claimsList } from "@/server/collab";
 import { todayVn, addDays } from "@/lib/dates";
 import { fillSeries, previousRange, previousSpan, type DashPeriod } from "@/lib/series";
 
@@ -16,13 +17,12 @@ function range(period: string, today: string): [string, string] {
 }
 
 /** Các khóa số liệu của kỳ trước dùng để tính "▲/▼ so với kỳ trước" — chỉ khóa mà hàm DB trả cho người gọi (đã lọc theo quyền) */
-const PREV_KEYS = ["revenue", "salesRevenue", "repairRevenue", "grossProfit", "collections", "invoiceCount", "unitsSold"] as const;
+const PREV_KEYS = ["revenue", "salesRevenue", "repairRevenue", "invoiceCount", "unitsSold"] as const;
 
-type RevRow = { period: string; salesRevenue: number; repairRevenue: number; revenue: number; invoiceCount: number };
-type ProfitRow = { period: string; revenue: number; cogs: number; grossProfit: number; marginPct: number };
+type RevRow = { period: string; shopRevenue: number; collabRevenue: number; repairRevenue: number; revenue: number; invoiceCount: number; unitsSold: number };
 
-// Tổng quan theo vai trò: hàm DB chỉ trả khóa người gọi được phép (FR-DASH-11); kèm chuỗi kỳ cho biểu đồ (nếu có quyền doanh thu/lãi),
-// kỳ trước để so sánh, tồn kho theo hãng (catalog.view). Chuỗi được điền kỳ trống bằng 0 để biểu đồ luôn đủ điểm.
+// Tổng quan theo quyền (CF-17): doanh thu, số chiếc bán, kho, CTV chờ xác nhận, máy sửa. Hàm DB chỉ trả khóa người gọi được phép (FR-DASH-11);
+// kèm chuỗi kỳ cho biểu đồ (nếu có quyền doanh thu), kỳ trước để so sánh, tồn kho theo hãng (catalog.view). Kỳ trống được điền 0.
 export const GET = api({ query: Q }, async ({ query, db, can }) => {
   const today = todayVn();
   const [from, to] = query.from && query.to ? [query.from, query.to] : range(query.period, today);
@@ -38,26 +38,25 @@ export const GET = api({ query: Q }, async ({ query, db, can }) => {
     const series: Record<string, unknown> = {};
     if (can("report.sales")) {
       const rows = (await tx.one<{ r: RevRow[] }>("SELECT app.rpt_revenue($1,$2,$3) AS r", [chartFrom, to, group]))!.r;
-      series.revenue = fillSeries(rows, chartFrom, to, group, { salesRevenue: 0, repairRevenue: 0, revenue: 0, invoiceCount: 0 });
-    }
-    if (can("profit.view")) {
-      const rows = (await tx.one<{ r: ProfitRow[] }>("SELECT app.rpt_profit($1,$2,$3) AS r", [chartFrom, to, group]))!.r;
-      series.profit = fillSeries(rows, chartFrom, to, group, { revenue: 0, cogs: 0, grossProfit: 0, marginPct: 0 });
+      series.revenue = fillSeries(rows, chartFrom, to, group, { shopRevenue: 0, collabRevenue: 0, repairRevenue: 0, revenue: 0, invoiceCount: 0, unitsSold: 0 });
     }
     const recentSales = can(["sale.view"])
-      ? await tx.q(`SELECT s.id, s.code, s.doc_date AS "docDate", s.grand_total_vnd AS "grandTotal", c.full_name AS "customerName", s.collaborator_id IS NOT NULL AS "isCollab"
+      ? await tx.q(`SELECT s.id, s.code, s.doc_date AS "docDate", s.grand_total_vnd AS "grandTotal", c.full_name AS "customerName", s.collaborator_id IS NOT NULL AS "isCollab",
+                           (SELECT string_agg(m.name, ', ' ORDER BY sl.line_no) FROM public.sale_lines sl JOIN public.watch_units u ON u.id = sl.unit_id JOIN public.watch_models m ON m.id = u.model_id WHERE sl.sale_id = s.id) AS items
                     FROM public.sales s LEFT JOIN public.customers c ON c.id = s.customer_id WHERE s.status = 'confirmed' ORDER BY s.confirmed_at DESC LIMIT 6`)
       : undefined;
+    const pendingClaims = can(["sale.confirm", "collab.view"]) ? (await claimsList(tx, { status: "pending", page: 1, pageSize: 5 })).items : undefined;
     const openRepairs = can("repair.view")
       ? await tx.q(`SELECT o.id, o.code, o.status, c.full_name AS "customerName", o.expected_date AS "expectedDate" FROM public.repair_orders o
-                    LEFT JOIN public.customers c ON c.id = o.customer_id WHERE o.status IN ('received','inspecting','repairing','waiting_parts','completed') ORDER BY o.received_at DESC LIMIT 6`)
+                    LEFT JOIN public.customers c ON c.id = o.customer_id WHERE o.status IN ('received','inspecting','repairing','waiting_parts','completed') AND o.kind = 'customer'
+                    ORDER BY o.received_at DESC LIMIT 6`)
       : undefined;
-    // Tồn kho theo hãng (số chiếc, không có giá vốn ⇒ chỉ cần quyền xem đồng hồ)
+    // Tồn kho theo hãng (số chiếc) — chỉ cần quyền xem đồng hồ
     const stockByBrand = can("catalog.view")
       ? await tx.q<{ name: string; count: number }>(
           `SELECT b.name, count(*)::int AS count FROM public.watch_units u JOIN public.brands b ON b.id = u.brand_id
-           WHERE u.status IN ('in_stock','reserved','with_collaborator','in_repair','inspecting') GROUP BY b.name ORDER BY count(*) DESC, b.name LIMIT 8`)
+           WHERE u.status IN ('in_stock','inspecting') GROUP BY b.name ORDER BY count(*) DESC, b.name LIMIT 8`)
       : undefined;
-    return { from, to, period: query.period, kpis, prev, series, recentSales, openRepairs, stockByBrand };
+    return { from, to, period: query.period, kpis, prev, series, recentSales, pendingClaims, openRepairs, stockByBrand };
   });
 });

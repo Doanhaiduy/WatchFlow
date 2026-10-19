@@ -81,24 +81,3 @@ export const IdentityBody = z.object({
   reason: z.string().trim().max(500).optional(),
   version: z.number().int().optional(),
 });
-
-export const PartListQuery = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(50),
-  q: z.string().trim().max(100).optional(),
-  categoryId: z.string().uuid().optional(),
-  low: z.enum(["1"]).optional(),
-});
-export const PartBody = z.object({
-  code: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,40}$/, "Mã chỉ gồm chữ, số và . _ / -"),
-  name: z.string().trim().min(1).max(160),
-  categoryId: z.string().uuid(),
-  uom: z.string().trim().min(1).max(20).default("cái"),
-  specs: z.string().trim().max(1000).nullable().optional(),
-  salePrice: money.default(0),
-  reorderLevel: z.number().int().min(0).max(100000).default(0),
-  isActive: z.boolean().optional(),
-  compatibility: z.array(z.object({ brandId: z.string().uuid(), modelId: z.string().uuid().nullable().optional(), note: z.string().max(200).optional().nullable() })).max(50).optional(),
-});
-export const PartAdjustBody = z.object({ delta: z.number().int().refine((x) => x !== 0, "Số lượng khác 0"), reason });
-export const CategoryBody = z.object({ name: z.string().trim().min(1).max(60), isActive: z.boolean().optional() });

@@ -20,12 +20,9 @@ export const CustomerListQuery = z.object({
   idNumber: z.string().trim().max(20).optional(),
   active: z.enum(["1", "0"]).optional(),
 });
-export const RevealBody = z.object({ reason: z.string().trim().max(500).default("") });
-export const AnonymizeBody = z.object({ reason: z.string().trim().min(10, "Lý do ít nhất 10 ký tự").max(500) });
 export const CustomerWatchBody = z.object({
   brandText: z.string().trim().max(80).optional().nullable(),
   modelText: z.string().trim().max(120).optional().nullable(),
   serialNo: z.string().trim().max(60).optional().nullable(),
   note: z.string().trim().max(300).optional().nullable(),
 });
-export const GroupBody = z.object({ name: z.string().trim().min(1).max(60), note: z.string().trim().max(300).optional().nullable(), isActive: z.boolean().optional() });

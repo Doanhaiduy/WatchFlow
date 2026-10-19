@@ -1,11 +1,10 @@
 "use client";
-// Thông tin cửa hàng + tài khoản nhận chuyển khoản (GET /api/v1/store-info) — dùng cho VietQR và PDF. Một lần tải, dùng chung (SWR).
+// Thông tin cửa hàng (GET /api/v1/store-info) — dùng cho phiếu in và PDF. Một lần tải, dùng chung (SWR).
 import useSWR from "swr";
 import { swrFetcher } from "./api-client";
 
 export type StoreInfo = {
   store: { name: string; address: string; phone: string; taxCode: string; receiptFooter: string; warrantyTerms: string; repairTerms: string };
-  payment: { configured: boolean; bankBin: string; accountNo: string; accountName: string; transferTemplate: string };
 };
 
 export function useStoreInfo() {

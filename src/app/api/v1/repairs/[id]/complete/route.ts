@@ -1,7 +1,7 @@
 import { api } from "@/server/http";
 import { CompleteBody } from "@/lib/types/repairs";
 
-// Hoàn thành: khóa dòng, trừ nốt linh kiện; sửa nội bộ vốn hóa vào giá vốn chiếc (BR-COST-04)
+// Sửa xong: khóa các dòng, chốt tiền sửa (chờ khách đến lấy máy)
 export const POST = api({ perm: "repair.update", body: CompleteBody, idempotent: "required" }, async ({ params, body, db }) => {
-  return db((tx) => tx.fn("app.fn_complete_repair", [params.id, body.unitStatus, body.condition ?? null, body.grade ?? null, body.findings ?? null]));
+  return db((tx) => tx.fn("app.fn_complete_repair", [params.id, "in_stock", null, null, body.findings ?? null]));
 });

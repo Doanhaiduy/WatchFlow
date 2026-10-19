@@ -30,25 +30,25 @@ export const PERMISSIONS = {
   "purchase.create": { module: "purchasing", label: "Lập phiếu nhập nháp", sensitive: false },
   "purchase.confirm": { module: "purchasing", label: "Xác nhận phiếu nhập", sensitive: false },
   "purchase.void": { module: "purchasing", label: "Hủy phiếu nhập", sensitive: true },
-  "sale.view": { module: "sales", label: "Xem mọi phiếu bán", sensitive: false },
+  "sale.view": { module: "sales", label: "Xem đơn bán", sensitive: false },
   "sale.view_own": { module: "sales", label: "Xem phiếu bán của mình", sensitive: false },
   "sale.create_draft": { module: "sales", label: "Lập phiếu bán nháp", sensitive: false },
-  "sale.confirm": { module: "sales", label: "Xác nhận phiếu bán", sensitive: false },
+  "sale.confirm": { module: "sales", label: "Ghi đơn bán & xác nhận CTV báo bán", sensitive: false },
   "sale.below_cost": { module: "sales", label: "Bán dưới giá vốn", sensitive: true },
-  "sale.void": { module: "sales", label: "Hủy phiếu bán", sensitive: true },
+  "sale.void": { module: "sales", label: "Hủy đơn bán", sensitive: true },
   "reservation.manage": { module: "sales", label: "Giữ hàng / hoàn cọc", sensitive: false },
   "reservation.forfeit": { module: "sales", label: "Tịch thu cọc", sensitive: true },
-  "warranty.view": { module: "sales", label: "Tra cứu bảo hành", sensitive: false },
+  "warranty.view": { module: "sales", label: "Xem hạn bảo hành", sensitive: false },
   "payment.create": { module: "payments", label: "Ghi thanh toán", sensitive: false },
   "payment.void": { module: "payments", label: "Hủy thanh toán", sensitive: true },
-  "collab.view": { module: "collaborators", label: "Xem cộng tác viên", sensitive: true },
-  "collab.manage": { module: "collaborators", label: "Quản lý cộng tác viên", sensitive: true },
-  "collab.view_own": { module: "collaborators", label: "CTV xem dữ liệu của mình", sensitive: false },
+  "collab.view": { module: "collaborators", label: "Xem cộng tác viên & thống kê", sensitive: true },
+  "collab.manage": { module: "collaborators", label: "Giao đồng hồ cho cộng tác viên", sensitive: true },
+  "collab.view_own": { module: "collaborators", label: "CTV: xem hàng được giao & báo đã bán", sensitive: false },
   "repair.view": { module: "repairs", label: "Xem phiếu sửa", sensitive: false },
   "repair.create": { module: "repairs", label: "Nhận máy sửa", sensitive: false },
   "repair.update": { module: "repairs", label: "Cập nhật phiếu sửa", sensitive: false },
   "repair.price.edit": { module: "repairs", label: "Sửa giá dòng sửa chữa", sensitive: false },
-  "repair.deliver": { module: "repairs", label: "Giao máy sửa, thu tiền", sensitive: false },
+  "repair.deliver": { module: "repairs", label: "Giao máy sửa", sensitive: false },
   "stocktake.manage": { module: "inventory", label: "Kiểm kê", sensitive: false },
   "stock.writeoff": { module: "inventory", label: "Thanh lý / ghi mất chiếc", sensitive: true },
   "report.sales": { module: "reports", label: "Báo cáo bán hàng", sensitive: false },
@@ -60,10 +60,20 @@ export type Permission = keyof typeof PERMISSIONS;
 export const PERMISSION_CODES = Object.keys(PERMISSIONS) as Permission[];
 
 export const MODULE_LABELS: Record<string, string> = {
-  iam: "Tài khoản & quyền", platform: "Hệ thống", catalog: "Đồng hồ", parts: "Linh kiện", partners: "Khách hàng",
-  cost: "Giá vốn & lợi nhuận", purchasing: "Nhập hàng", sales: "Bán hàng", payments: "Thanh toán", collaborators: "Cộng tác viên",
-  repairs: "Sửa chữa", inventory: "Kiểm kê", reports: "Báo cáo",
+  iam: "Tài khoản & quyền", platform: "Hệ thống", catalog: "Đồng hồ", partners: "Khách hàng",
+  purchasing: "Thêm đồng hồ", sales: "Bán hàng", collaborators: "Cộng tác viên",
+  repairs: "Sửa chữa", inventory: "Kho", reports: "Báo cáo",
 };
+
+/**
+ * Quyền của tính năng đã bỏ ở bản gọn (CF-10…CF-14): vẫn nằm trong DB (hàm cũ còn dùng) nhưng KHÔNG hiện ở Quản trị → Vai trò & quyền.
+ * Không dùng để kiểm quyền ở giao diện/API mới.
+ */
+export const RETIRED_PERMISSIONS: ReadonlySet<string> = new Set([
+  "part.view", "part.manage", "part.stock.adjust", "customer.pii.view", "cost.view", "cost.adjust", "profit.view", "debt.view",
+  "purchase.view", "purchase.void", "sale.view_own", "sale.create_draft", "sale.below_cost", "reservation.manage", "reservation.forfeit",
+  "payment.create", "payment.void", "stocktake.manage",
+]);
 
 export function isPermission(x: string): x is Permission {
   return Object.prototype.hasOwnProperty.call(PERMISSIONS, x);

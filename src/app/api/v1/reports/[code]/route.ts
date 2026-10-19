@@ -11,12 +11,11 @@ const Q = z.object({
   from: isoDate.optional(),
   to: isoDate.optional(),
   group: z.enum(["day", "month", "quarter", "year"]).default("day"),
-  days: z.coerce.number().int().min(1).max(3650).optional(),
   format: z.enum(["json", "xlsx"]).default("json"),
 });
 
-// R1–R11: dữ liệu từ hàm DB (kiểm quyền trong thân); xuất Excel cần thêm report.export, giới hạn 5 lần/giờ, ghi audit (PT-05)
-export const GET = api({ query: Q, writes: true }, async ({ params, query, db, can, user, req }) => {
+// 3 báo cáo (doanh thu / số lượng đồng hồ / cộng tác viên): dữ liệu từ hàm DB (kiểm quyền trong thân); xuất Excel cần thêm report.export, giới hạn 5 lần/giờ, ghi audit (PT-05)
+export const GET = api({ perm: ["report.sales", "report.inventory", "collab.view"], query: Q, writes: true }, async ({ params, query, db, can, user, req }) => {
   const def = REPORTS[params.code ?? ""];
   if (!def) throw new ApiError(404, "WF-NOT-FOUND", "Không có báo cáo này.");
   const to = query.to ?? todayVn();
@@ -27,7 +26,7 @@ export const GET = api({ query: Q, writes: true }, async ({ params, query, db, c
     await hitDb("export", user.userId);
   }
   const data = await db(async (tx) => {
-    const d = await def.run(tx, { from, to, group: query.group, days: query.days });
+    const d = await def.run(tx, { from, to, group: query.group });
     if (query.format === "xlsx") {
       await tx.q("SELECT app.fn_audit_event('report.exported', 'reports', $1, NULL, $2::jsonb, NULL, 'info')", [params.code, JSON.stringify({ from, to })]);
     }

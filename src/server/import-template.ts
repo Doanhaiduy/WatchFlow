@@ -9,11 +9,8 @@ const HEAD_FILL = "FFDDE7F5";
 const REQ_FILL = "FFFCE9D3";
 
 async function refLists(tx: Tx, kind: ImportKind): Promise<{ title: string; values: string[] }[]> {
-  if (kind === "customers") {
-    const g = await tx.q<{ name: string }>("SELECT name FROM public.customer_groups WHERE is_active ORDER BY name");
-    return [{ title: "Nhóm khách", values: g.map((x) => x.name) }];
-  }
-  if (kind === "watches") {
+  if (kind === "customers") return [];
+  {
     const m = await tx.q<{ brand: string; code: string; name: string }>(
       "SELECT b.name AS brand, m.code, m.name FROM public.watch_models m JOIN public.brands b ON b.id = m.brand_id WHERE m.is_active AND b.is_active ORDER BY b.name, m.name LIMIT 2000");
     const l = await tx.q<{ name: string }>("SELECT name FROM public.storage_locations WHERE is_active ORDER BY name");
@@ -26,8 +23,6 @@ async function refLists(tx: Tx, kind: ImportKind): Promise<{ title: string; valu
       { title: "Hạng tình trạng", values: ["A", "B", "C", "95%"] },
     ];
   }
-  const c = await tx.q<{ name: string }>("SELECT name FROM public.part_categories WHERE is_active ORDER BY name");
-  return [{ title: "Danh mục linh kiện", values: c.map((x) => x.name) }];
 }
 
 const GUIDE: Record<ImportKind, string[]> = {
@@ -36,21 +31,13 @@ const GUIDE: Record<ImportKind, string[]> = {
     "Hai dòng có chữ [VÍ DỤ] chỉ để minh họa — có thể để nguyên (hệ thống tự bỏ qua) hoặc xóa.",
     "Tối đa 300 dòng mỗi lần. Hệ thống cho XEM TRƯỚC từng dòng (hợp lệ / lỗi kèm lý do / trùng) rồi bạn mới xác nhận ghi.",
     "SĐT trùng với khách có sẵn hoặc trùng trong tệp được báo “trùng” — mặc định bỏ qua, bạn có thể chọn nhập vẫn.",
-    "CCCD/CMND (nếu có) được mã hóa khi lưu, giống tạo khách ở màn Khách hàng.",
   ],
   watches: [
-    "Mỗi chiếc đồng hồ một dòng ở sheet “Dữ liệu”. Cột bắt buộc: Loại/Model, Tình trạng, Giá vốn.",
-    "Hàng được ghi bằng MỘT phiếu nhập loại “Tồn đầu kỳ” và xác nhận luôn — giá vốn = cột “Giá vốn (giá thu)”, kho tăng đúng số chiếc.",
+    "Mỗi chiếc đồng hồ một dòng ở sheet “Dữ liệu”. Cột bắt buộc: Loại/Model, Tình trạng (và Vị trí kho nếu không chọn vị trí mặc định lúc nhập).",
     "Loại/Model phải khớp loại đã có (mã hoặc tên — xem sheet “Danh mục”). Chưa có thì tạo ở Đồng hồ → Loại & hãng, hoặc bật “tự tạo loại mới” lúc nhập (cần quyền quản lý danh mục; cần ghi cột Hãng).",
-    "Hàng Cũ và Đã sửa luôn vào kho ở trạng thái “Chờ kiểm tra”: cần hạng tình trạng + ảnh mới chuyển sang “Sẵn sàng bán” (đúng quy định kho).",
+    "Hàng Cũ và Đã sửa luôn vào kho ở trạng thái “Chờ kiểm tra”: cần hạng tình trạng + ảnh mới chuyển sang “Sẵn sàng bán”.",
     "Serial trùng với chiếc đã có trong kho (cùng hãng) hoặc trùng trong tệp sẽ bị chặn. Để trống serial = đồng hồ không có serial.",
-    "Giá: số nguyên đồng, không âm, không số lẻ (6000000 hoặc 6.000.000). Hai dòng [VÍ DỤ] tự bị bỏ qua.",
-  ],
-  parts: [
-    "Mỗi linh kiện một dòng ở sheet “Dữ liệu”. Cột bắt buộc: Mã, Tên, Danh mục (danh mục phải có sẵn — xem sheet “Danh mục”).",
-    "Tồn đầu > 0 được ghi bằng MỘT phiếu nhập “Tồn đầu kỳ”; giá vốn bình quân tính theo cột “Giá vốn”. Tồn đầu = 0 chỉ tạo linh kiện.",
-    "Mã đã có sẽ báo “trùng” — mặc định bỏ qua; nếu chọn nhập, số lượng được CỘNG vào tồn hiện có (không sửa tên/danh mục).",
-    "Giá: số nguyên đồng. Hai dòng [VÍ DỤ] tự bị bỏ qua.",
+    "Giá niêm yết: số nguyên đồng, không âm, không số lẻ (7500000 hoặc 7.500.000). Hai dòng [VÍ DỤ] tự bị bỏ qua.",
   ],
 };
 
@@ -112,6 +99,7 @@ export async function buildTemplate(tx: Tx, kind: ImportKind): Promise<{ buffer:
 
   const lists = await refLists(tx, kind);
   const ref = wb.addWorksheet("Danh mục");
+  if (!lists.length) ref.getCell(1, 1).value = "Không có danh mục tham chiếu cho loại này.";
   lists.forEach((l, i) => {
     ref.getColumn(i + 1).width = 24;
     const h = ref.getCell(1, i + 1);

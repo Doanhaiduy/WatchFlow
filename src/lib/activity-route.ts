@@ -51,20 +51,17 @@ export const SKIP_READ_PREFIXES = [
 ];
 
 /**
- * Mã sự kiện đọc/ghi nhạy cảm (cột action): xuất file, in, xem giá vốn, xem báo cáo, xem CCCD, xem nhật ký.
+ * Mã sự kiện đọc/ghi nhạy cảm (cột action): xuất file, in, xem báo cáo, xem nhật ký.
  * Chỉ dựa trên method + route + tham số `format` (không lưu query).
  */
 export function actionOf(method: string, route: string, query: URLSearchParams): string | null {
   const key = `${method} ${route}`;
   switch (key) {
-    case "GET /api/v1/purchases/export": return "export";
     case "GET /api/v1/reports/[code]": return query.get("format") === "xlsx" ? "export" : "view_report";
     case "GET /api/v1/reports/collaborators": return "view_report";
     // Tổng quan (reports/dashboard) tự nạp mỗi lần mở trang chủ ⇒ không ghi (sẽ làm ngập nhật ký); số liệu nhạy cảm vẫn do RLS/quyền chặn
-    case "GET /api/v1/catalog/units/[id]/cost": return "view_cost";
     case "POST /api/v1/sales/[id]/print":
     case "GET /api/v1/catalog/units/[id]/label": return "print";
-    case "POST /api/v1/customers/[id]/reveal-id": return "reveal_pii";
     case "GET /api/v1/audit": return query.get("page") && query.get("page") !== "1" ? null : "view_audit";
     case "GET /api/v1/activity": return query.get("before") ? null : "view_audit";
     default: return null;

@@ -3,8 +3,8 @@ import { ApiError } from "@/server/errors";
 import { getRepair } from "@/server/repairs";
 import { RepairInfoBody } from "@/lib/types/repairs";
 
-export const GET = api({ perm: "repair.view" }, async ({ params, db, can }) => {
-  const r = await db((tx) => getRepair(tx, params.id!, { cost: can("cost.view"), profit: can("profit.view") }));
+export const GET = api({ perm: "repair.view" }, async ({ params, db }) => {
+  const r = await db((tx) => getRepair(tx, params.id!));
   if (!r) throw new ApiError(404, "WF-NOT-FOUND", "Không tìm thấy phiếu sửa.");
   return r;
 });

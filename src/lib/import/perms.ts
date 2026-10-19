@@ -7,7 +7,6 @@ export const IMPORT_PERMS: Record<ImportKind, readonly Permission[]> = {
   // Cần xem TOÀN BỘ khách để báo trùng SĐT — CTV (chỉ customer.view_own) không nhập hàng loạt
   customers: ["customer.create", "customer.view"],
   watches: ["purchase.create", "purchase.confirm", "catalog.view"],
-  parts: ["purchase.create", "purchase.confirm", "part.view"],
 };
 
 export const ALL_IMPORT_PERMS: Permission[] = ["customer.create", "purchase.create"];

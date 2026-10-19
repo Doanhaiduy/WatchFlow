@@ -1,7 +1,7 @@
 import "server-only";
 // Tìm toàn cục cho bảng lệnh Ctrl+K (FR-NAV-01). Mỗi nhóm CHỈ chạy khi người gọi có quyền xem nhóm đó; mọi truy vấn chạy dưới wf_app
-// nên RLS vẫn là lớp chặn thật (CTV chỉ thấy chiếc đang giữ, người chỉ có customer.view_own chỉ thấy khách mình tạo…).
-// KHÔNG trả giá vốn/lợi nhuận/giá thu; SĐT khách chỉ trả 3 số cuối. Tối đa 5 dòng mỗi nhóm.
+// nên RLS vẫn là lớp chặn thật (người chỉ có customer.view_own chỉ thấy khách mình tạo; CTV không có nhóm nào…).
+// KHÔNG trả giá vốn/lợi nhuận; SĐT khách chỉ trả 3 số cuối. Tối đa 5 dòng mỗi nhóm.
 import type { Tx } from "./db";
 import type { Permission } from "@/lib/permissions";
 
@@ -12,7 +12,6 @@ type CanFn = (p: Permission | Permission[]) => boolean;
 export type SearchUnit = { id: string; assetCode: string; serialNo: string | null; title: string; status: string; exact: boolean };
 export type SearchCustomer = { id: string; code: string; fullName: string; phoneTail: string | null };
 export type SearchDoc = { id: string; code: string; status: string; docDate: string | null; subtitle: string | null };
-export type SearchPart = { id: string; code: string; name: string };
 
 export type SearchResult = {
   q: string;
@@ -20,9 +19,6 @@ export type SearchResult = {
   customers?: SearchCustomer[];
   sales?: SearchDoc[];
   repairs?: SearchDoc[];
-  purchases?: SearchDoc[];
-  reservations?: SearchDoc[];
-  parts?: SearchPart[];
   /** Chiếc khớp CHÍNH XÁC mã nội bộ/serial (Enter nhảy thẳng) */
   exactUnitId: string | null;
 };
@@ -41,7 +37,7 @@ export async function searchAll(tx: Tx, q: string, can: CanFn): Promise<SearchRe
 
   const tasks: Array<() => Promise<void>> = [];
   // Các truy vấn dùng chung MỘT kết nối (một transaction) ⇒ chạy tuần tự, không xếp hàng ngầm trên cùng client của driver.
-  if (can(["catalog.view", "collab.view_own"])) {
+  if (can("catalog.view")) {
     tasks.push(
       async () => {
         const rows = await tx.q<{ id: string; asset_code: string; serial_no: string | null; model_name: string; brand_name: string; status: string; exact: boolean }>(
@@ -50,7 +46,7 @@ export async function searchAll(tx: Tx, q: string, can: CanFn): Promise<SearchRe
            FROM public.watch_units u JOIN public.watch_models m ON m.id = u.model_id JOIN public.brands b ON b.id = u.brand_id
            WHERE u.search_text LIKE '%' || app.norm_text($2) || '%' OR u.serial_norm = app.norm_serial($1)
                  ${fuzzy ? "OR app.norm_text($1) <% u.search_text" : ""}
-           ORDER BY exact DESC, (u.status IN ('in_stock','reserved','with_collaborator','in_repair','inspecting')) DESC,
+           ORDER BY exact DESC, (u.status IN ('in_stock','in_repair','inspecting')) DESC,
                     word_similarity(app.norm_text($1), u.search_text) DESC, u.created_at DESC
            LIMIT ${L}`,
           [raw, like],
@@ -90,7 +86,7 @@ export async function searchAll(tx: Tx, q: string, can: CanFn): Promise<SearchRe
     (await tx.q<{ id: string; code: string; status: string; doc_date: string | null; subtitle: string | null }>(sql, params)).map((r) => ({
       id: r.id, code: r.code, status: r.status, docDate: r.doc_date, subtitle: r.subtitle,
     }));
-  if (can(["sale.view", "sale.view_own"])) {
+  if (can("sale.view")) {
     tasks.push(
       async () => {
         out.sales = await docs(
@@ -111,44 +107,6 @@ export async function searchAll(tx: Tx, q: string, can: CanFn): Promise<SearchRe
            FROM public.repair_orders o LEFT JOIN public.customers c ON c.id = o.customer_id
            WHERE upper(o.code) LIKE '%' || upper($1) || '%'
            ORDER BY (upper(o.code) = upper($2)) DESC, o.received_at DESC LIMIT ${L}`,
-          [like, raw],
-        );
-      },
-    );
-  }
-  if (can("purchase.view")) {
-    tasks.push(
-      async () => {
-        out.purchases = await docs(
-          `SELECT r.id, r.code, r.status, r.doc_date::text AS doc_date, coalesce(r.source_name, r.seller_name) AS subtitle
-           FROM public.purchase_receipts r
-           WHERE r.code IS NOT NULL AND upper(r.code) LIKE '%' || upper($1) || '%'
-           ORDER BY (upper(r.code) = upper($2)) DESC, r.created_at DESC LIMIT ${L}`,
-          [like, raw],
-        );
-      },
-    );
-  }
-  if (can("reservation.manage")) {
-    tasks.push(
-      async () => {
-        out.reservations = await docs(
-          `SELECT r.id, r.code, r.status, r.hold_until::text AS doc_date, c.full_name AS subtitle
-           FROM public.reservations r JOIN public.customers c ON c.id = r.customer_id
-           WHERE upper(r.code) LIKE '%' || upper($1) || '%'
-           ORDER BY (upper(r.code) = upper($2)) DESC, r.created_at DESC LIMIT ${L}`,
-          [like, raw],
-        );
-      },
-    );
-  }
-  if (can("part.view")) {
-    tasks.push(
-      async () => {
-        out.parts = await tx.q<SearchPart>(
-          `SELECT p.id, p.code, p.name FROM public.parts p
-           WHERE p.is_active AND (p.search_text LIKE '%' || app.norm_text($1) || '%' ${fuzzy ? "OR app.norm_text($2) <% p.search_text" : ""})
-           ORDER BY word_similarity(app.norm_text($2), p.search_text) DESC, p.name LIMIT ${L}`,
           [like, raw],
         );
       },

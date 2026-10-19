@@ -3,10 +3,10 @@ import { ApiError } from "@/server/errors";
 import { getUnit } from "@/server/catalog";
 import { UnitInfoBody } from "@/lib/types/catalog";
 
-// Chi tiết chiếc (id hoặc mã nội bộ) + phụ kiện + ảnh. Giá vốn chỉ khi cost.view.
-export const GET = api({ perm: ["catalog.view", "collab.view_own"] }, async ({ params, db, can }) => {
+// Chi tiết chiếc (id hoặc mã nội bộ) + phụ kiện + ảnh. Không giá vốn.
+export const GET = api({ perm: "catalog.view" }, async ({ params, db }) => {
   return db(async (tx) => {
-    const unit = await getUnit(tx, params.id!, can("cost.view"));
+    const unit = await getUnit(tx, params.id!);
     if (!unit) throw new ApiError(404, "WF-NOT-FOUND", "Không tìm thấy chiếc đồng hồ hoặc bạn không có quyền xem.");
     const model = await tx.one(
       `SELECT caliber, movement_type AS "movementType", case_size_mm::float AS "caseSizeMm", case_material AS "caseMaterial", strap_type AS "strapType",

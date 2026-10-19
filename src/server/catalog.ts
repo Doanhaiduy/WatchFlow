@@ -1,6 +1,5 @@
 import "server-only";
-// Truy vấn đọc module catalog: DTO chiếc đồng hồ. Trường giá vốn CHỈ có khi người gọi có cost.view (BR-SEC-02) —
-// không "xóa ở client": SQL không chọn cột khi không có quyền, RLS unit_cost_entries là lớp chặn thứ hai.
+// Truy vấn đọc module catalog: DTO chiếc đồng hồ. Bản gọn (CF-14): KHÔNG trả giá vốn ở bất kỳ API nào (cột giá vốn vẫn nằm ở bảng riêng có RLS).
 import type { Tx } from "./db";
 import type { z } from "zod";
 import type { UnitListQuery } from "@/lib/types/catalog";
@@ -27,10 +26,9 @@ export type UnitDto = {
   daysInStock: number | null;
   thumbUrl: string | null;
   version: number;
-  cost?: number | null;
 };
 
-const SELECT_UNIT = (withCost: boolean) => `
+const SELECT_UNIT = `
   SELECT u.id, u.asset_code, u.status, u.condition, u.condition_grade, u.condition_note, u.serial_no, u.has_serial,
          u.list_price_vnd, u.promo_price_vnd, u.promo_from::text, u.promo_to::text, u.stock_since::text, u.version,
          app.unit_effective_price(u.list_price_vnd, u.promo_price_vnd, u.promo_from, u.promo_to) AS effective_price,
@@ -40,15 +38,14 @@ const SELECT_UNIT = (withCost: boolean) => `
          u.held_by_collaborator_id, CASE WHEN u.held_by_collaborator_id IS NOT NULL THEN app.user_display_name(u.held_by_collaborator_id) END AS holder_name,
          (SELECT f.id FROM public.files f WHERE f.entity_table = 'watch_units' AND f.entity_id = u.id AND f.kind = 'product' AND NOT f.is_deleted
             ORDER BY f.created_at LIMIT 1) AS photo_id
-         ${withCost ? ", (SELECT c.cost_vnd FROM public.v_unit_costs c WHERE c.unit_id = u.id) AS cost_vnd" : ""}
   FROM public.watch_units u
   JOIN public.watch_models m ON m.id = u.model_id
   JOIN public.brands b ON b.id = u.brand_id
   LEFT JOIN public.storage_locations l ON l.id = u.location_id`;
 
 type Row = Record<string, unknown>;
-export function toUnitDto(r: Row, withCost: boolean): UnitDto {
-  const d: UnitDto = {
+export function toUnitDto(r: Row): UnitDto {
+  return {
     id: r.id as string,
     assetCode: r.asset_code as string,
     status: r.status as string,
@@ -71,13 +68,11 @@ export function toUnitDto(r: Row, withCost: boolean): UnitDto {
     thumbUrl: r.photo_id ? `/api/v1/files/${r.photo_id}/thumb` : null,
     version: r.version as number,
   };
-  if (withCost) d.cost = (r.cost_vnd as number) ?? null;
-  return d;
 }
 
-export const STOCK_STATUSES = ["in_stock", "reserved", "with_collaborator", "in_repair", "inspecting"];
+export const STOCK_STATUSES = ["in_stock", "in_repair", "inspecting"];
 
-export async function listUnits(tx: Tx, q: z.infer<typeof UnitListQuery>, withCost: boolean) {
+export async function listUnits(tx: Tx, q: z.infer<typeof UnitListQuery>) {
   const conds: string[] = [];
   const p: unknown[] = [];
   const add = (sql: string, ...vals: unknown[]) => {
@@ -105,29 +100,29 @@ export async function listUnits(tx: Tx, q: z.infer<typeof UnitListQuery>, withCo
     order = `coalesce(upper(u.asset_code) = upper($${i}) OR u.serial_norm = app.norm_serial($${i}), false) DESC,word_similarity(app.norm_text($${i}), u.search_text) DESC, ${order}`;
   }
   const where = conds.length ? "WHERE " + conds.join(" AND ") : "";
-  const rows = await tx.q(`${SELECT_UNIT(withCost)} ${where} ORDER BY ${order} LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`, p);
+  const rows = await tx.q(`${SELECT_UNIT} ${where} ORDER BY ${order} LIMIT ${q.pageSize} OFFSET ${(q.page - 1) * q.pageSize}`, p);
   const total = (await tx.one<{ n: number }>(`SELECT count(*)::int n FROM public.watch_units u ${where}`, p))?.n ?? 0;
   const counts = await tx.q<{ status: string; n: number }>("SELECT status, count(*)::int n FROM public.watch_units GROUP BY status");
-  return { items: rows.map((r) => toUnitDto(r, withCost)), page: q.page, pageSize: q.pageSize, total, counts: Object.fromEntries(counts.map((c) => [c.status, c.n])) };
+  return { items: rows.map((r) => toUnitDto(r)), page: q.page, pageSize: q.pageSize, total, counts: Object.fromEntries(counts.map((c) => [c.status, c.n])) };
 }
 
-export async function getUnit(tx: Tx, idOrCode: string, withCost: boolean): Promise<UnitDto | null> {
+export async function getUnit(tx: Tx, idOrCode: string): Promise<UnitDto | null> {
   const isId = /^[0-9a-f-]{36}$/i.test(idOrCode);
-  const r = await tx.one(`${SELECT_UNIT(withCost)} WHERE ${isId ? "u.id = $1" : "upper(u.asset_code) = upper($1)"}`, [idOrCode]);
-  return r ? toUnitDto(r, withCost) : null;
+  const r = await tx.one(`${SELECT_UNIT} WHERE ${isId ? "u.id = $1" : "upper(u.asset_code) = upper($1)"}`, [idOrCode]);
+  return r ? toUnitDto(r) : null;
 }
 
 /** Tra cứu theo mã nội bộ / serial / nội dung QR (QR chứa mã nội bộ hoặc URL /units/<mã>) */
-export async function lookupUnit(tx: Tx, code: string, withCost: boolean) {
+export async function lookupUnit(tx: Tx, code: string) {
   const raw = code.trim();
   const m = /\/units\/([^/?#]+)/.exec(raw);
   const key = m ? decodeURIComponent(m[1]!) : raw;
   const rows = await tx.q(
-    `${SELECT_UNIT(withCost)} WHERE upper(u.asset_code) = upper($1) OR u.id::text = $1 OR (u.serial_norm IS NOT NULL AND u.serial_norm = app.norm_serial($1))
+    `${SELECT_UNIT} WHERE upper(u.asset_code) = upper($1) OR u.id::text = $1 OR (u.serial_norm IS NOT NULL AND u.serial_norm = app.norm_serial($1))
      ORDER BY (upper(u.asset_code) = upper($1)) DESC, u.created_at DESC LIMIT 5`,
     [key],
   );
-  return rows.map((r) => toUnitDto(r, withCost));
+  return rows.map((r) => toUnitDto(r));
 }
 
 export const MODEL_COLS = `m.id, m.code, m.brand_id AS "brandId", b.name AS "brandName", m.name, m.reference_no AS "referenceNo", m.caliber,
