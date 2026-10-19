@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { login, reauth, ownerSql, asUser, userOf } from "./_lib.mjs";
+import { login, ownerSql, asUser, userOf } from "./_lib.mjs";
 
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 const STORE = path.join(process.cwd(), ".local", "storage");
@@ -44,9 +44,8 @@ test("ẩn danh khách ⇒ job DAILY xóa THẬT mọi ảnh giấy tờ (gắn 
   for (const f of [fc, fr, fp]) { assert.ok(onDisk(f), "tệp phải có trong kho trước khi ẩn danh"); assert.ok(thumbOnDisk(f)); assert.ok(f.thumb_size_bytes > 0); }
   assert.equal(fc.is_immutable, true, "ảnh giấy tờ bất biến");
 
-  await reauth(owner);
-  const r = await owner.post(`/api/v1/customers/${c.id}/anonymize`, { reason: "Khách yêu cầu xóa dữ liệu cá nhân" }, { "Idempotency-Key": crypto.randomUUID() });
-  assert.equal(r.status, 200, JSON.stringify(r.body));
+  // Bản gọn không còn nút/API ẩn danh, nhưng hàm DB vẫn là đường duy nhất xóa PII khi khách yêu cầu (chủ chạy qua DB/SQL) — kiểm tra ở mức DB
+  await asUser(userOf("owner").id, (cn) => cn.query("SELECT app.fn_anonymize_customer($1, $2)", [c.id, "Khách yêu cầu xóa dữ liệu cá nhân"]));
 
   // Ngay sau ẩn danh: đã đánh dấu + hẹn xóa ngay; tệp CÒN trong kho cho tới khi job chạy
   const [a, b, p] = await Promise.all([row(idCust), row(idRcpt), row(photo)]);

@@ -33,13 +33,11 @@ describe("entityIdOf", () => {
 
 describe("actionOf", () => {
   const q = (s = "") => new URLSearchParams(s);
-  it("xuất Excel, in, giá vốn, báo cáo, CCCD", () => {
+  it("xuất Excel, in, báo cáo", () => {
     expect(actionOf("GET", "/api/v1/reports/[code]", q("format=xlsx"))).toBe("export");
     expect(actionOf("GET", "/api/v1/reports/[code]", q("format=json"))).toBe("view_report");
-    expect(actionOf("GET", "/api/v1/purchases/export", q())).toBe("export");
-    expect(actionOf("GET", "/api/v1/catalog/units/[id]/cost", q())).toBe("view_cost");
     expect(actionOf("POST", "/api/v1/sales/[id]/print", q())).toBe("print");
-    expect(actionOf("POST", "/api/v1/customers/[id]/reveal-id", q())).toBe("reveal_pii");
+    expect(actionOf("GET", "/api/v1/catalog/units/[id]/label", q())).toBe("print");
     expect(actionOf("GET", "/api/v1/sales", q())).toBeNull();
   });
   it("xem nhật ký chỉ ghi trang đầu", () => {
@@ -63,7 +61,7 @@ describe("shouldRecord", () => {
   });
   it("đọc thường không ghi; đọc nhạy cảm và 403 thì ghi", () => {
     expect(shouldRecord("GET", "/api/v1/sales", 200, null, null)).toBe(false);
-    expect(shouldRecord("GET", "/api/v1/catalog/units/[id]/cost", 200, null, "view_cost")).toBe(true);
+    expect(shouldRecord("GET", "/api/v1/catalog/units/[id]/label", 200, null, "print")).toBe(true);
     expect(shouldRecord("GET", "/api/v1/reports/[code]", 403, "WF-AUTH-FORBIDDEN", "view_report")).toBe(true);
     expect(shouldRecord("GET", "/api/v1/sales", 403, "WF-AUTH-FORBIDDEN", null)).toBe(true);
     expect(shouldRecord("GET", "/api/v1/sales", 403, "WF-AUTH-MFA-REQUIRED", null)).toBe(false);
@@ -72,7 +70,7 @@ describe("shouldRecord", () => {
 
 describe("nhãn", () => {
   it("route có nhãn", () => {
-    expect(activityLabel("POST", "/api/v1/sales/[id]/confirm").label).toBe("Xác nhận phiếu bán");
+    expect(activityLabel("POST", "/api/v1/collab/claims/[id]/confirm").label).toBe("Xác nhận CTV bán được");
     expect(activityLabel("GET", "/api/v1/reports/[code]", "export").label).toBe("Xuất Excel báo cáo");
   });
   it("route chưa có nhãn: suy khu vực theo đoạn đường dẫn, nhãn dự phòng", () => {

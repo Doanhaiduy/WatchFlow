@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  CUSTOMER_COLUMNS, WATCH_COLUMNS, foldText, headerKey, normalizeIdNumber, normalizePhoneVN, normSerial, parseCondition, parseCount, parseCsv, parseGrade,
+  CUSTOMER_COLUMNS, WATCH_COLUMNS, foldText, headerKey, normalizePhoneVN, normSerial, parseCondition, parseCsv, parseGrade,
   parseMoneyVnd, rowsFromTable, sniffFile,
 } from "@/lib/import/columns";
 
@@ -11,8 +11,10 @@ describe("tên cột", () => {
     expect(headerKey(CUSTOMER_COLUMNS, "Tên khách hàng")).toBe("fullName");
     expect(headerKey(CUSTOMER_COLUMNS, "SĐT")).toBe("phone");
     expect(headerKey(CUSTOMER_COLUMNS, "Điện thoại")).toBe("phone");
-    expect(headerKey(CUSTOMER_COLUMNS, "Nhóm khách")).toBe("group");
-    expect(headerKey(CUSTOMER_COLUMNS, "CCCD/CMND")).toBe("idNumber");
+    expect(headerKey(CUSTOMER_COLUMNS, "Địa chỉ")).toBe("address");
+    // Bản gọn (CF-13): không còn cột nhóm khách / CCCD / email
+    expect(headerKey(CUSTOMER_COLUMNS, "Nhóm khách")).toBeNull();
+    expect(headerKey(CUSTOMER_COLUMNS, "CCCD/CMND")).toBeNull();
     expect(headerKey(CUSTOMER_COLUMNS, "Cột lạ")).toBeNull();
   });
   it("phân biệt Hãng (thương hiệu) và Hạng (tình trạng) theo dấu", () => {
@@ -20,8 +22,7 @@ describe("tên cột", () => {
     expect(headerKey(WATCH_COLUMNS, "hang")).toBe("brand");
     expect(headerKey(WATCH_COLUMNS, "Hạng")).toBe("grade");
     expect(headerKey(WATCH_COLUMNS, "Hạng tình trạng")).toBe("grade");
-    expect(headerKey(WATCH_COLUMNS, "Giá vốn (giá thu)")).toBe("cost");
-    expect(headerKey(WATCH_COLUMNS, "Giá thu")).toBe("cost");
+    expect(headerKey(WATCH_COLUMNS, "Giá vốn (giá thu)")).toBeNull(); // bản gọn không nhập giá vốn
     expect(headerKey(WATCH_COLUMNS, "Giá niêm yết")).toBe("listPrice");
     expect(headerKey(WATCH_COLUMNS, "Vị trí kho")).toBe("location");
   });
@@ -49,7 +50,7 @@ describe("bảng → dòng", () => {
     expect(t.missingColumns).toEqual([]);
   });
   it("báo cột bắt buộc còn thiếu; không có tiêu đề ⇒ lỗi", () => {
-    expect(rowsFromTable("watches", [["Hãng", "Serial", "Loại"], ["Seiko", "A1", "SRPD55"]]).missingColumns).toEqual(["Tình trạng", "Giá vốn (giá thu)"]);
+    expect(rowsFromTable("watches", [["Hãng", "Serial", "Loại"], ["Seiko", "A1", "SRPD55"]]).missingColumns).toEqual(["Tình trạng"]);
     expect(() => rowsFromTable("customers", [["a", "b"], ["1", "2"]])).toThrow(/tiêu đề/);
   });
   it("parseCsv: BOM, chấm phẩy, ngoặc kép, xuống dòng trong ô", () => {
@@ -91,14 +92,6 @@ describe("tiền & số", () => {
     expect(parseMoneyVnd("abc").error).toBeTruthy();
     expect(parseMoneyVnd("99999999999999999").error).toBeTruthy();
   });
-  it("parseCount", () => {
-    expect(parseCount("20").value).toBe(20);
-    expect(parseCount("20.0").value).toBe(20);
-    expect(parseCount("").value).toBeNull();
-    expect(parseCount("-1").error).toBeTruthy();
-    expect(parseCount("1,5").error).toBeTruthy();
-    expect(parseCount("1000000").error).toBeTruthy();
-  });
 });
 
 describe("đồng hồ", () => {
@@ -121,12 +114,6 @@ describe("đồng hồ", () => {
     expect(normSerial("imp 0001")).toBe("IMP0001");
     expect(normSerial("S5D-100.001/x_y")).toBe("S5D100001XY");
     expect(normSerial("  ")).toBeNull();
-  });
-  it("CCCD: thêm số 0 đầu bị Excel làm mất", () => {
-    expect(normalizeIdNumber("79099112233")).toEqual({ value: "079099112233", fixed: true });
-    expect(normalizeIdNumber("079 099 112 233").value).toBe("079099112233");
-    expect(normalizeIdNumber("12").error).toBeTruthy();
-    expect(normalizeIdNumber("").value).toBeNull();
   });
 });
 

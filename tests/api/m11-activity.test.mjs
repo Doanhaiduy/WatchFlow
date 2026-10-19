@@ -40,15 +40,15 @@ test("thao tác ghi được ghi SAU phản hồi với route mẫu, entity_id U
   const s = await login("sales");
   const salesId = await uid(userOf("sales").email);
   const id = uuid();
-  const r = await s.post(`/api/v1/sales/${id}/confirm?secret=BIMAT123&phone=0912345678`, { note: "NOI-DUNG-GUI-LEN-KHONG-DUOC-GHI-0912345678" });
-  assert.ok(r.status >= 400, "phiếu không tồn tại ⇒ lỗi");
+  const r = await s.post(`/api/v1/sales/${id}/void?secret=BIMAT123&phone=0912345678`, { reason: "NOI-DUNG-GUI-LEN-KHONG-DUOC-GHI-0912345678" });
+  assert.ok(r.status >= 400, "sales không có quyền hủy đơn ⇒ lỗi");
   const rid = r.headers.get("x-request-id");
   const rows = await waitRows("SELECT * FROM public.activity_logs WHERE entity_id = $1", [id]);
   assert.equal(rows.length, 1, "đúng một dòng");
   const a = rows[0];
   assert.equal(a.user_id, salesId);
   assert.equal(a.method, "POST");
-  assert.equal(a.route, "/api/v1/sales/[id]/confirm");
+  assert.equal(a.route, "/api/v1/sales/[id]/void");
   assert.equal(a.status, r.status);
   assert.ok(a.error_code?.startsWith("WF-"), "mã lỗi: " + a.error_code);
   assert.match(a.ip_hash, /^[0-9a-f]{8,64}$/);
@@ -65,9 +65,9 @@ test("tham số đường dẫn không phải UUID (có thể là PII) ⇒ route
   const s = await login("sales");
   const marker = "0987654321";
   const before = (await ownerSql("SELECT count(*)::int n FROM public.activity_logs"))[0].n;
-  const r = await s.post(`/api/v1/customers/${marker}/anonymize`, { reason: "kiểm thử không PII trong route" });
+  const r = await s.post(`/api/v1/sales/${marker}/void`, { reason: "kiểm thử không PII trong route" });
   assert.ok(r.status >= 400);
-  const rows = await waitRows("SELECT * FROM public.activity_logs WHERE route = '/api/v1/customers/[id]/anonymize' ORDER BY at DESC LIMIT 1", []);
+  const rows = await waitRows("SELECT * FROM public.activity_logs WHERE route = '/api/v1/sales/[id]/void' ORDER BY at DESC LIMIT 1", []);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].entity_id, null);
   const leaked = await ownerSql("SELECT count(*)::int n FROM public.activity_logs WHERE route LIKE $1 OR coalesce(entity_id,'') LIKE $1", ["%" + marker + "%"]);
@@ -75,19 +75,19 @@ test("tham số đường dẫn không phải UUID (có thể là PII) ⇒ route
   assert.ok((await ownerSql("SELECT count(*)::int n FROM public.activity_logs"))[0].n > before);
 });
 
-test("đọc thường KHÔNG ghi; đọc nhạy cảm (giá vốn) ghi kèm action; poll/đánh dấu đã đọc bị bỏ qua", async () => {
+test("đọc thường KHÔNG ghi; đọc nhạy cảm (tem/in) ghi kèm action; poll/đánh dấu đã đọc bị bỏ qua", async () => {
   const o = await login("owner");
   const ownerId = await uid(userOf("owner").email);
   const marker = uuid();
   await o.get("/api/v1/sales?page=1");
   await o.get("/api/v1/notifications");
   await o.post("/api/v1/notifications/read-all", {});
-  const cost = await o.get(`/api/v1/catalog/units/${marker}/cost`);
-  assert.ok(cost.status >= 200);
+  const label = await o.get(`/api/v1/catalog/units/${marker}/label`);
+  assert.ok(label.status >= 200);
   const rows = await waitRows("SELECT * FROM public.activity_logs WHERE entity_id = $1", [marker]);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].action, "view_cost");
-  assert.equal(rows[0].route, "/api/v1/catalog/units/[id]/cost");
+  assert.equal(rows[0].action, "print");
+  assert.equal(rows[0].route, "/api/v1/catalog/units/[id]/label");
   await new Promise((x) => setTimeout(x, 800));
   const noise = await ownerSql(
     `SELECT route FROM public.activity_logs WHERE user_id = $1 AND at > now() - interval '30 seconds'

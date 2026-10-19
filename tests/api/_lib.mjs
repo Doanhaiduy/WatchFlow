@@ -119,3 +119,21 @@ export async function expectWf(promise, code) {
   }
   throw new Error(`Mong lỗi ${code} nhưng thành công`);
 }
+
+let _unitSeq = 0;
+/** Tạo nhanh một chiếc trong kho (qua kết nối chủ DB, bật app.seed) — dùng cho test cần dữ liệu riêng. */
+export async function makeUnit(listPrice, { cond = "new", status = "in_stock", serial } = {}) {
+  const [model] = await ownerSql("SELECT id, brand_id FROM public.watch_models ORDER BY code LIMIT 1");
+  const [loc] = await ownerSql("SELECT id FROM public.storage_locations ORDER BY name LIMIT 1");
+  const code = `TU-${Date.now().toString(36)}-${++_unitSeq}`;
+  const c = new pg.Client({ connectionString: process.env.TEST_OWNER_DB_URL });
+  await c.connect();
+  try {
+    await c.query("SELECT set_config('app.seed','on',false)");
+    const r = await c.query(
+      `INSERT INTO public.watch_units (asset_code, model_id, brand_id, serial_no, condition, condition_grade, status, location_id, list_price_vnd)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [code, model.id, model.brand_id, serial ?? code, cond, cond === "new" ? null : "A", status, loc.id, listPrice]);
+    return { id: r.rows[0].id, code };
+  } finally { await c.end(); }
+}

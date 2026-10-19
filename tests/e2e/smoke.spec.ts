@@ -10,9 +10,9 @@ test("đăng nhập: trang công khai đạt axe", async ({ page }, info) => {
 
 test("chủ cửa hàng: các màn chính", async ({ page }, info) => {
   await login(page, "owner");
-  for (const [path, name] of [["/", "tong-quan"], ["/dong-ho", "dong-ho"], ["/ban-hang", "ban-hang"], ["/ban-hang/moi", "pos"], ["/nhap-hang", "nhap-hang"],
-    ["/khach-hang", "khach-hang"], ["/linh-kien", "linh-kien"], ["/giu-hang", "giu-hang"], ["/bao-hanh", "bao-hanh"], ["/quan-tri/nguoi-dung", "qt-nguoi-dung"],
-    ["/quan-tri/vai-tro", "qt-vai-tro"], ["/cai-dat", "cai-dat"]] as const) {
+  for (const [path, name] of [["/", "tong-quan"], ["/dong-ho", "dong-ho"], ["/dong-ho/moi", "them-dong-ho"], ["/ban-hang", "ban-hang"], ["/ban-hang/moi", "ghi-don"],
+    ["/khach-hang", "khach-hang"], ["/cong-tac-vien", "cong-tac-vien"], ["/sua-chua/moi", "nhan-may-sua"], ["/nhap-excel", "nhap-excel"],
+    ["/quan-tri/nguoi-dung", "qt-nguoi-dung"], ["/quan-tri/vai-tro", "qt-vai-tro"], ["/cai-dat", "cai-dat"]] as const) {
     await page.goto(path);
     await expect(page.locator("main, [role=main]").first()).toBeVisible();
     await checkPage(page, info, `owner-${name}`);
@@ -28,8 +28,13 @@ test("nhân viên bán hàng: không thấy mục quản trị/giá vốn", asyn
   await expect(page.getByText(/không có quyền/i)).toBeVisible();
 });
 
-test("cộng tác viên: trang của tôi", async ({ page }, info) => {
+test("cộng tác viên: các màn của tôi, không có doanh thu/giá vốn", async ({ page }, info) => {
   await login(page, "collaborator");
   await expect(page).toHaveURL(/\/ctv/);
   await checkPage(page, info, "ctv-trang-chu");
+  for (const [path, name] of [["/ctv/don", "ctv-bao-ban"], ["/ctv/thong-ke", "ctv-thong-ke"]] as const) {
+    await page.goto(path);
+    await checkPage(page, info, name);
+  }
+  await expect(page.getByText(/Doanh thu|Giá vốn|Giá thu|Lãi/)).toHaveCount(0);
 });

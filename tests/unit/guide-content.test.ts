@@ -74,9 +74,13 @@ describe("nội dung hướng dẫn (src/content/guide.ts)", () => {
     const none = guideFor(() => false);
     expect(none.length).toBeGreaterThan(0);
     expect(none.every((s) => !s.perms)).toBe(true);
-    const sale = guideFor((p) => (Array.isArray(p) ? p : [p]).includes("sale.create_draft" as Permission));
+    const sale = guideFor((p) => (Array.isArray(p) ? p : [p]).includes("sale.confirm" as Permission));
     expect(sale.some((s) => s.id === "ban-hang")).toBe(true);
-    expect(sale.some((s) => s.id === "ctv")).toBe(false);
+    expect(sale.some((s) => s.id === "man-ctv")).toBe(false); // màn riêng của CTV
+    expect(sale.some((s) => s.id === "sua-chua")).toBe(false); // sửa chữa chỉ chủ
+    const ctv = guideFor((p) => (Array.isArray(p) ? p : [p]).includes("collab.view_own" as Permission));
+    expect(ctv.some((s) => s.id === "man-ctv")).toBe(true);
+    expect(ctv.some((s) => s.id === "ban-hang")).toBe(false);
     expect(guideFor(() => true).length).toBe(GUIDE.length);
   });
 });

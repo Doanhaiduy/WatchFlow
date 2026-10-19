@@ -1,93 +1,100 @@
-// M8 — Báo cáo & tổng quan: SC-10 (tổng hợp ngày SC-01→SC-04 trên khoảng ngày riêng), PT-05 (xuất file theo quyền + giới hạn),
-// PT-01 phần dashboard (khóa theo quyền), CTV/kho 403 với R1/R2, Excel cùng số.
+// M8 (bản gọn, CF-17) — Báo cáo & tổng quan: SC-10 (doanh thu / số lượng đồng hồ / CTV trên ngày riêng), PT-05 (xuất file theo quyền + giới hạn),
+// PT-01/PT-14 phần dashboard (khóa theo quyền; CTV không có thẻ số), không giá vốn/lãi/nợ ở bất kỳ báo cáo nào, Excel cùng số.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { login, ownerSql } from "./_lib.mjs";
+import { login, ownerSql, makeUnit, userOf } from "./_lib.mjs";
 
 const K = () => ({ "Idempotency-Key": crypto.randomUUID() });
-let owner, sales, wh, ctv, ids, KH;
-const D1 = "2027-01-02", D3 = "2027-01-03", D5 = "2027-01-05";
+let owner, sales, wh, ctv, KH, C1;
+const D3 = "2027-01-03", D5 = "2027-01-05";
 
-test("chuẩn bị + dựng lại SC-01→SC-04 trên ngày 2027-01-02/03/05", async () => {
+test("dựng dữ liệu SC-10: 2 đơn cửa hàng + 1 đơn CTV + 1 máy sửa giao trong ngày 2027-01-03", async () => {
+  C1 = userOf("collaborator");
+  await ownerSql("INSERT INTO public.collaborator_profiles (user_id, phone, is_active) VALUES ($1,'0900000000',true) ON CONFLICT (user_id) DO UPDATE SET is_active = true", [C1.id]);
   [owner, sales, wh, ctv] = await Promise.all([login("owner"), login("sales"), login("warehouse"), login("collaborator")]);
-  const m = await ownerSql("SELECT code, id FROM public.watch_models");
-  const l = await ownerSql("SELECT name, id FROM public.storage_locations");
-  ids = { m: Object.fromEntries(m.map((r) => [r.code, r.id])), l: Object.fromEntries(l.map((r) => [r.name, r.id])) };
+  for (const c of [owner, sales, wh, ctv]) c.today = D3;
   KH = Object.fromEntries((await ownerSql("SELECT full_name, id FROM public.customers")).map((r) => [r.full_name, r.id]));
-  wh.today = D1;
-  const w = (code, serial, price, list) => ({ lineType: "watch", modelId: ids.m[code], serialNo: serial, hasSerial: true, condition: "new", initialStatus: "in_stock", locationId: ids.l["Tủ trưng bày 1"], unitPrice: price, listPrice: list });
-  const d = await wh.post("/api/v1/purchases", { kind: "purchase", sourceName: "Cửa hàng ABC", docDate: D1, lines: [w("SEIKO-5-SRPD55", "SC10-A", 6_000_000, 8_500_000),
-    w("CASIO-MTP-V001", "SC10-B", 1_200_000, 1_800_000), w("ORIENT-BAMBINO-V2", "SC10-C", 4_800_000, 6_500_000)], costs: [{ kind: "shipping", amount: 120_000 }] });
-  const c = await wh.post(`/api/v1/purchases/${d.body.id}/confirm`, {}, K());
-  assert.equal(c.status, 200, JSON.stringify(c.body));
-  const [A, B, C] = c.body.units;
-  sales.today = D3;
-  const sell = async (body, payments, tendered) => {
-    const s = await sales.post("/api/v1/sales", { orderDiscount: 0, tradeIns: [], ...body });
-    const r = await sales.post(`/api/v1/sales/${s.body.id}/confirm`, { payments, cashTendered: tendered }, K());
-    assert.equal(r.status, 200, JSON.stringify(r.body));
-    return s.body.id;
-  };
-  await sell({ customerId: KH["Nguyễn Văn An"], lines: [{ lineType: "watch", unitId: A.unitId, unitPrice: 8_200_000 }] }, [{ method: "cash", amount: 5_000_000 }, { method: "bank_transfer", amount: 3_200_000 }]);
-  await sell({ lines: [{ lineType: "watch", unitId: C.unitId, unitPrice: 6_500_000 }] }, [{ method: "cash", amount: 6_500_000 }], 7_000_000);
-  const sb = await sell({ customerId: KH["Trần Thị Bình"], dueDate: "2027-01-10", lines: [{ lineType: "watch", unitId: B.unitId, unitPrice: 1_800_000 }] }, [{ method: "cash", amount: 500_000 }]);
-  owner.today = D3;
-  // Trước thu thêm: kiểm ngày 03
+  const A = await makeUnit(8_500_000), C = await makeUnit(6_500_000), E = await makeUnit(1_800_000);
+  const s1 = await sales.post("/api/v1/sales", { customerId: KH["Nguyễn Văn An"], lines: [{ unitId: A.id, price: 8_200_000 }] }, K());
+  const s2 = await sales.post("/api/v1/sales", { customer: { fullName: "Khách vãng lai", phone: "0944 000 111" }, lines: [{ unitId: C.id, price: 6_500_000 }] }, K());
+  assert.equal(s1.status, 200, JSON.stringify(s1.body));
+  assert.equal(s2.status, 200, JSON.stringify(s2.body));
+  // CTV bán E: giao → báo → chủ xác nhận với giá mặc định (niêm yết 1.800.000)
+  assert.equal((await owner.post("/api/v1/collab/offers", { unitIds: [E.id], collaboratorIds: [C1.id] }, K())).status, 200);
+  const cl = await ctv.post("/api/v1/collab/me/claims", { unitId: E.id, customerName: "Khách CTV", customerPhone: "0955 222 333" }, K());
+  assert.equal(cl.status, 200, JSON.stringify(cl.body));
+  const cf = await owner.post(`/api/v1/collab/claims/${cl.body.id}/confirm`, {}, K());
+  assert.equal(cf.status, 200, JSON.stringify(cf.body));
+  // sửa chữa: nhận → khoản 140.000 → xong → giao
+  const r = await owner.post("/api/v1/repairs", { customer: { fullName: "Khách sửa", phone: "0933 456 789" }, brandText: "Citizen", complaint: "hết pin" }, K());
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  await owner.post(`/api/v1/repairs/${r.body.id}/lines`, { lineType: "other", description: "Thay pin", unitPrice: 140_000 });
+  await owner.post(`/api/v1/repairs/${r.body.id}/complete`, {}, K());
+  assert.equal((await owner.post(`/api/v1/repairs/${r.body.id}/deliver`, {}, K())).status, 200);
+});
+
+test("SC-10: Doanh thu ngày = cửa hàng 14.700.000 + CTV 1.800.000 + sửa chữa 140.000; 3 đơn bán, 3 chiếc (1 do CTV), 1 máy sửa", async () => {
   const q = `?from=${D3}&to=${D3}`;
   const rev = (await owner.get("/api/v1/reports/revenue" + q)).body.data;
-  assert.equal(rev[0].revenue, 16_500_000);
-  const pr = (await owner.get("/api/v1/reports/profit" + q)).body.data.periods[0];
-  assert.deepEqual([pr.revenue, pr.cogs, pr.grossProfit], [16_500_000, 12_120_000, 4_380_000]);
-  const col = (await owner.get("/api/v1/reports/collections" + q)).body.data;
-  assert.deepEqual([col.net, col.cash, col.bankTransfer], [15_200_000, 12_000_000, 3_200_000]);
-  const ob = (await owner.get("/api/v1/reports/open-balances")).body.data.due.find((x) => x.docId === sb);
-  assert.equal(ob.due, 1_300_000);
-  const dash = (await owner.get(`/api/v1/reports/dashboard?from=${D3}&to=${D3}`)).body.kpis;
-  assert.deepEqual([dash.revenue, dash.grossProfit, dash.collections, dash.unitsSold], [16_500_000, 4_380_000, 15_200_000, 3]);
-  // Thu thêm 05
-  sales.today = D5;
-  assert.equal((await sales.post(`/api/v1/sales/${sb}/payments`, { lines: [{ method: "bank_transfer", amount: 1_000_000 }] }, K())).status, 200);
-  const col5 = (await owner.get(`/api/v1/reports/collections?from=${D5}&to=${D5}`)).body.data;
-  assert.equal(col5.net, 1_000_000);
-  const all = (await owner.get(`/api/v1/reports/collections?from=${D3}&to=${D5}`)).body.data;
-  assert.equal(all.net, 16_200_000);
-  const ob2 = (await owner.get("/api/v1/reports/open-balances")).body.data.due.find((x) => x.docId === sb);
-  assert.equal(ob2.due, 300_000);
-  // Excel cùng số
-  const x = await owner.req("GET", "/api/v1/reports/revenue" + q + "&format=xlsx");
+  assert.equal(rev.length, 1);
+  assert.deepEqual([rev[0].shopRevenue, rev[0].collabRevenue, rev[0].repairRevenue, rev[0].revenue], [14_700_000, 1_800_000, 140_000, 16_640_000]);
+  assert.deepEqual([rev[0].invoiceCount, rev[0].unitsSold, rev[0].collabUnits, rev[0].repairCount], [3, 3, 1, 1]);
+  // gom theo tháng/quý/năm cùng tổng
+  for (const g of ["month", "quarter", "year"]) {
+    const x = (await owner.get(`/api/v1/reports/revenue?from=${D3}&to=${D3}&group=${g}`)).body.data;
+    assert.equal(x.length, 1, g);
+    assert.equal(x[0].revenue, 16_640_000, g);
+  }
+  assert.ok(!JSON.stringify(rev).match(/cogs|profit|cost|due|debt/i), "không giá vốn/lãi/nợ");
+  const d = (await owner.get(`/api/v1/reports/dashboard?from=${D3}&to=${D3}`)).body.kpis;
+  assert.deepEqual([d.revenue, d.invoiceCount, d.unitsSold, d.repairRevenue, d.collabSalesRevenue], [16_640_000, 3, 3, 140_000, 1_800_000]);
+  // ngày khác không có số
+  assert.deepEqual((await owner.get(`/api/v1/reports/revenue?from=${D5}&to=${D5}`)).body.data, []);
+});
+
+test("Số lượng đồng hồ: đã bán trong kỳ theo kênh + theo hãng; tồn kho; Excel cùng số", async () => {
+  const u = (await owner.get(`/api/v1/reports/units?from=${D3}&to=${D3}`)).body.data;
+  const get = (k) => u.summary.find((x) => x.k.trim() === k).v;
+  assert.equal(get("Đã bán trong kỳ"), 3);
+  assert.equal(get("- Bán tại cửa hàng"), 2);
+  assert.equal(get("- CTV bán"), 1);
+  assert.equal(u.soldByBrand.reduce((a, b) => a + b.units, 0), 3);
+  assert.ok(u.stockByBrand.length > 0);
+  const x = await owner.req("GET", `/api/v1/reports/revenue?from=${D3}&to=${D3}&format=xlsx`);
   assert.equal(x.status, 200);
   assert.match(x.headers.get("content-type"), /spreadsheetml/);
+  assert.equal((await owner.req("GET", `/api/v1/reports/units?from=${D3}&to=${D3}&format=xlsx`)).status, 200);
 });
 
-test("PT-05 / PT-01: sales xem R1 (doanh thu) nhưng R2/R4 ⇒ 403; dashboard của sales không có khóa lãi/giá vốn/giá trị tồn", async () => {
+test("Cộng tác viên (chỉ chủ): theo kỳ + từng CTV; sales/kho/CTV ⇒ 403", async () => {
+  const c = (await owner.get(`/api/v1/reports/collab?from=${D3}&to=${D3}&group=day`)).body.data;
+  assert.deepEqual(c.periods.map((p) => [p.units, p.revenue, p.collaborators]), [[1, 1_800_000, 1]]);
+  assert.deepEqual(c.byCollaborator.map((p) => [p.collaboratorId, p.units, p.revenue]), [[C1.id, 1, 1_800_000]]);
+  const st = (await owner.get(`/api/v1/reports/collaborators?period=day&from=${D3}&to=${D3}`)).body;
+  assert.deepEqual(st.byCollaborator.map((p) => [p.collaboratorId, p.units, p.revenue]), [[C1.id, 1, 1_800_000]]);
+  for (const who of [sales, wh, ctv]) assert.equal((await who.get(`/api/v1/reports/collab?from=${D3}&to=${D3}`)).status, 403);
+  assert.equal((await sales.get("/api/v1/reports/collaborators")).status, 403);
+  assert.equal((await owner.get("/api/v1/reports/khong-co")).status, 404);
+  for (const old of ["profit", "stock", "collections", "open-balances", "aging", "shrinkage", "warranty", "moves", "repairs"]) assert.equal((await owner.get(`/api/v1/reports/${old}`)).status, 404, old);
+});
+
+test("PT-05 / PT-01 / PT-14: sales xem doanh thu & số lượng (không xem CTV); kho chỉ số lượng đồng hồ; CTV không có báo cáo/thẻ số", async () => {
   const q = `?from=${D3}&to=${D3}`;
   assert.equal((await sales.get("/api/v1/reports/revenue" + q)).status, 200);
-  for (const code of ["profit", "stock"]) {
-    const r = await sales.get(`/api/v1/reports/${code}${q}`);
-    assert.equal(r.status, 403, code);
-    assert.equal((await sales.req("GET", `/api/v1/reports/${code}${q}&format=xlsx`)).status, 403, "xuất file cùng lớp quyền");
-  }
+  assert.equal((await sales.get("/api/v1/reports/units" + q)).status, 200);
+  assert.equal((await sales.req("GET", `/api/v1/reports/revenue${q}&format=xlsx`)).status, 200, "sales có report.export");
+  assert.equal((await sales.req("GET", `/api/v1/reports/collab${q}&format=xlsx`)).status, 403, "xuất file vẫn tuân quyền dữ liệu");
+  assert.equal((await wh.get("/api/v1/reports/revenue" + q)).status, 403);
+  assert.equal((await wh.req("GET", `/api/v1/reports/revenue${q}&format=xlsx`)).status, 403, "xuất file cùng lớp quyền");
+  assert.equal((await wh.get("/api/v1/reports/units" + q)).status, 200, "kho xem số lượng đồng hồ");
+  assert.equal((await ctv.get("/api/v1/reports/revenue")).status, 403);
+  assert.equal((await ctv.get("/api/v1/reports/units")).status, 403);
   const d = (await sales.get(`/api/v1/reports/dashboard?from=${D3}&to=${D3}`)).body;
   assert.ok("revenue" in d.kpis);
-  for (const k of ["grossProfit", "cogs", "stockValueUnits", "stockValueParts", "collabUnsettled", "otherIncome"]) assert.ok(!(k in d.kpis), k);
-  assert.ok(!("profit" in d.series));
+  assert.ok(!JSON.stringify(d).match(/grossProfit|cogs|stockValue|cost|due\b|debt|deposit/i));
   const w = (await wh.get("/api/v1/reports/dashboard")).body.kpis;
-  assert.ok("stockValueUnits" in w && !("revenue" in w) && !("grossProfit" in w));
-  assert.equal((await wh.get("/api/v1/reports/revenue")).status, 403);
-  assert.equal((await ctv.get("/api/v1/reports/revenue")).status, 403);
-  assert.equal((await ctv.get("/api/v1/reports/profit")).status, 403);
+  assert.ok("unitsInStock" in w && !("revenue" in w));
   const c = (await ctv.get("/api/v1/reports/dashboard")).body.kpis;
   assert.deepEqual(Object.keys(c).filter((k) => !["from", "to"].includes(k)), [], "CTV không có thẻ số cửa hàng");
-  const audits = await ownerSql("SELECT count(*)::int n FROM public.audit_logs WHERE action='report.exported'");
-  assert.ok(audits[0].n >= 1);
-});
-
-test("các báo cáo còn lại chạy được và tuân quyền: moves, stock, aging, repairs, shrinkage, warranty", async () => {
-  for (const code of ["moves", "stock", "aging", "repairs", "shrinkage", "warranty"]) {
-    const r = await owner.get(`/api/v1/reports/${code}?from=2026-01-01&to=2027-12-31`);
-    assert.equal(r.status, 200, code + JSON.stringify(r.body));
-  }
-  const mv = (await wh.get("/api/v1/reports/moves?from=2027-01-01&to=2027-01-31")).body.data;
-  assert.ok(mv.inbound.some((x) => x.source === "Cửa hàng ABC" && x.units === 3));
-  assert.equal((await owner.get("/api/v1/reports/khong-co")).status, 404);
+  assert.ok((await ownerSql("SELECT count(*)::int n FROM public.audit_logs WHERE action='report.exported'"))[0].n >= 1);
 });

@@ -1,9 +1,8 @@
-// M1 — Danh mục & kho: ma trận trạng thái (state-machines §1), status không UPDATE trực tiếp (B1), giá vốn chỉ cost.view (PT-01 phần catalog),
-// tìm kiếm không dấu/gõ sai nhẹ (FR-UNIT-09), giá & lịch sử (BR-UNIT-05), vị trí (BR-UNIT-08), release BR-UNIT-10, writeoff/restore,
-// linh kiện: điều chỉnh tồn có lý do, không âm (BR-PART-01/05), giá vốn bình quân ẩn với người không quyền.
+// M1 — Danh mục & kho: ma trận trạng thái (state-machines §1), status không UPDATE trực tiếp (B1), không API nào trả giá vốn (CF-14),
+// tìm kiếm không dấu/gõ sai nhẹ (FR-UNIT-09), giá & lịch sử (BR-UNIT-05), vị trí (BR-UNIT-08), release BR-UNIT-10, writeoff/restore.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { login, reauth, ownerSql, asUser, userOf, expectWf } from "./_lib.mjs";
+import { login, reauth, ownerSql, asUser, userOf } from "./_lib.mjs";
 
 const idem = () => ({ "Idempotency-Key": crypto.randomUUID() });
 let owner, sales, wh, ctv;
@@ -33,21 +32,16 @@ test("B1: wf_app không UPDATE status/held_by/giá/vị trí; superuser ngoài f
     SELECT 'DH-X', m.id, m.brand_id, 'new', 'in_stock', (SELECT id FROM public.storage_locations LIMIT 1) FROM public.watch_models m LIMIT 1`), /WF-UNIT-INVALID-TRANSITION/);
 });
 
-test("danh sách chiếc: sales KHÔNG có trường cost; owner/warehouse có", async () => {
-  const s = await sales.get("/api/v1/catalog/units?status=stock");
-  assert.equal(s.status, 200);
-  assert.ok(s.body.items.length > 0);
-  for (const it of s.body.items) assert.ok(!("cost" in it), "sales thấy cost");
-  assert.ok(!JSON.stringify(s.body).match(/"cost/i));
-  const o = await owner.get("/api/v1/catalog/units?status=stock");
-  assert.ok(o.body.items.every((it) => "cost" in it) && o.body.items.some((it) => it.cost > 0));
-  const w = await wh.get("/api/v1/catalog/units");
-  assert.ok(w.body.items.some((it) => it.cost > 0));
-  const id = s.body.items[0].id;
-  assert.equal((await sales.get(`/api/v1/catalog/units/${id}/cost`)).status, 403);
-  const oc = await owner.get(`/api/v1/catalog/units/${id}/cost`);
-  assert.equal(oc.status, 200);
-  assert.ok(oc.body.total > 0);
+test("danh sách chiếc: KHÔNG vai trò nào nhận trường giá vốn (CF-14); API giá vốn không còn; RLS lớp 2 vẫn chặn", async () => {
+  for (const who of [sales, owner, wh]) {
+    const r = await who.get("/api/v1/catalog/units?status=stock");
+    assert.equal(r.status, 200);
+    assert.ok(r.body.items.length > 0);
+    for (const it of r.body.items) assert.ok(!("cost" in it), "lộ cost");
+    assert.ok(!JSON.stringify(r.body).match(/"cost/i));
+  }
+  const id = (await sales.get("/api/v1/catalog/units?status=stock")).body.items[0].id;
+  assert.equal((await owner.get(`/api/v1/catalog/units/${id}/cost`)).status, 404, "API giá vốn đã gỡ");
   // RLS lớp 2: dưới wf_app, sales đọc trực tiếp unit_cost_entries ⇒ 0 dòng
   const r = await asUser(userOf("sales").id, (c) => c.query("SELECT count(*)::int n FROM public.unit_cost_entries"));
   assert.equal(r.rows[0].n, 0);
@@ -152,40 +146,8 @@ test("danh mục: sales không tạo thương hiệu; warehouse tạo loại + v
   assert.equal((await wh.post("/api/v1/catalog/locations", { name: "Tủ kính 3", kind: "cabinet" })).status, 200);
 });
 
-test("linh kiện: sales xem không có avgCost; điều chỉnh cần lý do + quyền; không âm; ghi movement; avg giữ nguyên", async () => {
-  const s = await sales.get("/api/v1/parts");
-  assert.equal(s.status, 200);
-  assert.ok(s.body.items.length >= 3);
-  assert.ok(!JSON.stringify(s.body).includes("avgCost"));
-  const o = await owner.get("/api/v1/parts?q=kinh sapphire");
-  const p = o.body.items.find((x) => x.code === "LK-0002");
-  assert.equal(p.avgCost, "250000.0000");
-  assert.equal((await sales.post(`/api/v1/parts/${p.id}/adjust`, { delta: -1, reason: "Hỏng khi lắp thử máy" }, idem())).status, 403);
-  assert.equal((await wh.post(`/api/v1/parts/${p.id}/adjust`, { delta: -1, reason: "ngắn" }, idem())).status, 422);
-  const tooMuch = await wh.post(`/api/v1/parts/${p.id}/adjust`, { delta: -999, reason: "Kiểm đếm thiếu nhiều" }, idem());
-  assert.equal(tooMuch.body.code, "WF-SALE-STOCK-INSUFFICIENT");
-  const ok = await wh.post(`/api/v1/parts/${p.id}/adjust`, { delta: -1, reason: "Vỡ khi lắp thử máy khách" }, idem());
-  assert.equal(ok.status, 200);
-  assert.equal(ok.body.qtyOnHand, 4);
-  const mv = await wh.get(`/api/v1/parts/${p.id}/movements`);
-  assert.equal(mv.body.items[0].qtyDelta, -1);
-  assert.equal(mv.body.items[0].unitCost, "250000.0000");
-  const [c] = await ownerSql("SELECT avg_cost::text a FROM public.part_costs WHERE part_id=$1", [p.id]);
-  assert.equal(c.a, "250000.0000");
-  // I7: qty = Σ movements
-  const [i7] = await ownerSql("SELECT p.qty_on_hand = (SELECT sum(qty_delta) FROM public.part_stock_movements m WHERE m.part_id=p.id) ok FROM public.parts p WHERE id=$1", [p.id]);
-  assert.equal(i7.ok, true);
-  // qty không đổi ngoài fn_*
-  await assert.rejects(ownerSql("UPDATE public.parts SET qty_on_hand = 100 WHERE id=$1", [p.id]), /WF-IMMUTABLE/);
-  // dưới wf_app: không đọc cột unit_cost, part_costs ⇒ 0 dòng với sales
-  await assert.rejects(asUser(userOf("warehouse").id, (cn) => cn.query("SELECT unit_cost FROM public.part_stock_movements")), /permission denied/);
-  const r = await asUser(userOf("sales").id, (cn) => cn.query("SELECT count(*)::int n FROM public.part_costs"));
-  assert.equal(r.rows[0].n, 0);
-  await expectWf(asUser(userOf("sales").id, (cn) => cn.query("SELECT * FROM app.fn_part_movement_costs($1)", [p.id])), "WF-AUTH-FORBIDDEN");
-});
-
 test("PT-08: unit_status_history / price_history / movements / cost entries bất biến", async () => {
-  for (const t of ["unit_status_history", "unit_price_history", "unit_movements", "unit_cost_entries", "part_stock_movements"]) {
+  for (const t of ["unit_status_history", "unit_price_history", "unit_movements", "unit_cost_entries"]) {
     await assert.rejects(ownerSql(`UPDATE public.${t} SET id = id`), /WF-IMMUTABLE/, t);
     await assert.rejects(ownerSql(`DELETE FROM public.${t}`), /WF-IMMUTABLE|violates foreign key/, t);
     await assert.rejects(ownerSql(`TRUNCATE public.${t} CASCADE`), /WF-IMMUTABLE/, t);
