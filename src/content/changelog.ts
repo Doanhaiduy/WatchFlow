@@ -1,8 +1,22 @@
 // Nhật ký thay đổi — mục mới nhất ở ĐẦU. `pnpm version:bump` thêm mục; `pnpm build` hỏng nếu phiên bản lệch package.json
-// hoặc còn chữ TODO. Hiện ở Quản trị → Phiên bản.
+// hoặc còn chữ TODO. Hiện ở cuối trang Hướng dẫn (“Có gì mới”).
 export type ChangelogEntry = { version: string; date: string; title: string; items: string[] };
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "0.16.0",
+    date: "2026-10-19",
+    title: "Rút gọn về đúng việc của cửa hàng: ghi đơn bán, giao đồng hồ cho nhiều CTV, sửa chữa, báo cáo gọn",
+    items: [
+      "Làm gọn theo đúng việc của chủ cửa hàng: quản lý đồng hồ đang có, ghi đơn khi khách mua, giao đồng hồ cho cộng tác viên (CTV) bán, nhận–sửa–giao máy sửa chữa, và xem báo cáo. Các phần ít dùng đã được bỏ khỏi giao diện: thanh toán/công nợ/QR chuyển khoản, giữ hàng & đặt cọc, thu cũ đổi mới, nhập hàng nhiều dòng, linh kiện, kiểm kê, giá vốn & lãi gộp, quyết toán CTV, trang tra cứu bảo hành. Dữ liệu cũ vẫn được giữ nguyên trong hệ thống.",
+      "Ghi đơn bán chỉ cần: chọn chiếc, nhập khách (chọn sẵn hoặc gõ tên + số điện thoại), giá và ngày — kèm hạn bảo hành từng chiếc. Lưu là có đơn ngay, tra cứu lại theo tên, số điện thoại, mã đơn hoặc serial; in phiếu có hạn bảo hành; hủy đơn nhập nhầm trong 24 giờ.",
+      "Giao đồng hồ cho cộng tác viên: một chiếc giao được cho nhiều CTV cùng lúc, chiếc vẫn bán được tại cửa hàng. CTV nào bấm “Đã bán” trước (kèm tên và số điện thoại khách) thì được giữ; chủ xác nhận (giá mặc định là giá niêm yết, sửa được) hoặc từ chối. CTV khác tự mất chiếc đó và được báo.",
+      "Cộng tác viên chỉ thấy hàng được giao (kèm giá niêm yết), báo bán của mình và số chiếc bán được — không thấy doanh thu, giá vốn, đơn hay khách. Chủ xem số chiếc và doanh thu từng CTV mang về theo ngày, tháng, quý, năm.",
+      "Sửa chữa gọn hơn (chỉ chủ): nhận máy trong một trang (khách có số điện thoại, máy, lỗi, hẹn trả, chọn bảo hành miễn phí nếu còn hạn), ghi khoản tiền sửa, sửa xong, giao máy ghi doanh thu, in phiếu.",
+      "Báo cáo còn 3 loại dễ hiểu — Doanh thu, Số lượng đồng hồ, Cộng tác viên — xem theo ngày/tháng/quý/năm, xuất Excel và in. Tổng quan gọn theo quyền từng người.",
+      "Gọn menu: Nhật ký và Hoạt động gộp một trang, bỏ tab Phiên bản (xem “Có gì mới” cuối trang Hướng dẫn), Nhập Excel chỉ còn khách và đồng hồ, Cài đặt/Vai trò ẩn mục của tính năng đã bỏ. Hướng dẫn sử dụng viết lại theo từng việc.",
+    ],
+  },
   {
     version: "0.15.0",
     date: "2026-10-17",
