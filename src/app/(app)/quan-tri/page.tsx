@@ -1,5 +1,5 @@
 "use client";
-import { Activity, FileClock, History, ListChecks, Settings, ShieldCheck, Tag, Users } from "lucide-react";
+import { Activity, FileClock, Settings, ShieldCheck, Tag, Users } from "lucide-react";
 import { useMemo } from "react";
 import { RequirePerm } from "@/components/auth/RequirePerm";
 import { ADMIN_TABS, allowed, navItem } from "@/components/layout/nav";
@@ -11,11 +11,9 @@ import type { Tone } from "@/components/ui/cx";
 const ICON: Record<string, [React.ReactNode, Tone, string]> = {
   "/quan-tri/nguoi-dung": [<Users key="u" size={20} />, "info", "Tạo tài khoản, đặt lại mật khẩu, khóa/mở"],
   "/quan-tri/vai-tro": [<ShieldCheck key="r" size={20} />, "check", "Ma trận quyền theo vai trò"],
-  "/quan-tri/cai-dat": [<Settings key="s" size={20} />, "hold", "Hạn giữ hàng, bảo hành, bảo mật…"],
-  "/quan-tri/nhat-ky": [<FileClock key="a" size={20} />, "repair", "Ai đã làm gì, khi nào"],
-  "/quan-tri/hoat-dong": [<ListChecks key="o" size={20} />, "check", "Ai đã xem, in, xuất dữ liệu nhạy cảm"],
+  "/quan-tri/cai-dat": [<Settings key="s" size={20} />, "hold", "Thông tin cửa hàng, bảo hành, bảo mật…"],
+  "/quan-tri/nhat-ky": [<FileClock key="a" size={20} />, "repair", "Ai đã làm gì, khi nào, đăng nhập"],
   "/quan-tri/he-thong": [<Activity key="h" size={20} />, "ok", "Sức khỏe, sao lưu, tác vụ nền"],
-  "/quan-tri/phien-ban": [<History key="v" size={20} />, "neutral", "Những gì đã thay đổi"],
 };
 
 export default function AdminHome() {

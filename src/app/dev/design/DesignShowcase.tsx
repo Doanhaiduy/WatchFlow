@@ -2,7 +2,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { BarChart3, Banknote, Boxes, Bookmark, Lock, PackageCheck, PackageSearch, ShoppingBag, Wrench, Watch } from "lucide-react";
 import { AppShell, type DemoUser } from "@/components/layout/AppShell";
-import { PaymentSheet, type PaymentLineInput } from "@/components/payments";
 import { CopyCodeButton, QuantityStepper, FilterButton, ActiveFilterChips } from "@/components/lucian";
 import { DetentSheet, type Detent } from "@/components/lucian/DetentSheet";
 import { PERMISSION_CODES } from "@/lib/permissions";
@@ -34,7 +33,7 @@ const ROLE_PERMS: Record<string, { label: string; user: Omit<DemoUser, "perms">;
   sales: {
     label: "Nhân viên bán hàng",
     user: { fullName: "Trần Thị Bích", roles: ["Nhân viên bán hàng"] },
-    perms: ["catalog.view", "sale.view", "sale.view_own", "sale.create_draft", "sale.confirm", "customer.view", "customer.create", "reservation.manage", "warranty.view", "repair.view"],
+    perms: ["catalog.view", "sale.view", "sale.confirm", "customer.view", "customer.create", "warranty.view", "repair.view"],
   },
   warehouse: {
     label: "Quản lý kho",
@@ -77,7 +76,7 @@ function Tokens() {
 
 function Chips() {
   const kinds = Object.keys(STATUS_MAP) as StatusKind[];
-  const names: Record<StatusKind, string> = { unit: "Chiếc", repair: "Phiếu sửa", doc: "Chứng từ", warranty: "Bảo hành", reservation: "Giữ hàng" };
+  const names: Record<StatusKind, string> = { unit: "Chiếc", repair: "Phiếu sửa", doc: "Đơn bán", warranty: "Bảo hành", claim: "CTV báo bán" };
   return (
     <Sec id="s-chip" title="StatusChip (mọi trạng thái)">
       <div className="wf-dev-grid">
@@ -417,7 +416,7 @@ function Visuals() {
               {["Nguyễn Văn An", "Trần Thị Bình", "Lê Hoàng Nam", "Phạm Minh Châu", "Đặng Thu Hà"].map((n) => <Avatar key={n} name={n} />)}
               <Avatar name="Vũ Quốc Bảo" tone="neutral" />
             </div>
-            <ShortcutGrid ariaLabel="Lối tắt mẫu" items={[{ href: "/ban-hang/moi", label: "Bán hàng", icon: <ShoppingBag size={22} />, tone: "ok" }, { href: "/giu-hang", label: "Giữ hàng", icon: <Bookmark size={22} />, tone: "hold", badge: 3 }]} />
+            <ShortcutGrid ariaLabel="Lối tắt mẫu" items={[{ href: "/ban-hang/moi", label: "Bán hàng", icon: <ShoppingBag size={22} />, tone: "ok" }, { href: "/cong-tac-vien/bao-ban", label: "CTV báo bán", icon: <Bookmark size={22} />, tone: "hold", badge: 3 }]} />
           </GlassCard>
         </div>
       </div>
@@ -653,17 +652,12 @@ function LucianBits() {
 
 function PaymentDemo() {
   const toast = useToast();
-  const [open, setOpen] = useState(false);
-  const [debt, setDebt] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [qty, setQty] = useState(2);
   const [chips, setChips] = useState(["Hãng: Seiko", "Tồn lâu"]);
   return (
-    <Sec id="s-pay" title="PaymentSheet (M3) · Lucian #008 #018 #305">
+    <Sec id="s-pay" title="Sao chép mã · Bộ chỉnh số lượng · Nút lọc + chip · Lucian #008 #018 #305">
       <GlassCard padded>
         <div className="wf-dev-row">
-          <Button variant="primary" onClick={() => setOpen(true)}>Mở tờ thanh toán (8.200.000 ₫)</Button>
-          <Switch checked={debt} onChange={setDebt} label="Cho ghi nợ" />
         </div>
         <Cap>Sao chép mã (#008) · Bộ chỉnh số lượng (#018) · Nút lọc + chip (#305)</Cap>
         <div className="wf-dev-row">
@@ -673,21 +667,6 @@ function PaymentDemo() {
         </div>
         <ActiveFilterChips chips={chips.map((c) => ({ id: c, label: c, onRemove: () => setChips((l) => l.filter((x) => x !== c)) }))} />
       </GlassCard>
-      <PaymentSheet
-        open={open}
-        onClose={() => setOpen(false)}
-        payable={8_200_000}
-        allowDebt={debt}
-        submitting={busy}
-        onSubmit={(lines: PaymentLineInput[]) => {
-          setBusy(true);
-          setTimeout(() => {
-            setBusy(false);
-            setOpen(false);
-            toast.success("Đã ghi nhận thanh toán", lines.map((l) => `${l.method === "cash" ? "TM" : "CK"} ${formatVnd(l.amount)}`).join(" + "));
-          }, 800);
-        }}
-      />
     </Sec>
   );
 }
@@ -700,7 +679,7 @@ function States() {
       <div className="wf-dev-grid">
         <GlassCard padded>
           <Cap>EmptyState — hướng dẫn bắt đầu</Cap>
-          <EmptyState title="Bạn chưa có phiếu giữ hàng" description="Bắt đầu bằng việc giữ một chiếc cho khách đặt cọc." icon={<Lock size={24} />} action={{ label: "Giữ hàng mới", href: "/giu-hang?moi=1" }} />
+          <EmptyState title="Chưa có đơn bán nào" description="Khi khách mua đồng hồ, bấm “Ghi đơn bán” để lưu lại." icon={<Lock size={24} />} action={{ label: "Ghi đơn bán", href: "/ban-hang/moi" }} />
         </GlassCard>
         <GlassCard padded>
           <Cap>EmptyState — không có kết quả (Lucian #092)</Cap>

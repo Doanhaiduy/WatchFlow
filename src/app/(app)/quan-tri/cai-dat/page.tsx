@@ -12,23 +12,17 @@ import { Field } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { Textarea, TextInput } from "@/components/ui/TextInput";
-import { Select } from "@/components/ui/Select";
 import { useToast } from "@/components/ui/Toast";
 import { swrFetcher } from "@/lib/api-client";
 import { formatDateTimeVn } from "@/lib/dates";
 import { useSession } from "@/lib/session";
-import { VN_BANKS } from "@/lib/vietqr";
+import { RETIRED_SETTINGS } from "@/lib/settings-catalog";
 
 type Item = { key: string; value: unknown; label: string; group: string; updatedAt: string };
 
 const LONG = /(terms|footer|address)$/;
-const ENUMS: Record<string, Array<{ value: string; label: string }>> = {
-  "purchase.default_cost_allocation": [{ value: "by_value", label: "Theo giá trị từng chiếc" }, { value: "equal", label: "Chia đều" }],
-};
-const BANK_OPTIONS = VN_BANKS.map((b) => ({ value: b.bin, label: b.name, sublabel: `${b.code} · ${b.bin}`, keywords: `${b.code} ${b.bin}` }));
 /** Thứ tự hiển thị trong nhóm (khóa chưa liệt kê giữ thứ tự theo khóa) */
-const ORDER = ["payment.bank_bin", "payment.account_no", "payment.account_name", "payment.transfer_template"];
-const rank = (k: string) => { const i = ORDER.indexOf(k); return i < 0 ? 999 : i; };
+const rank = (_k: string) => 999;
 const toText = (v: unknown) => (Array.isArray(v) ? v.join(", ") : v === null || v === undefined ? "" : String(v));
 
 function SettingRow({ item, canEdit, onSave }: { item: Item; canEdit: boolean; onSave: (key: string, value: unknown) => Promise<void> }) {
@@ -45,7 +39,7 @@ function SettingRow({ item, canEdit, onSave }: { item: Item; canEdit: boolean; o
 
   const dirty = text !== orig;
   const save = async () => {
-    let value: unknown = item.key === "payment.account_no" ? text.replace(/\s/g, "") : text;
+    let value: unknown = text;
     if (typeof v === "number") {
       const n = Number(text.replace(",", "."));
       if (text.trim() === "" || !Number.isFinite(n)) return setErr("Nhập một số hợp lệ");
@@ -65,10 +59,8 @@ function SettingRow({ item, canEdit, onSave }: { item: Item; canEdit: boolean; o
   };
 
   let control;
-  if (item.key === "payment.bank_bin") control = <Select value={text} onChange={(e) => setText(e.target.value)} options={BANK_OPTIONS} placeholder="Chưa chọn ngân hàng" searchable label="Ngân hàng nhận tiền" disabled={!canEdit} />;
-  else if (ENUMS[item.key]) control = <Select value={text} onChange={(e) => setText(e.target.value)} options={ENUMS[item.key]} disabled={!canEdit} />;
-  else if (typeof v === "string" && LONG.test(item.key)) control = <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} disabled={!canEdit} />;
-  else control = <TextInput value={text} inputMode={typeof v === "number" ? "decimal" : item.key === "payment.account_no" ? "numeric" : undefined} onChange={(e) => setText(e.target.value)} disabled={!canEdit} />;
+  if (typeof v === "string" && LONG.test(item.key)) control = <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} disabled={!canEdit} />;
+  else control = <TextInput value={text} inputMode={typeof v === "number" ? "decimal" : undefined} onChange={(e) => setText(e.target.value)} disabled={!canEdit} />;
 
   return (
     <Field label={item.label} error={err} hint={Array.isArray(v) ? "Nhập các giá trị cách nhau bằng dấu phẩy" : `Cập nhật ${formatDateTimeVn(item.updatedAt)}`}>
@@ -92,7 +84,7 @@ export default function SettingsPage() {
 
   const groups = useMemo(() => {
     const m = new Map<string, Item[]>();
-    for (const it of data?.items ?? []) m.set(it.group, [...(m.get(it.group) ?? []), it]);
+    for (const it of (data?.items ?? []).filter((x) => !RETIRED_SETTINGS.has(x.key))) m.set(it.group, [...(m.get(it.group) ?? []), it]);
     return [...m.entries()].map(([g, items]) => [g, [...items].sort((a, b) => rank(a.key) - rank(b.key))] as [string, Item[]]);
   }, [data]);
 

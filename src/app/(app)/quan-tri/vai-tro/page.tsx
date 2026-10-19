@@ -18,7 +18,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { Textarea, TextInput } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { swrFetcher } from "@/lib/api-client";
-import { MODULE_LABELS } from "@/lib/permissions";
+import { MODULE_LABELS, RETIRED_PERMISSIONS } from "@/lib/permissions";
 import { useSession } from "@/lib/session";
 
 type Role = { id: string; code: string; nameVi: string; description: string | null; isSystem: boolean; maxDiscountPct: number; isActive: boolean; version: number; permissions: string[] };
@@ -104,7 +104,7 @@ export default function RolesPage() {
 
   const groups = useMemo(() => {
     const m = new Map<string, Perm[]>();
-    for (const p of perms.data?.items ?? []) m.set(p.module, [...(m.get(p.module) ?? []), p]);
+    for (const p of (perms.data?.items ?? []).filter((x) => !RETIRED_PERMISSIONS.has(x.code))) m.set(p.module, [...(m.get(p.module) ?? []), p]);
     const order = Object.keys(MODULE_LABELS);
     return [...m.entries()].sort((a, b) => (order.indexOf(a[0]) + 100) % 100 - (order.indexOf(b[0]) + 100) % 100);
   }, [perms.data]);

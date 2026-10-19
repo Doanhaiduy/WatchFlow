@@ -1,7 +1,5 @@
 "use client";
-import {
-  Banknote, BarChart3, Bookmark, Boxes, CheckCircle2, ChevronRight, ClipboardCheck, Clock, Coins, Handshake, LayoutDashboard, PackageCheck, Receipt, ShieldCheck, ShoppingBag, TrendingUp, Watch, Wrench,
-} from "lucide-react";
+import { BarChart3, CheckCircle2, ChevronRight, Handshake, LayoutDashboard, PackageCheck, ShoppingBag, Watch, Wrench } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -32,11 +30,9 @@ type Period = "today" | "7d" | "month" | "quarter" | "year";
 type K = Record<string, number | undefined>;
 type Dash = {
   from: string; to: string; period: Period; kpis: K; prev?: K;
-  series: {
-    revenue?: Array<{ period: string; salesRevenue: number; repairRevenue: number; revenue: number; invoiceCount: number }>;
-    profit?: Array<{ period: string; grossProfit: number }>;
-  };
-  recentSales?: Array<{ id: string; code: string; docDate: string; grandTotal: number; customerName: string | null; isCollab: boolean }>;
+  series: { revenue?: Array<{ period: string; shopRevenue: number; collabRevenue: number; repairRevenue: number; revenue: number; invoiceCount: number; unitsSold: number }> };
+  recentSales?: Array<{ id: string; code: string; docDate: string; grandTotal: number; customerName: string | null; isCollab: boolean; items: string | null }>;
+  pendingClaims?: Array<{ id: string; assetCode: string; modelName: string; collaboratorName: string | null; customerName: string }>;
   openRepairs?: Array<{ id: string; code: string; status: string; customerName: string | null; expectedDate: string | null }>;
   stockByBrand?: Array<{ name: string; count: number }>;
 };
@@ -44,15 +40,10 @@ const PERIOD_LABEL: Record<Period, string> = { today: "hôm nay", "7d": "7 ngày
 const VS_LABEL: Record<Period, string> = { today: "hôm qua", "7d": "7 ngày trước", month: "tháng trước", quarter: "quý trước", year: "năm trước" };
 const CHART_TITLE: Record<Period, string> = { today: "Doanh thu 7 ngày gần đây", "7d": "Doanh thu 7 ngày", month: "Doanh thu tháng này", quarter: "Doanh thu quý này", year: "Doanh thu năm nay" };
 
+// Việc cần xử lý (bản gọn): CTV báo bán chờ xác nhận, máy sửa xong chưa giao
 const TODOS: Array<{ key: string; label: string; sub: string; href: string; icon: ReactNode; tone: "bad" | "hold" | "info" | "ok" | "check" | "repair" }> = [
-  { key: "reservationsOverdue", label: "Giữ hàng quá hạn", sub: "Liên hệ khách hoặc hủy giữ", href: "/giu-hang", icon: <Bookmark size={20} />, tone: "bad" },
-  { key: "dueTodayCount", label: "Phiếu nợ đến hạn", sub: "Hẹn trả hôm nay hoặc đã quá hạn", href: "/ban-hang", icon: <Banknote size={20} />, tone: "hold" },
+  { key: "collabPendingClaims", label: "CTV báo đã bán, chờ xác nhận", sub: "Xác nhận hoặc từ chối", href: "/cong-tac-vien/bao-ban", icon: <Handshake size={20} />, tone: "hold" },
   { key: "repairsReady", label: "Máy sửa xong chưa giao", sub: "Báo khách đến lấy máy", href: "/sua-chua", icon: <Wrench size={20} />, tone: "ok" },
-  { key: "collabPendingOrders", label: "Đơn CTV chờ xác nhận", sub: "Cần chủ cửa hàng duyệt", href: "/ban-hang", icon: <Handshake size={20} />, tone: "check" },
-  { key: "partsLow", label: "Linh kiện sắp hết", sub: "Dưới mức đặt hàng lại", href: "/linh-kien", icon: <Boxes size={20} />, tone: "repair" },
-  { key: "agingUnits", label: "Chiếc tồn lâu", sub: "Nằm kho quá ngưỡng", href: "/dong-ho", icon: <Clock size={20} />, tone: "hold" },
-  { key: "warrantiesExpiring", label: "Bảo hành sắp hết hạn", sub: "Nhắc khách trước hạn", href: "/bao-hanh", icon: <ShieldCheck size={20} />, tone: "info" },
-  { key: "stocktakesOpen", label: "Đợt kiểm kê đang mở", sub: "Chưa chốt số liệu", href: "/kiem-ke", icon: <ClipboardCheck size={20} />, tone: "info" },
 ];
 
 /** Nhãn trục ngang: ngày "17/10", tháng "T10" */
@@ -64,7 +55,6 @@ export default function HomePage() {
   const router = useRouter();
   const isCtv = detectProfile(can) === "ctv";
   const [period, setPeriod] = useState<Period>("today");
-  const [tab, setTab] = useState<"revenue" | "profit" | "both">("revenue");
   useEffect(() => {
     if (isCtv) router.replace("/ctv");
   }, [isCtv, router]);
@@ -78,42 +68,31 @@ export default function HomePage() {
   const todoOpen = todos.filter((t) => (k[t.key] ?? 0) > 0);
   const todoTotal = todoOpen.reduce((a, t) => a + (k[t.key] ?? 0), 0);
   const rev = data?.series.revenue;
-  const prof = data?.series.profit;
   const monthly = period === "year" || period === "quarter";
-  const showTab = tab === "both" && rev && prof ? "both" : tab === "profit" && prof ? "profit" : rev ? "revenue" : prof ? "profit" : null;
   const revData = (rev ?? []).map((r) => ({ label: axisLabel(r.period, monthly), value: Number(r.revenue) }));
-  const profData = (prof ?? []).map((r) => ({ label: axisLabel(r.period, monthly), value: Number(r.grossProfit) }));
-  const chartA = showTab === "profit" ? profData : revData;
-  const chartB = showTab === "both" ? profData : undefined;
-  const chartOk = (chartA.length > 1 && chartA.some((d) => d.value !== 0)) || (chartB?.some((d) => d.value !== 0) ?? false);
-  const span = (rev ?? prof ?? []) as Array<{ period: string }>;
-  const channelData = (rev ?? []).map((r) => ({ label: axisLabel(r.period, monthly), value: Number(r.salesRevenue), value2: Number(r.repairRevenue) }));
+  const chartOk = revData.length > 1 && revData.some((d) => d.value !== 0);
+  const span = (rev ?? []) as Array<{ period: string }>;
+  const channelData = (rev ?? []).map((r) => ({ label: axisLabel(r.period, monthly), value: Number(r.shopRevenue) + Number(r.collabRevenue), value2: Number(r.repairRevenue) }));
   const channelOk = channelData.length > 1 && channelData.some((d) => d.value > 0 || (d.value2 ?? 0) > 0);
   const anyKpi = Object.keys(k).length > 0;
 
-  // Tồn kho theo trạng thái: "Đã giữ" = phần còn lại của tổng tồn
+  // Đồng hồ trong kho theo trạng thái: sẵn sàng bán (trong đó đang giao CTV) / chờ kiểm tra
   const stockSegments = useMemo(() => {
     if (!has("unitsInStock")) return [];
-    const sellable = k.unitsSellable ?? 0, collab = k.unitsWithCollab ?? 0, repair = k.unitsInRepair ?? 0, insp = k.unitsInspecting ?? 0;
-    const reserved = Math.max(0, (k.unitsInStock ?? 0) - sellable - collab - repair - insp);
+    const sellable = k.unitsSellable ?? 0, insp = k.unitsInspecting ?? 0, offered = Math.min(k.unitsOffered ?? 0, sellable);
     return [
-      { label: "Sẵn sàng bán", value: sellable, color: "var(--wf-ok)" },
-      { label: "Đã giữ", value: reserved, color: "var(--wf-hold)" },
-      { label: "Đang ở CTV", value: collab, color: "var(--wf-info)" },
-      { label: "Đang sửa", value: repair, color: "var(--wf-repair)" },
+      { label: "Bán tại cửa hàng", value: Math.max(0, sellable - offered), color: "var(--wf-ok)" },
+      { label: "Đang giao CTV", value: offered, color: "var(--wf-info)" },
       { label: "Chờ kiểm tra", value: insp, color: "var(--wf-check)" },
     ].filter((s) => s.value > 0);
   }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
   const brandSegments = (data?.stockByBrand ?? []).map((b) => ({ label: b.name, value: b.count }));
-  const payments = has("cash") && has("bankTransfer") && (k.cash ?? 0) + (k.bankTransfer ?? 0) > 0
-    ? [{ label: "Tiền mặt", value: Math.max(0, k.cash ?? 0), display: formatVnd(k.cash ?? 0), tone: "ok" as const }, { label: "Chuyển khoản", value: Math.max(0, k.bankTransfer ?? 0), display: formatVnd(k.bankTransfer ?? 0), tone: "info" as const }]
-    : [];
 
-  const shortcuts = QUICK_ACTIONS.filter((a) => !a.id.startsWith("ctv-") && a.id !== "print-qr" && a.id !== "ctv-pending" && can(a.permission)).slice(0, 6).map((a) => ({ href: a.href, label: a.label, tone: a.tone, icon: <a.icon size={22} /> }));
+  const shortcuts = QUICK_ACTIONS.filter((a) => !a.id.startsWith("ctv-") && a.id !== "print-qr" && can(a.permission)).slice(0, 6).map((a) => ({ href: a.href, label: a.label, tone: a.tone, icon: <a.icon size={22} /> }));
 
   const today = todayVn();
   const dateLine = `${weekdayVn(today).replace(/^./, (c) => c.toUpperCase())}, ${formatDateVn(today)}`;
-  const summary = has("invoiceCount") && has("revenue") ? ` · ${PERIOD_LABEL[period]}: ${k.invoiceCount} phiếu, ${formatVndShort(k.revenue!)}` : "";
+  const summary = has("invoiceCount") && has("revenue") ? ` · ${PERIOD_LABEL[period]}: ${k.invoiceCount} đơn, ${formatVndShort(k.revenue!)}` : "";
 
   const vs = (key: string) => deltaPct(k[key], pv[key]);
   const heroDelta = vs("revenue");
@@ -135,58 +114,46 @@ export default function HomePage() {
             <div className="wf-dcol">
               {has("revenue") && (
                 <div style={{ order: 1 }}>
-                <HeroCard
-                  icon={<BarChart3 size={16} aria-hidden="true" />}
-                  label={`Doanh thu ${PERIOD_LABEL[period]}`}
-                  value={formatVnd(k.revenue!, { symbol: false })}
-                  unit="₫"
-                  note={heroDelta !== null ? <span>{heroDelta >= 0 ? "▲" : "▼"} {Math.abs(heroDelta).toLocaleString("vi-VN")}% so với {VS_LABEL[period]}</span> : undefined}
-                  stats={[
-                    ...(has("salesRevenue") ? [{ label: "Bán hàng", value: formatVndShort(k.salesRevenue!) }] : []),
-                    ...(has("repairRevenue") ? [{ label: "Sửa chữa", value: formatVndShort(k.repairRevenue!) }] : []),
-                    ...(has("invoiceCount") ? [{ label: "Số phiếu", value: String(k.invoiceCount) }] : []),
-                  ].slice(0, 3)}
-                  action={can("report.sales") ? { label: "Báo cáo", href: "/bao-cao/revenue" } : undefined}
-                />
+                  <HeroCard
+                    icon={<BarChart3 size={16} aria-hidden="true" />}
+                    label={`Doanh thu ${PERIOD_LABEL[period]}`}
+                    value={formatVnd(k.revenue!, { symbol: false })}
+                    unit="₫"
+                    note={heroDelta !== null ? <span>{heroDelta >= 0 ? "▲" : "▼"} {Math.abs(heroDelta).toLocaleString("vi-VN")}% so với {VS_LABEL[period]}</span> : undefined}
+                    stats={[
+                      ...(has("shopSalesRevenue") ? [{ label: "Bán tại cửa hàng", value: formatVndShort(k.shopSalesRevenue!) }] : []),
+                      ...(has("collabSalesRevenue") ? [{ label: "CTV bán", value: formatVndShort(k.collabSalesRevenue!) }] : []),
+                      ...(has("repairRevenue") ? [{ label: "Sửa chữa", value: formatVndShort(k.repairRevenue!) }] : []),
+                    ].slice(0, 3)}
+                    action={can("report.sales") ? { label: "Báo cáo", href: "/bao-cao/doanh-thu" } : undefined}
+                  />
                 </div>
               )}
               <KpiGrid className="wf-o2">
-                {has("grossProfit") && <KpiTile tone="ok" icon={<TrendingUp size={16} />} label="Lãi gộp" value={formatVndShort(k.grossProfit!)} delta={vs("grossProfit")} hint={heroDelta === null ? PERIOD_LABEL[period] : undefined} spark={prof && prof.length > 1 ? prof.map((r) => Number(r.grossProfit)) : undefined} href={can("profit.view") ? "/bao-cao/profit" : undefined} />}
-                {has("collections") && <KpiTile tone="info" icon={<Banknote size={16} />} label="Thực thu" value={formatVndShort(k.collections!)} delta={vs("collections")} hint={has("cash") ? `Mặt ${formatVndShort(k.cash!)}` : undefined} href={can("report.sales") ? "/bao-cao/collections" : undefined} />}
-                {has("unitsInStock") && <KpiTile tone="check" icon={<Watch size={16} />} label="Tồn kho" value={`${k.unitsInStock} chiếc`} hint={has("unitsWithCollab") ? `${k.unitsWithCollab} ở CTV` : undefined} href={can("catalog.view") ? "/dong-ho" : undefined} />}
-                {has("stockValueUnits") && <KpiTile tone="repair" icon={<Coins size={16} />} label="Giá trị tồn" value={formatVndShort(k.stockValueUnits!)} hint={has("stockValueParts") ? `Vốn · LK ${formatVndShort(k.stockValueParts!)}` : "Theo giá vốn"} href={can(["report.inventory", "cost.view"]) ? "/bao-cao/stock" : undefined} />}
-                {has("unitsSold") && <KpiTile tone="ok" icon={<ShoppingBag size={16} />} label="Đã bán" value={`${k.unitsSold} chiếc`} delta={vs("unitsSold")} hint={heroDelta === null ? PERIOD_LABEL[period] : undefined} />}
-                {has("unitsSellable") && !has("unitsInStock") && <KpiTile tone="ok" icon={<PackageCheck size={16} />} label="Sẵn sàng bán" value={`${k.unitsSellable} chiếc`} />}
-                {has("customerDue") && <KpiTile tone="hold" icon={<Receipt size={16} />} label="Khách còn nợ" value={formatVndShort(k.customerDue!)} href={can("debt.view") ? "/bao-cao/open-balances" : undefined} />}
-                {has("depositsHeld") && <KpiTile tone="hold" icon={<Bookmark size={16} />} label="Cọc đang giữ" value={formatVndShort(k.depositsHeld!)} href={can("reservation.manage") ? "/giu-hang" : undefined} />}
-                {has("collabUnsettled") && <KpiTile tone="check" icon={<Handshake size={16} />} label="CTV chưa nộp" value={formatVndShort(k.collabUnsettled!)} href={can("collab.view") ? "/cong-tac-vien" : undefined} />}
+                {has("unitsSold") && <KpiTile tone="ok" icon={<ShoppingBag size={16} />} label="Đã bán" value={`${k.unitsSold} chiếc`} delta={vs("unitsSold")} hint={has("invoiceCount") ? `${k.invoiceCount} đơn` : undefined} href={can("sale.view") ? "/ban-hang" : undefined} />}
+                {has("unitsSellable") && <KpiTile tone="check" icon={<Watch size={16} />} label="Sẵn sàng bán" value={`${k.unitsSellable} chiếc`} hint={has("unitsInspecting") && (k.unitsInspecting ?? 0) > 0 ? `${k.unitsInspecting} chờ kiểm tra` : undefined} href={can("catalog.view") ? "/dong-ho" : undefined} />}
+                {has("unitsOffered") && <KpiTile tone="info" icon={<PackageCheck size={16} />} label="Đang giao CTV" value={`${k.unitsOffered} chiếc`} href={can("collab.view") ? "/cong-tac-vien/hang" : undefined} />}
+                {has("collabPendingClaims") && <KpiTile tone={(k.collabPendingClaims ?? 0) > 0 ? "hold" : "neutral"} icon={<Handshake size={16} />} label="CTV báo bán chờ" value={String(k.collabPendingClaims)} href="/cong-tac-vien/bao-ban" />}
+                {has("repairsOpen") && <KpiTile tone="repair" icon={<Wrench size={16} />} label="Máy đang sửa" value={`${k.repairsOpen} máy`} hint={has("repairsReady") && (k.repairsReady ?? 0) > 0 ? `${k.repairsReady} xong chưa giao` : undefined} href={can("repair.view") ? "/sua-chua" : undefined} />}
               </KpiGrid>
 
-              {showTab && (
+              {rev && (
                 <section className="g wf-pad" aria-label="Biểu đồ" style={{ order: 4 }}>
                   <div className="wf-ch">
                     <h3>
-                      {showTab === "profit" ? CHART_TITLE[period].replace("Doanh thu", "Lãi gộp") : showTab === "both" ? CHART_TITLE[period].replace("Doanh thu", "Doanh thu & lãi gộp") : CHART_TITLE[period]}
+                      {CHART_TITLE[period]}
                       {span.length > 1 && <span className="sub">{formatDateVn(span[0]!.period)} – {formatDateVn(span[span.length - 1]!.period)}</span>}
                     </h3>
-                    {rev && prof && <SegmentedControl mode="tabs" ariaLabel="Chỉ số biểu đồ" value={showTab} onChange={setTab} options={[{ value: "revenue", label: "Doanh thu" }, { value: "profit", label: "Lãi gộp" }, { value: "both", label: "Cả hai" }]} />}
                   </div>
                   {chartOk ? (
-                    <AreaChart
-                      data={chartA}
-                      data2={chartB}
-                      color={showTab === "profit" ? "var(--wf-ok)" : "var(--wf-accent)"}
-                      legend={chartB ? ["Doanh thu", "Lãi gộp"] : undefined}
-                      format={formatVndShort}
-                      ariaLabel={showTab === "profit" ? "Lãi gộp theo kỳ" : "Doanh thu theo kỳ"}
-                    />
+                    <AreaChart data={revData} color="var(--wf-accent)" format={formatVndShort} ariaLabel="Doanh thu theo kỳ" />
                   ) : (
-                    <p className="wf-mute" style={{ padding: "18px 4px 6px" }}>Chưa có doanh thu trong khoảng này — biểu đồ sẽ hiện khi có phiếu bán hoặc phiếu sửa đã giao.</p>
+                    <p className="wf-mute" style={{ padding: "18px 4px 6px" }}>Chưa có doanh thu trong khoảng này — biểu đồ sẽ hiện khi có đơn bán hoặc phiếu sửa đã giao.</p>
                   )}
                 </section>
               )}
 
-              {(channelOk || stockSegments.length > 0 || brandSegments.length > 0 || payments.length > 0) && (
+              {(channelOk || stockSegments.length > 0 || brandSegments.length > 0) && (
                 <div className="wf-dcards" style={{ order: 5 }}>
                   {channelOk && (
                     <section className="g wf-pad" aria-label="Bán hàng và sửa chữa theo kỳ">
@@ -195,29 +162,23 @@ export default function HomePage() {
                     </section>
                   )}
                   {stockSegments.length > 0 && (
-                    <section className="g wf-pad" aria-label="Tồn kho theo trạng thái">
-                      <h3>Tồn kho theo trạng thái</h3>
-                      <Donut segments={stockSegments} size={132} stroke={20} center={{ title: k.unitsInStock ?? 0, caption: "chiếc" }} ariaLabel="Tồn kho theo trạng thái" />
+                    <section className="g wf-pad" aria-label="Đồng hồ trong kho">
+                      <h3>Đồng hồ trong kho</h3>
+                      <Donut segments={stockSegments} size={132} stroke={20} center={{ title: k.unitsInStock ?? 0, caption: "chiếc" }} ariaLabel="Đồng hồ trong kho theo trạng thái" />
                     </section>
                   )}
                   {brandSegments.length > 0 && (
-                    <section className="g wf-pad" aria-label="Tồn kho theo hãng">
-                      <h3>Tồn kho theo hãng</h3>
-                      <HBarList ariaLabel="Số chiếc tồn theo hãng" items={brandSegments.map((b, i) => ({ label: b.label, value: b.value, display: `${b.value} chiếc`, tone: (["accent", "ok", "repair", "info", "check", "hold", "neutral", "bad"] as const)[i % 8] }))} />
-                    </section>
-                  )}
-                  {payments.length > 0 && (
-                    <section className="g wf-pad" aria-label="Thực thu theo hình thức">
-                      <h3>Thực thu theo hình thức</h3>
-                      <HBarList ariaLabel="Thực thu theo hình thức" items={payments} />
+                    <section className="g wf-pad" aria-label="Kho theo hãng">
+                      <h3>Kho theo hãng</h3>
+                      <HBarList ariaLabel="Số chiếc trong kho theo hãng" items={brandSegments.map((b, i) => ({ label: b.label, value: b.value, display: `${b.value} chiếc`, tone: (["accent", "ok", "repair", "info", "check", "hold", "neutral", "bad"] as const)[i % 8] }))} />
                     </section>
                   )}
                 </div>
               )}
 
               {data.recentSales && data.recentSales.length > 0 && (
-                <section aria-label="Phiếu bán gần đây" style={{ order: 6 }}><div className="wf-sec"><h3>Bán gần đây</h3><Link href="/ban-hang">Xem tất cả</Link></div>
-                  <InsetList>{data.recentSales.map((s) => <InsetRow key={s.id} href={`/ban-hang/${s.id}`} icon={<ShoppingBag size={18} />} tone="ok" title={s.code} subtitle={`${s.customerName ?? "Khách lẻ"} · ${formatDateVn(s.docDate)}${s.isCollab ? " · qua CTV" : ""}`} end={formatVnd(s.grandTotal)} />)}</InsetList>
+                <section aria-label="Đơn bán gần đây" style={{ order: 6 }}><div className="wf-sec"><h3>Bán gần đây</h3><Link href="/ban-hang">Xem tất cả</Link></div>
+                  <InsetList>{data.recentSales.map((s) => <InsetRow key={s.id} href={`/ban-hang/${s.id}`} icon={<ShoppingBag size={18} />} tone="ok" title={s.customerName ?? "Khách lẻ"} subtitle={`${s.items ?? s.code} · ${formatDateVn(s.docDate)}${s.isCollab ? " · CTV bán" : ""}`} end={formatVnd(s.grandTotal)} />)}</InsetList>
                 </section>
               )}
             </div>
@@ -246,7 +207,7 @@ export default function HomePage() {
               )}
               {data.openRepairs && data.openRepairs.length > 0 && (
                 <section aria-label="Máy đang sửa" style={{ order: 8 }}><div className="wf-sec"><h3>Đang sửa</h3><Link href="/sua-chua">Xem tất cả</Link></div>
-                  <InsetList>{data.openRepairs.map((r) => <InsetRow key={r.id} href={`/sua-chua/${r.id}`} icon={<Wrench size={18} />} tone="repair" title={r.code} subtitle={`${r.customerName ?? "Máy cửa hàng"}${r.expectedDate ? ` · hẹn ${formatDateVn(r.expectedDate)}` : ""}`} end={<StatusChip kind="repair" status={r.status} />} />)}</InsetList>
+                  <InsetList>{data.openRepairs.map((r) => <InsetRow key={r.id} href={`/sua-chua/${r.id}`} icon={<Wrench size={18} />} tone="repair" title={r.code} subtitle={`${r.customerName ?? "—"}${r.expectedDate ? ` · hẹn ${formatDateVn(r.expectedDate)}` : ""}`} end={<StatusChip kind="repair" status={r.status} />} />)}</InsetList>
                 </section>
               )}
             </div>

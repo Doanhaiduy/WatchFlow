@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { useToast } from "@/components/ui/Toast";
+import { CHANGELOG } from "@/content/changelog";
 import { GUIDE, GUIDE_INTRO, GUIDE_QUICK, GUIDE_ROLES, guideFor, type GuideBlock, type GuideSection } from "@/content/guide";
 import { useSession } from "@/lib/session";
 
@@ -80,6 +81,7 @@ export default function GuidePage() {
   // Liên kết sâu /huong-dan#dong-ho: mở đúng mục (kể cả mục ngoài quyền của mình — chỉ để đọc) rồi cuộn tới
   useEffect(() => {
     const id = decodeURIComponent(window.location.hash.slice(1));
+    if (id === "co-gi-moi") { const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 250); return () => clearTimeout(t); }
     if (!id || !GUIDE.some((s) => s.id === id)) return;
     if (!mineIds.has(id)) setScope("all");
     const t = setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: "start" }), 250);
@@ -122,7 +124,7 @@ export default function GuidePage() {
         </section>
 
         <div className="wf-gd-tools">
-          <SearchBar value={q} onChange={setQ} placeholder="Tìm hướng dẫn (vd. giữ hàng, tem QR, nợ)" />
+          <SearchBar value={q} onChange={setQ} placeholder="Tìm hướng dẫn (vd. CTV, tem QR, hủy đơn)" />
           <SegmentedControl ariaLabel="Phạm vi hướng dẫn" options={[{ value: "mine", label: "Dành cho tôi" }, { value: "all", label: "Tất cả mục" }]} value={scope} onChange={setScope} />
         </div>
         <p className="wf-gd-note" role="status">
@@ -189,7 +191,7 @@ export default function GuidePage() {
           <div className="wf-gd-list">
             {sections.length === 0 && (
               <div className="g wf-gd-empty">
-                <EmptyState variant="search" icon={<BookOpen size={24} />} title="Không có mục nào khớp" description="Thử từ khóa ngắn hơn, ví dụ “bán nợ”, “tem QR” hoặc “cọc”." />
+                <EmptyState variant="search" icon={<BookOpen size={24} />} title="Không có mục nào khớp" description="Thử từ khóa ngắn hơn, ví dụ “CTV”, “tem QR” hoặc “sửa chữa”." />
               </div>
             )}
             {sections.map((s) => {
@@ -218,6 +220,28 @@ export default function GuidePage() {
             })}
           </div>
         </div>
+
+        {!nq && (
+          <section id="co-gi-moi" className="wf-gd-sec g" aria-labelledby="co-gi-moi-t" style={{ marginTop: 16 }}>
+            <header className="wf-gd-sh">
+              <span className="wf-ib" aria-hidden="true"><BookOpen size={22} /></span>
+              <div className="tx">
+                <h2 id="co-gi-moi-t">Có gì mới</h2>
+                <p>Phiên bản đang chạy: v{CHANGELOG[0]?.version}</p>
+              </div>
+            </header>
+            <ul className="wf-stack" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {CHANGELOG.slice(0, 4).map((c, i) => (
+                <li key={c.version}>
+                  <p style={{ fontWeight: 700 }}>{c.title} <span className="wf-chip" data-tone={i === 0 ? "ok" : "info"}>v{c.version}</span> <span className="wf-mute" style={{ fontWeight: 500, fontSize: 12.5 }}>{c.date}</span></p>
+                  <ul style={{ margin: "6px 0 0", paddingLeft: 18, listStyle: "disc" }}>
+                    {c.items.slice(0, 6).map((t) => <li key={t} style={{ fontSize: 13.5 }}><Inline text={t} /></li>)}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
 
       {showTop && (

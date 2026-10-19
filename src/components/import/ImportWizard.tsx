@@ -135,7 +135,7 @@ export function ImportWizard({ initialKind }: { initialKind?: ImportKind }) {
   if (!kinds.length) {
     return (
       <div className="g wf-pad">
-        <EmptyState title="Bạn chưa có quyền nhập loại dữ liệu nào" description="Nhập khách cần quyền tạo khách hàng; nhập đồng hồ/linh kiện cần quyền lập và xác nhận phiếu nhập. Liên hệ chủ cửa hàng." />
+        <EmptyState title="Bạn chưa có quyền nhập loại dữ liệu nào" description="Nhập khách cần quyền tạo khách hàng; nhập đồng hồ cần quyền thêm đồng hồ vào kho. Liên hệ chủ cửa hàng." />
       </div>
     );
   }
@@ -171,18 +171,13 @@ export function ImportWizard({ initialKind }: { initialKind?: ImportKind }) {
                 </div>
               )}
               <div style={{ marginTop: 10 }}>
-                <Note tone="info">Hàng <b>Cũ</b> và <b>Đã sửa</b> luôn vào kho ở trạng thái <b>Chờ kiểm tra</b> — cần hạng tình trạng + ảnh mới chuyển sang Sẵn sàng bán. Hàng Mới vào thẳng Sẵn sàng bán. Giá vốn = cột “Giá vốn (giá thu)”.</Note>
+                <Note tone="info">Hàng <b>Cũ</b> và <b>Đã sửa</b> luôn vào kho ở trạng thái <b>Chờ kiểm tra</b> — cần hạng tình trạng + ảnh mới chuyển sang Sẵn sàng bán. Hàng Mới vào thẳng Sẵn sàng bán. Giá niêm yết là giá mặc định khi ghi đơn bán.</Note>
               </div>
             </section>
           )}
-          {kind === "parts" && (
-            <div style={{ marginTop: 12 }}>
-              <Note tone="info">Tồn đầu &gt; 0 được ghi bằng một phiếu nhập “Tồn đầu kỳ”. Mã linh kiện đã có sẽ báo trùng; nếu bạn chọn nhập, số lượng được <b>cộng thêm</b> vào tồn hiện có.</Note>
-            </div>
-          )}
           {kind === "customers" && (
             <div style={{ marginTop: 12 }}>
-              <Note tone="info">SĐT trùng với khách có sẵn hoặc trùng trong tệp sẽ được báo — mặc định bỏ qua, bạn chọn lại ở bước xem trước. CCCD (nếu có) được mã hóa khi lưu.</Note>
+              <Note tone="info">SĐT trùng với khách có sẵn hoặc trùng trong tệp sẽ được báo — mặc định bỏ qua, bạn chọn lại ở bước xem trước.</Note>
             </div>
           )}
 
@@ -262,11 +257,10 @@ export function ImportWizard({ initialKind }: { initialKind?: ImportKind }) {
             <p>
               {result.skipped ? `Bỏ qua ${result.skipped} dòng` : "Không bỏ qua dòng nào"}
               {result.failed.length ? ` · ${result.failed.length} dòng lỗi khi lưu` : ""}
-              {result.receipt ? ` · Phiếu nhập ${result.receipt.code}` : ""}
+              {result.receipt ? ` · Mã lô nhập ${result.receipt.code}` : ""}
             </p>
             <div className="imp-done-acts">
-              {result.receipt && <Button sm href={result.receipt.href}>Mở phiếu {result.receipt.code}</Button>}
-              <Button sm href={kind === "customers" ? "/khach-hang" : kind === "watches" ? "/dong-ho" : "/linh-kien"}>Xem danh sách {info.short.toLowerCase()}</Button>
+              <Button sm href={kind === "customers" ? "/khach-hang" : "/dong-ho"}>Xem danh sách {info.short.toLowerCase()}</Button>
               <Button sm variant="primary" onClick={() => reset()}>Nhập tệp khác</Button>
             </div>
           </section>

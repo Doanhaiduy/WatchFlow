@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { errMsg } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
-import { byCode } from "@/components/reports/meta";
+import { bySlug } from "@/components/reports/meta";
 import { ReportTable } from "@/components/reports/ReportTable";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { DateRange } from "@/components/ui/DateInput";
-import { Select, TextInput } from "@/components/ui/TextInput";
+import { Select } from "@/components/ui/TextInput";
 import { useToast } from "@/components/ui/Toast";
 import { ApiClientError, swrFetcher } from "@/lib/api-client";
 import { addDays, formatDateVn, todayVn } from "@/lib/dates";
@@ -36,7 +36,7 @@ function presetRange(p: Preset, today: string): [string, string] {
 
 export default function ReportPage() {
   const { ma } = useParams<{ ma: string }>();
-  const meta = byCode(ma);
+  const meta = bySlug(ma);
   const { can } = useSession();
   const toast = useToast();
   const today = todayVn();
@@ -44,17 +44,15 @@ export default function ReportPage() {
   const [from, setFrom] = useState(addDays(today, -29));
   const [to, setTo] = useState(today);
   const [group, setGroup] = useState("day");
-  const [days, setDays] = useState("");
   const [exporting, setExporting] = useState(false);
 
   const qs = useMemo(() => {
     const p = new URLSearchParams();
     if (meta?.dates || meta?.group) { p.set("from", from); p.set("to", to); }
     if (meta?.group) p.set("group", group);
-    if (meta?.days && days) p.set("days", days);
     return p.toString();
-  }, [meta, from, to, group, days]);
-  const { data, error, isLoading, mutate } = useSWR<Res>(meta && can(meta.perm) ? `/api/v1/reports/${ma}?${qs}` : null, swrFetcher, { shouldRetryOnError: false });
+  }, [meta, from, to, group]);
+  const { data, error, isLoading, mutate } = useSWR<Res>(meta && can(meta.perm) ? `/api/v1/reports/${meta.code}?${qs}` : null, swrFetcher, { shouldRetryOnError: false });
   const forbidden = error instanceof ApiClientError && error.status === 403;
 
   const pick = (p: Preset) => {
@@ -68,7 +66,7 @@ export default function ReportPage() {
   const exportXlsx = async () => {
     setExporting(true);
     try {
-      const r = await fetch(`/api/v1/reports/${ma}?${qs}&format=xlsx`, { credentials: "same-origin" });
+      const r = await fetch(`/api/v1/reports/${meta?.code}?${qs}&format=xlsx`, { credentials: "same-origin" });
       if (!r.ok) {
         const j = await r.json().catch(() => null);
         throw new Error(j?.detail ?? "Không xuất được file.");
@@ -76,7 +74,7 @@ export default function ReportPage() {
       const blob = await r.blob();
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `bao-cao-${ma}-${from}_${to}.xlsx`;
+      a.download = `bao-cao-${meta?.code}-${from}_${to}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -111,14 +109,13 @@ export default function ReportPage() {
         <section className="g wf-pad wf-no-print" aria-label="Bộ lọc báo cáo" style={{ marginBottom: 12 }}>
           {(meta.dates || meta.group) && (
             <>
-              <SegmentedControl ariaLabel="Khoảng thời gian" value={preset} onChange={pick} options={[{ value: "7", label: "7 ngày" }, { value: "30", label: "30 ngày" }, { value: "month", label: "Tháng" }, { value: "quarter", label: "Quý" }, { value: "year", label: "Năm" }, { value: "custom", label: "Tùy chọn" }]} />
+              <SegmentedControl ariaLabel="Khoảng thời gian" value={preset} onChange={pick} options={[{ value: "7", label: "7 ngày" }, { value: "30", label: "30 ngày" }, { value: "month", label: "Tháng này" }, { value: "quarter", label: "Quý" }, { value: "year", label: "Năm" }, { value: "custom", label: "Tùy chọn" }]} />
               <div style={{ marginTop: 10 }}>
                 <Field label="Khoảng ngày"><DateRange from={from} to={to} max={today} onChange={(r) => { setPreset("custom"); setFrom(r.from); setTo(r.to); }} /></Field>
               </div>
             </>
           )}
           {meta.group && <Field label="Nhóm theo"><Select value={group} onChange={(e) => setGroup(e.target.value)} options={[{ value: "day", label: "Ngày" }, { value: "month", label: "Tháng" }, { value: "quarter", label: "Quý" }, { value: "year", label: "Năm" }]} /></Field>}
-          {meta.days && <Field label="Ngưỡng số ngày" hint="Để trống = theo cài đặt cửa hàng"><TextInput inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value.replace(/\D/g, ""))} /></Field>}
           <div className="wf-dev-row" style={{ marginTop: 6 }}>
             {can("report.export") && <Button loading={exporting} icon={<Download size={16} aria-hidden="true" />} onClick={() => void exportXlsx()}>Xuất Excel</Button>}
             <Button icon={<Printer size={16} aria-hidden="true" />} onClick={() => window.print()}>In / Lưu PDF</Button>

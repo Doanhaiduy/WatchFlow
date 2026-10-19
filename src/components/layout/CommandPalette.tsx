@@ -5,7 +5,7 @@
 // Mở: Ctrl/⌘+K, "/" (khi không gõ trong ô nhập), nút tìm ở thanh trên / đầu trang điện thoại. Gần đây lưu localStorage: chỉ nhãn + đường dẫn,
 // KHÔNG lưu khách/SĐT/tên khách (PII).
 import {
-  BookOpen, Bookmark, Boxes, Clock, CornerDownLeft, PackagePlus, Search, ShoppingBag, UserRound, Watch, Wrench, X, type LucideIcon,
+  BookOpen, Clock, CornerDownLeft, Search, ShoppingBag, UserRound, Watch, Wrench, X, type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -26,20 +26,16 @@ import "../lucian/lucian-046.css";
 type SUnit = { id: string; assetCode: string; serialNo: string | null; title: string; status: string; exact: boolean };
 type SCustomer = { id: string; code: string; fullName: string; phoneTail: string | null };
 type SDoc = { id: string; code: string; status: string; docDate: string | null; subtitle: string | null };
-type SPart = { id: string; code: string; name: string };
 type SearchPayload = {
   q: string;
   units?: SUnit[];
   customers?: SCustomer[];
   sales?: SDoc[];
   repairs?: SDoc[];
-  purchases?: SDoc[];
-  reservations?: SDoc[];
-  parts?: SPart[];
   exactUnitId: string | null;
 };
 
-type Kind = "page" | "action" | "unit" | "customer" | "sale" | "repair" | "purchase" | "reservation" | "part";
+type Kind = "page" | "action" | "unit" | "customer" | "sale" | "repair";
 type Entry = {
   id: string;
   group: string;
@@ -56,20 +52,19 @@ type Entry = {
 };
 
 const KIND_ICON: Record<Kind, LucideIcon> = {
-  page: BookOpen, action: Search, unit: Watch, customer: UserRound, sale: ShoppingBag, repair: Wrench, purchase: PackagePlus, reservation: Bookmark, part: Boxes,
+  page: BookOpen, action: Search, unit: Watch, customer: UserRound, sale: ShoppingBag, repair: Wrench,
 };
 const KIND_TONE: Record<Kind, Tone> = {
-  page: "neutral", action: "info", unit: "check", customer: "info", sale: "ok", repair: "repair", purchase: "info", reservation: "hold", part: "repair",
+  page: "neutral", action: "info", unit: "check", customer: "info", sale: "ok", repair: "repair",
 };
 const TONE_STYLE = (t: Tone): CSSProperties =>
   ({ "--tb": `var(--wf-${t}-t)`, "--tc": t === "ok" || t === "hold" || t === "bad" ? `var(--wf-${t}-text)` : `var(--wf-${t})` }) as CSSProperties;
 
-const GROUP_ORDER = ["Gần đây", "Khớp chính xác", "Hành động nhanh", "Trang", "Đồng hồ", "Khách hàng", "Phiếu bán", "Phiếu sửa", "Phiếu nhập", "Giữ hàng", "Linh kiện"];
+const GROUP_ORDER = ["Gần đây", "Khớp chính xác", "Hành động nhanh", "Trang", "Đồng hồ", "Khách hàng", "Đơn bán", "Phiếu sửa"];
 
 // Nhãn + từ khóa riêng cho bảng lệnh (nhãn ngắn gọn theo cách người dùng gọi)
 const ACTION_LABEL: Record<string, { label: string; kw: string }> = {
   sell: { label: "Bán nhanh", kw: "pos ban hang thanh toan tinh tien" },
-  purchase: { label: "Nhập hàng", kw: "phieu nhap mua may" },
   repair: { label: "Nhận máy sửa", kw: "sua chua bao hanh tiep nhan" },
   reserve: { label: "Giữ hàng / đặt cọc", kw: "giu hang dat coc" },
   "deliver-ctv": { label: "Giao hàng cho CTV", kw: "cong tac vien giao" },
@@ -281,7 +276,7 @@ export function CommandPalette({ can }: { can: CanFn }) {
   }, [can]);
 
   const unitHref = useCallback(
-    (id: string) => (can("catalog.view") ? `/dong-ho/${id}` : can("sale.create_draft") ? `/ctv/tao-don?unit=${id}` : "/ctv"),
+    (id: string) => (can("catalog.view") ? `/dong-ho/${id}` : "/ctv"),
     [can],
   );
 
@@ -314,7 +309,7 @@ export function CommandPalette({ can }: { can: CanFn }) {
       d.customers?.forEach((c) =>
         out.push({ id: `c:${c.id}`, group: "Khách hàng", kind: "customer", label: c.fullName, sub: `${c.code}${c.phoneTail ? ` · SĐT …${c.phoneTail}` : ""}`, href: `/khach-hang/${c.id}` }),
       );
-      const doc = (list: SDoc[] | undefined, group: string, kind: Kind, kindStatus: "doc" | "repair" | "reservation", base: string, withId: boolean) =>
+      const doc = (list: SDoc[] | undefined, group: string, kind: Kind, kindStatus: "doc" | "repair", base: string, withId: boolean) =>
         list?.forEach((x) =>
           out.push({
             id: `${kind}:${x.id}`,
@@ -327,11 +322,8 @@ export function CommandPalette({ can }: { can: CanFn }) {
             remember: true,
           }),
         );
-      doc(d.sales, "Phiếu bán", "sale", "doc", "/ban-hang", true);
+      doc(d.sales, "Đơn bán", "sale", "doc", "/ban-hang", true);
       doc(d.repairs, "Phiếu sửa", "repair", "repair", "/sua-chua", true);
-      doc(d.purchases, "Phiếu nhập", "purchase", "doc", "/nhap-hang", true);
-      doc(d.reservations, "Giữ hàng", "reservation", "reservation", "/giu-hang", false);
-      d.parts?.forEach((p) => out.push({ id: `part:${p.id}`, group: "Linh kiện", kind: "part", label: `${p.code} · ${p.name}`, href: `/linh-kien/${p.id}`, remember: true }));
     }
     return out;
   }, [trimmed, recents, staticEntries, serverFresh, unitHref]);
@@ -369,7 +361,7 @@ export function CommandPalette({ can }: { can: CanFn }) {
 
   const go = useCallback(
     (e: Entry) => {
-      if (e.remember) saveRecent({ label: e.label, sub: e.kind === "unit" || e.kind === "part" || e.kind === "page" ? e.sub : undefined, href: e.href, kind: e.kind });
+      if (e.remember) saveRecent({ label: e.label, sub: e.kind === "unit" || e.kind === "page" ? e.sub : undefined, href: e.href, kind: e.kind });
       setOpen(false);
       router.push(e.href);
     },

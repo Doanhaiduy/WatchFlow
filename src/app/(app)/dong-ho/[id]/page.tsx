@@ -1,5 +1,5 @@
 "use client";
-import { ArrowRightLeft, BadgeCheck, Ban, Bookmark, Handshake, Pencil, Printer, RotateCcw, ShoppingBag, Tag } from "lucide-react";
+import { ArrowRightLeft, BadgeCheck, Ban, Handshake, Pencil, Printer, RotateCcw, ShoppingBag, Tag } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import useSWR from "swr";
@@ -9,18 +9,12 @@ import { isReauthCancelled, useReauth } from "@/components/auth/useReauth";
 import { UnitArt } from "@/components/catalog/UnitArt";
 import { useLocations } from "@/components/catalog/useLists";
 import { unitTitle, type UnitDetail } from "@/components/catalog/types";
-import type { RepairListItem } from "@/components/repairs/types";
-import type { Warranty } from "@/components/trade/types";
-import { warrantyStatus } from "@/components/ui/status";
-import { InsetList, InsetRow } from "@/components/ui/InsetList";
-import { ReservationModal } from "@/components/trade/ReservationModal";
 import { CopyCodeButton } from "@/components/lucian/CopyCodeButton";
 import { ImageUpload } from "@/components/lucian/ImageUpload";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { KeyValue, LockNote, Timeline } from "@/components/ui/Display";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { KeyValue, Timeline } from "@/components/ui/Display";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Field } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -41,20 +35,18 @@ import { formatVnd } from "@/lib/money";
 import { useSession } from "@/lib/session";
 import { ACCESSORY_KINDS, ACCESSORY_LABELS, CONDITIONS, CONDITION_LABELS, MOVEMENT_LABELS } from "@/lib/types/catalog";
 
-type Tab = "info" | "photos" | "price" | "cost" | "history" | "warranty";
+type Tab = "info" | "photos" | "price" | "history";
 type History = {
   status: Array<{ id: string; from: string | null; to: string; at: string; reason: string | null; actorName: string | null }>;
   prices: Array<{ id: string; field: string; oldValue: string | null; newValue: string | null; at: string; reason: string | null; actorName: string | null }>;
   movements: Array<{ id: string; fromName: string | null; toName: string | null; at: string; note: string | null; actorName: string | null }>;
 };
-type Cost = { cycle: number; total: number; entries: Array<{ id: string; cycle: number; kind: string; amount: number; reason: string | null; createdAt: string; actorName: string | null }> };
 
 const SPEC_LABELS: Record<string, string> = {
   caliber: "Bộ máy", movementType: "Loại máy", caseSizeMm: "Đường kính vỏ (mm)", caseMaterial: "Chất liệu vỏ", strapType: "Loại dây", dialColor: "Màu mặt",
   glassType: "Kính", waterResistanceM: "Chống nước (m)", gender: "Dành cho", originCountry: "Xuất xứ",
 };
 const GENDER: Record<string, string> = { male: "Nam", female: "Nữ", unisex: "Unisex" };
-const COST_KIND: Record<string, string> = { purchase: "Giá thu", acquisition: "Giá thu", repair: "Chi phí sửa", repair_cost: "Chi phí sửa", extra: "Chi phí phát sinh", adjustment: "Điều chỉnh", adjust: "Điều chỉnh" };
 const PRICE_FIELD: Record<string, string> = { list_price_vnd: "Giá niêm yết", promo_price_vnd: "Giá khuyến mãi", promo_from: "Khuyến mãi từ", promo_to: "Khuyến mãi đến" };
 const price = (field: string, v: string | null) => (v === null || v === "" ? "—" : field.endsWith("_vnd") && /^\d+$/.test(v) ? formatVnd(Number(v)) : v);
 
@@ -74,18 +66,9 @@ export default function UnitDetailPage() {
   const [tab, setTab] = useState<Tab>("info");
   const detail = useSWR<UnitDetail>(can("catalog.view") ? `/api/v1/catalog/units/${id}` : null, swrFetcher);
   const u = detail.data;
-  const showCost = can("cost.view"); // KHÔNG gọi /cost và không render nếu thiếu quyền (BR-SEC-02)
   const hist = useSWR<History>(u && (tab === "price" || tab === "history") ? `/api/v1/catalog/units/${id}/history` : null, swrFetcher);
-  const cost = useSWR<Cost>(u && showCost && tab === "cost" ? `/api/v1/catalog/units/${id}/cost` : null, swrFetcher);
 
-  const tabs = useMemo(
-    () => [
-      { value: "info", label: "Thông tin" }, { value: "photos", label: "Ảnh" }, { value: "price", label: "Giá" },
-      ...(showCost ? [{ value: "cost", label: "Giá thu" }] : []),
-      { value: "history", label: "Lịch sử" }, { value: "warranty", label: "Bảo hành" },
-    ],
-    [showCost],
-  );
+  const tabs = useMemo(() => [{ value: "info", label: "Thông tin" }, { value: "photos", label: "Ảnh" }, { value: "price", label: "Giá" }, { value: "history", label: "Lịch sử" }], []);
 
   return (
     <>
@@ -101,7 +84,7 @@ export default function UnitDetailPage() {
             <ErrorState title="Không mở được chiếc này" description={errMsg(detail.error)} onRetry={async () => (await detail.mutate()) !== undefined} />
           </div>
         ) : (
-          <UnitBody u={u} tab={tab} setTab={(t) => setTab(t)} tabs={tabs} refresh={() => detail.mutate()} hist={hist} cost={cost} />
+          <UnitBody u={u} tab={tab} setTab={(t) => setTab(t)} tabs={tabs} refresh={() => detail.mutate()} hist={hist} />
         )}
       </RequirePerm>
     </>
@@ -109,15 +92,15 @@ export default function UnitDetailPage() {
 }
 
 function UnitBody({
-  u, tab, setTab, tabs, refresh, hist, cost,
+  u, tab, setTab, tabs, refresh, hist,
 }: {
   u: UnitDetail; tab: Tab; setTab: (t: Tab) => void; tabs: Array<{ value: string; label: string }>; refresh: () => Promise<unknown>;
-  hist: ReturnType<typeof useSWR<History>>; cost: ReturnType<typeof useSWR<Cost>>;
+  hist: ReturnType<typeof useSWR<History>>;
 }) {
   const { can } = useSession();
   const toast = useToast();
   const { withReauth } = useReauth();
-  const [dlg, setDlg] = useState<"" | "price" | "move" | "release" | "writeoff" | "restore" | "edit" | "reserve" | "costadj">("");
+  const [dlg, setDlg] = useState<"" | "price" | "move" | "release" | "writeoff" | "restore" | "edit">("");
   const [busy, setBusy] = useState(false);
   const live = !["sold", "written_off", "cancelled"].includes(u.status);
   const photo = u.photos.find((p) => p.kind === "product") ?? u.photos[0];
@@ -176,9 +159,8 @@ function UnitBody({
             {can("unit.release") && u.status === "inspecting" && <ActBtn primary icon={<BadgeCheck size={20} />} label="Kiểm tra đạt" onClick={() => setDlg("release")} />}
             {can("stock.writeoff") && live && <ActBtn icon={<Ban size={20} />} label="Ghi mất" onClick={() => setDlg("writeoff")} />}
             {can("stock.writeoff") && u.status === "written_off" && <ActBtn icon={<RotateCcw size={20} />} label="Khôi phục" onClick={() => setDlg("restore")} />}
-            {can("sale.create_draft") && <ActBtn primary={u.status === "in_stock"} icon={<ShoppingBag size={20} />} label="Bán" disabled={u.status !== "in_stock"} hint="Chưa sẵn sàng bán" onClick={() => (window.location.href = `/ban-hang/moi?unit=${u.id}`)} />}
-            {can("reservation.manage") && <ActBtn icon={<Bookmark size={20} />} label="Giữ hàng" disabled={u.status !== "in_stock"} hint="Chưa sẵn sàng bán" onClick={() => setDlg("reserve")} />}
-            {can("collab.manage") && <ActBtn icon={<Handshake size={20} />} label="Giao CTV" disabled={u.status !== "in_stock"} hint="Chưa sẵn sàng bán" onClick={() => (window.location.href = "/cong-tac-vien/giao-hang/moi")} />}
+            {can("sale.confirm") && <ActBtn primary={u.status === "in_stock"} icon={<ShoppingBag size={20} />} label="Bán" disabled={u.status !== "in_stock"} hint="Chưa sẵn sàng bán" onClick={() => (window.location.href = `/ban-hang/moi?chiec=${u.id}`)} />}
+            {can("collab.manage") && <ActBtn icon={<Handshake size={20} />} label="Giao CTV" disabled={u.status !== "in_stock"} hint="Chưa sẵn sàng bán" onClick={() => (window.location.href = `/cong-tac-vien/giao-hang?chiec=${u.id}`)} />}
           </div>
         </section>
       </div>
@@ -188,16 +170,12 @@ function UnitBody({
       {tab === "info" && <InfoTab u={u} onEdit={can("catalog.manage") ? () => setDlg("edit") : undefined} />}
       {tab === "photos" && <PhotosTab u={u} refresh={refresh} canEdit={can("catalog.manage")} />}
       {tab === "price" && <PriceTab u={u} hist={hist} />}
-      {tab === "cost" && can("cost.view") && <CostTab cost={cost} onAdjust={can("cost.adjust") && live && u.status !== "sold" ? () => setDlg("costadj") : undefined} />}
       {tab === "history" && <HistoryTab hist={hist} />}
-      {tab === "warranty" && <WarrantyTab u={u} />}
 
       <PriceModal open={dlg === "price"} u={u} onClose={() => setDlg("")} onDone={async () => (await refresh(), setDlg(""))} />
       <MoveModal open={dlg === "move"} u={u} busy={busy} onClose={() => setDlg("")} onSubmit={(locationId, note) => void run(() => sapi(`/api/v1/catalog/units/${u.id}/move`, { body: { locationId, note: note || undefined }, idempotencyKey: newIdempotencyKey() }), "Đã đổi vị trí", "Không đổi được vị trí")} />
       <RestoreModal open={dlg === "restore"} busy={busy} onClose={() => setDlg("")} onSubmit={(locationId, reason) => { const key = newIdempotencyKey(); void run(() => withReauth(() => sapi(`/api/v1/catalog/units/${u.id}/restore`, { body: { locationId, reason }, idempotencyKey: key })), "Đã khôi phục chiếc về kho", "Không khôi phục được"); }} />
       <EditModal open={dlg === "edit"} u={u} onClose={() => setDlg("")} onDone={async () => (await refresh(), setDlg(""))} />
-      <ReservationModal open={dlg === "reserve"} unit={u} onClose={() => setDlg("")} onDone={async () => { await refresh(); setDlg(""); }} />
-      <CostAdjustModal open={dlg === "costadj"} u={u} onClose={() => setDlg("")} onDone={async () => { await Promise.all([refresh(), cost.mutate()]); setDlg(""); }} />
       <ConfirmDialog
         open={dlg === "release"}
         title="Xác nhận kiểm tra đạt?"
@@ -212,7 +190,7 @@ function UnitBody({
         danger
         requireReason
         title={`Ghi mất / thanh lý ${u.assetCode}?`}
-        message={`Chiếc sẽ rời khỏi tồn kho${u.cost != null ? `, ghi nhận tổn thất theo giá thu ${formatVnd(u.cost)}` : ""}. Cần xác nhận lại mật khẩu; có thể khôi phục sau.`}
+        message="Chiếc sẽ rời khỏi kho (mất, hỏng, thanh lý) và ngừng được bán/giao CTV. Cần xác nhận lại mật khẩu; có thể khôi phục sau."
         confirmLabel="Ghi mất"
         loading={busy}
         onCancel={() => setDlg("")}
@@ -319,26 +297,6 @@ function PriceTab({ u, hist }: { u: UnitDetail; hist: ReturnType<typeof useSWR<H
         )}
       </section>
     </div>
-  );
-}
-
-function CostTab({ cost, onAdjust }: { cost: ReturnType<typeof useSWR<Cost>>; onAdjust?: () => void }) {
-  return (
-    <section className="g wf-pad" aria-label="Giá thu">
-      {cost.isLoading ? (
-        <Skeleton h={90} />
-      ) : cost.error || !cost.data ? (
-        <p className="wf-fld-err">{errMsg(cost.error)}</p>
-      ) : (
-        <>
-          <p className="wf-mute">Giá thu hiện tại (chu kỳ {cost.data.cycle})</p>
-          <div className="wf-uprice" style={{ margin: "2px 0 10px" }}>{formatVnd(cost.data.total)}</div>
-          <Timeline items={cost.data.entries.map((e) => ({ title: `${COST_KIND[e.kind] ?? e.kind}: ${formatVnd(e.amount)}${e.cycle !== cost.data!.cycle ? ` (chu kỳ ${e.cycle})` : ""}`, meta: `${formatDateTimeVn(e.createdAt)} · ${e.actorName ?? "Hệ thống"}${e.reason ? ` · ${e.reason}` : ""}` }))} />
-        </>
-      )}
-      {onAdjust && <Button block style={{ marginTop: 10 }} onClick={onAdjust}>Điều chỉnh giá vốn</Button>}
-      <LockNote />
-    </section>
   );
 }
 
@@ -503,65 +461,5 @@ function EditModal({ open, u, onClose, onDone }: { open: boolean; u: UnitDetail;
         </div>
       </form>
     </Modal>
-  );
-}
-
-function CostAdjustModal({ open, u, onClose, onDone }: { open: boolean; u: UnitDetail; onClose: () => void; onDone: () => Promise<unknown> }) {
-  const toast = useToast();
-  const { withReauth } = useReauth();
-  const [dir, setDir] = useState<"up" | "down">("up");
-  const [amount, setAmount] = useState<number | null>(null);
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    if (open) { setDir("up"); setAmount(null); setReason(""); setErr(null); }
-  }, [open]);
-  const missing = Math.max(0, 10 - reason.trim().length);
-  const submit = async () => {
-    if (!amount) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      const key = newIdempotencyKey();
-      await withReauth(() => sapi(`/api/v1/catalog/units/${u.id}/cost-adjust`, { body: { amount: dir === "up" ? amount : -amount, reason: reason.trim() }, idempotencyKey: key }));
-      toast.success("Đã điều chỉnh giá vốn");
-      await onDone();
-    } catch (x) {
-      if (!isReauthCancelled(x)) setErr(errMsg(x));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal open={open} onClose={onClose} busy={busy} title="Điều chỉnh giá vốn" footer={<><Button onClick={onClose} disabled={busy}>Hủy</Button><Button variant="primary" loading={busy} disabled={!amount || missing > 0} onClick={() => void submit()}>Ghi bút toán</Button></>}>
-      <p className="wf-confirm-msg">Giá vốn hiện tại {u.cost != null ? formatVnd(u.cost) : "—"}. Bút toán được ghi lại vĩnh viễn kèm lý do; cần xác nhận lại mật khẩu.</p>
-      <SegmentedControl ariaLabel="Hướng điều chỉnh" value={dir} onChange={setDir} options={[{ value: "up", label: "Tăng giá vốn" }, { value: "down", label: "Giảm giá vốn" }]} />
-      <div style={{ height: 12 }} />
-      <Field label="Số tiền điều chỉnh" required><MoneyInput data-autofocus value={amount} onChange={setAmount} /></Field>
-      <Field label="Lý do" required hint={missing > 0 ? `Nhập thêm ít nhất ${missing} ký tự` : undefined}><Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} /></Field>
-      {err && <p className="wf-fld-err" role="alert">{err}</p>}
-    </Modal>
-  );
-}
-
-function WarrantyTab({ u }: { u: UnitDetail }) {
-  const { can } = useSession();
-  const key = u.serialNo ?? u.assetCode;
-  const rep = useSWR<{ items: RepairListItem[] }>(can("repair.view") ? `/api/v1/repairs/by-serial?serial=${encodeURIComponent(key)}` : null, swrFetcher);
-  const war = useSWR<{ items: Warranty[] }>(can(["warranty.view", "repair.view"]) ? `/api/v1/warranties?q=${encodeURIComponent(u.assetCode)}&pageSize=10` : null, swrFetcher);
-  return (
-    <div className="wf-stack">
-      <section aria-label="Bảo hành"><div className="wf-sec"><h3>Bảo hành</h3></div>
-        {war.data && war.data.items.length > 0 ? (
-          <InsetList>{war.data.items.map((w) => <InsetRow key={w.id} title={w.code} subtitle={`${formatDateVn(w.startDate)} – ${formatDateVn(w.endDate)} · ${w.customerName ?? ""}`} end={<StatusChip kind="warranty" status={w.effectiveStatus === "active" ? warrantyStatus(w.daysLeft) : w.effectiveStatus} />} />)}</InsetList>
-        ) : <div className="g wf-pad"><p className="wf-mute">Chưa có bảo hành (cấp khi bán).</p></div>}
-      </section>
-      <section aria-label="Lịch sử sửa chữa"><div className="wf-sec"><h3>Lịch sử sửa chữa theo serial</h3></div>
-        {rep.data && rep.data.items.length > 0 ? (
-          <InsetList>{rep.data.items.map((r) => <InsetRow key={r.id} href={`/sua-chua/${r.id}`} title={r.code} subtitle={`${formatDateVn(r.receivedAt)} · ${r.complaint ?? ""}`} end={<StatusChip kind="repair" status={r.status} />} />)}</InsetList>
-        ) : <div className="g wf-pad"><p className="wf-mute">{can("repair.view") ? "Máy chưa từng sửa." : "Bạn không xem được lịch sử sửa chữa."}</p></div>}
-      </section>
-    </div>
   );
 }

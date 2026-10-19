@@ -1,5 +1,5 @@
 "use client";
-import { Bookmark, ClipboardCheck, FileSpreadsheet, Handshake, Layers, PackageCheck, PackagePlus, Watch } from "lucide-react";
+import { ClipboardCheck, FileSpreadsheet, Layers, PackageCheck, PackagePlus, ShoppingBag, Watch, Wrench } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
@@ -22,22 +22,20 @@ import { SearchBar } from "@/components/ui/SearchBar";
 import { StatStrip } from "@/components/ui/StatStrip";
 import { Skeleton, SkeletonGroup } from "@/components/ui/Skeleton";
 import { Select } from "@/components/ui/TextInput";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { swrFetcher } from "@/lib/api-client";
 import { CONDITION_LABELS } from "@/lib/types/catalog";
 import { useSession } from "@/lib/session";
 
-type Filters = { status: string; brandId: string; modelId: string; locationId: string; condition: string; aging: boolean; sort: string };
-const DEFAULT: Filters = { status: "stock", brandId: "", modelId: "", locationId: "", condition: "", aging: false, sort: "-created_at" };
-const STOCK = ["in_stock", "reserved", "with_collaborator", "in_repair", "inspecting"];
+type Filters = { status: string; brandId: string; modelId: string; locationId: string; condition: string; sort: string };
+const DEFAULT: Filters = { status: "stock", brandId: "", modelId: "", locationId: "", condition: "", sort: "-created_at" };
+const STOCK = ["in_stock", "in_repair", "inspecting"];
 const STATUS_CHIPS: Array<{ value: string; label: string }> = [
-  { value: "stock", label: "Tất cả tồn kho" }, { value: "in_stock", label: "Sẵn sàng bán" }, { value: "reserved", label: "Đã giữ" },
-  { value: "with_collaborator", label: "Đang ở CTV" }, { value: "in_repair", label: "Đang sửa" }, { value: "inspecting", label: "Chờ kiểm tra" },
-  { value: "sold", label: "Đã bán" }, { value: "written_off", label: "Thanh lý/mất" },
+  { value: "stock", label: "Đang có" }, { value: "in_stock", label: "Sẵn sàng bán" }, { value: "inspecting", label: "Chờ kiểm tra" },
+  { value: "in_repair", label: "Đang sửa" }, { value: "sold", label: "Đã bán" }, { value: "written_off", label: "Thanh lý/mất" },
 ];
 const SORTS = [
   { value: "-created_at", label: "Mới nhập nhất" }, { value: "price", label: "Giá thấp → cao" }, { value: "-price", label: "Giá cao → thấp" },
-  { value: "asset_code", label: "Theo mã nội bộ" }, { value: "-stock_since", label: "Mới vào kho" }, { value: "stock_since", label: "Tồn lâu nhất" },
+  { value: "asset_code", label: "Theo mã nội bộ" }, { value: "-stock_since", label: "Mới vào kho" },
 ];
 const PAGE = 24;
 
@@ -49,7 +47,6 @@ function qs(q: string, f: Filters, page: number, pageSize: number) {
   if (f.modelId) p.set("modelId", f.modelId);
   if (f.locationId) p.set("locationId", f.locationId);
   if (f.condition) p.set("condition", f.condition);
-  if (f.aging) p.set("aging", "1");
   return p.toString();
 }
 
@@ -94,7 +91,6 @@ export function UnitsView() {
     if (f.modelId) out.push({ id: "m", label: `Loại: ${models.data?.items.find((m) => m.id === f.modelId)?.name ?? "đã chọn"}`, onRemove: () => setF({ ...f, modelId: "" }) });
     if (f.locationId) out.push({ id: "l", label: `Vị trí: ${locations.data?.items.find((l) => l.id === f.locationId)?.name ?? "đã chọn"}`, onRemove: () => setF({ ...f, locationId: "" }) });
     if (f.condition) out.push({ id: "c", label: CONDITION_LABELS[f.condition as keyof typeof CONDITION_LABELS] ?? f.condition, onRemove: () => setF({ ...f, condition: "" }) });
-    if (f.aging) out.push({ id: "a", label: "Tồn lâu", onRemove: () => setF({ ...f, aging: false }) });
     if (f.sort !== DEFAULT.sort) out.push({ id: "s", label: SORTS.find((s) => s.value === f.sort)?.label ?? f.sort, onRemove: () => setF({ ...f, sort: DEFAULT.sort }) });
     return out;
   }, [f, brands.data, models.data, locations.data]);
@@ -112,7 +108,7 @@ export function UnitsView() {
       <PageHeader
         title="Đồng hồ"
         context={total ? `${total} chiếc` : undefined}
-        description="Kho đồng hồ của cửa hàng"
+        description="Đồng hồ đang có của cửa hàng"
         onScan={() => setScan(true)}
         actions={
           <>
@@ -137,9 +133,9 @@ export function UnitsView() {
           <StatStrip
             items={[
               { label: "Sẵn sàng bán", value: counts.in_stock ?? 0, icon: <PackageCheck size={16} />, tone: "ok", hint: "có thể bán ngay", onClick: () => setF({ ...f, status: "in_stock" }), active: f.status === "in_stock" },
-              { label: "Đã giữ", value: counts.reserved ?? 0, icon: <Bookmark size={16} />, tone: "hold", hint: "khách đã cọc", onClick: () => setF({ ...f, status: "reserved" }), active: f.status === "reserved" },
-              { label: "Đang ở CTV", value: counts.with_collaborator ?? 0, icon: <Handshake size={16} />, tone: "info", hint: "cộng tác viên giữ", onClick: () => setF({ ...f, status: "with_collaborator" }), active: f.status === "with_collaborator" },
-              { label: "Chờ kiểm tra", value: counts.inspecting ?? 0, icon: <ClipboardCheck size={16} />, tone: "check", hint: "hàng cũ / thu cũ", onClick: () => setF({ ...f, status: "inspecting" }), active: f.status === "inspecting" },
+              { label: "Chờ kiểm tra", value: counts.inspecting ?? 0, icon: <ClipboardCheck size={16} />, tone: "check", hint: "hàng cũ cần xem lại", onClick: () => setF({ ...f, status: "inspecting" }), active: f.status === "inspecting" },
+              { label: "Đang sửa", value: counts.in_repair ?? 0, icon: <Wrench size={16} />, tone: "repair", hint: "máy của cửa hàng", onClick: () => setF({ ...f, status: "in_repair" }), active: f.status === "in_repair" },
+              { label: "Đã bán", value: counts.sold ?? 0, icon: <ShoppingBag size={16} />, tone: "neutral", hint: "từ trước đến nay", onClick: () => setF({ ...f, status: "sold" }), active: f.status === "sold" },
             ]}
           />
         )}
@@ -182,7 +178,7 @@ export function UnitsView() {
               variant={dq || activeChips.length || f.status !== "stock" ? "search" : "plain"}
               icon={<Watch size={24} aria-hidden="true" />}
               title={dq || activeChips.length || f.status !== "stock" ? "Không có chiếc nào khớp" : "Kho chưa có đồng hồ"}
-              description={dq || activeChips.length || f.status !== "stock" ? "Thử bỏ bớt bộ lọc hoặc đổi từ khóa." : "Bắt đầu bằng việc nhập hàng để có chiếc đầu tiên."}
+              description={dq || activeChips.length || f.status !== "stock" ? "Thử bỏ bớt bộ lọc hoặc đổi từ khóa." : "Bắt đầu bằng việc thêm chiếc đồng hồ đầu tiên."}
               suggestions={dq || activeChips.length || f.status !== "stock" ? [{ removed: "Tất cả bộ lọc", count: chipCount("stock"), onClick: resetAll }] : undefined}
               action={!dq && !activeChips.length && f.status === "stock" && can("catalog.manage") ? { label: "Thêm đồng hồ", href: "/dong-ho/moi" } : undefined}
             />
@@ -241,7 +237,6 @@ export function UnitsView() {
             <Field label="Tình trạng máy">
               <Select placeholder="Mọi tình trạng" value={draft.condition} onChange={(e) => setDraft({ ...draft, condition: e.target.value })} options={Object.entries(CONDITION_LABELS).map(([value, label]) => ({ value, label }))} />
             </Field>
-            <Checkbox checked={draft.aging} onChange={(c) => setDraft({ ...draft, aging: c })} label="Chỉ chiếc tồn lâu (sẵn sàng bán quá hạn tồn)" />
           </FilterSection>
           <FilterSection title="Sắp xếp">
             <Select value={draft.sort} onChange={(e) => setDraft({ ...draft, sort: e.target.value })} options={SORTS} aria-label="Sắp xếp" />

@@ -2,8 +2,8 @@
 // Bộ dựng khối nội dung hướng dẫn (src/content/guide.ts) thành giao diện Glass: bước có đường nối, ghi chú theo tone, đường dẫn menu, bảng,
 // thẻ, sơ đồ luồng, tab phân đoạn (SegmentedControl — Lucian #047 đã port), mục xổ. Không có HTML thô: chữ đi qua Inline/MiniMarkdown.
 import {
-  AlertTriangle, BarChart3, Bell, BookOpen, Bookmark, Boxes, ChevronDown, ChevronRight, ClipboardCheck, FileSpreadsheet, Handshake, Info, Lightbulb, LogIn,
-  PackagePlus, RefreshCw, Search, Settings, ShieldAlert, ShieldCheck, ShoppingBag, Smartphone, UserRound, Users, Watch, Wrench, CircleHelp,
+  AlertTriangle, BarChart3, Bell, BookOpen, ChevronDown, ChevronRight, FileSpreadsheet, Handshake, Info, Lightbulb, LogIn,
+  Search, Settings, ShieldAlert, ShieldCheck, ShoppingBag, Smartphone, UserRound, Users, Watch, Wrench, CircleHelp,
   type LucideIcon,
 } from "lucide-react";
 import { Fragment, useId, useState } from "react";
@@ -15,8 +15,8 @@ import { DemoView } from "./GuideDemos";
 import "./guide.css";
 
 export const GUIDE_ICONS: Record<GuideIcon, LucideIcon> = {
-  start: LogIn, app: Smartphone, shield: ShieldCheck, sale: ShoppingBag, reserve: Bookmark, tradein: RefreshCw, warranty: ShieldCheck, purchase: PackagePlus,
-  watch: Watch, part: Boxes, customer: Users, excel: FileSpreadsheet, ctv: Handshake, me: UserRound, repair: Wrench, stocktake: ClipboardCheck,
+  start: LogIn, app: Smartphone, shield: ShieldCheck, sale: ShoppingBag,
+  watch: Watch, customer: Users, excel: FileSpreadsheet, ctv: Handshake, me: UserRound, repair: Wrench,
   report: BarChart3, admin: Settings, help: CircleHelp, bell: Bell, search: Search, book: BookOpen,
 };
 

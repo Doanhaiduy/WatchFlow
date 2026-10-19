@@ -1,9 +1,8 @@
 "use client";
 // Minh họa giao diện trong hướng dẫn: dựng bằng chính lớp Glass của ứng dụng (chip trạng thái, viên số việc, dòng phiếu…) với dữ liệu giả.
 // Mọi khung là hình tĩnh (aria-hidden) kèm chú thích chữ; số liệu chỉ là ví dụ.
-import { Banknote, Bell, Home, Layers, Menu, Plus, QrCode, ScanLine, Search, ShoppingBag, Watch } from "lucide-react";
+import { Bell, Home, Menu, Plus, ScanLine, Search, ShoppingBag, Watch } from "lucide-react";
 import type { ReactNode } from "react";
-import { formatVnd } from "@/lib/money";
 import type { GuideDemo } from "@/content/guide";
 import { StatusChip } from "../ui/StatusChip";
 import "../layout/shell-extras.css";
@@ -22,7 +21,7 @@ function Mk({ n, style }: { n: number; style: React.CSSProperties }) {
 }
 
 function LayoutDesktop({ caption }: { caption?: string }) {
-  const items = ["Tổng quan", "Bán hàng", "Đồng hồ", "Sửa chữa", "Giữ hàng"];
+  const items = ["Tổng quan", "Bán hàng", "Đồng hồ", "Sửa chữa", "Cộng tác viên"];
   return (
     <Frame label="Minh họa giao diện máy tính: thanh bên, ô tìm nhanh, quét QR và chuông, nút hành động chính" caption={caption}>
       <div className="wf-gd-dk">
@@ -32,7 +31,7 @@ function LayoutDesktop({ caption }: { caption?: string }) {
             <div key={t} className={i === 1 ? "it on" : "it"}>
               <span className="ic" />
               <span>{t}</span>
-              {t === "Giữ hàng" && <span className="wf-nb warn wf-nb-row">2</span>}
+              {t === "Cộng tác viên" && <span className="wf-nb warn wf-nb-row">2</span>}
             </div>
           ))}
           <div className="me"><span className="av">A</span><span className="tx"><b>Tên bạn</b><small>Vai trò</small></span></div>
@@ -86,7 +85,7 @@ function Badges() {
   return (
     <Frame label="Minh họa viên số việc cần xử lý: vàng là đang chờ, đỏ là có việc quá hạn">
       <div className="wf-gd-badges">
-        <div className="row"><span className="ic" /><b>Giữ hàng</b><small>Vàng: đang chờ xử lý</small><span className="wf-nb warn wf-nb-row">3</span></div>
+        <div className="row"><span className="ic" /><b>Cộng tác viên</b><small>Vàng: đang chờ xử lý</small><span className="wf-nb warn wf-nb-row">3</span></div>
         <div className="row"><span className="ic" /><b>Sửa chữa</b><small>Đỏ: có việc quá hạn</small><span className="wf-nb bad wf-nb-row">1</span></div>
       </div>
     </Frame>
@@ -113,12 +112,10 @@ function Shortcuts() {
 }
 
 const UNIT_STATES: [string, string][] = [
-  ["in_stock", "Có thể thêm vào phiếu bán"],
-  ["reserved", "Khách đã đặt cọc — không bán cho người khác"],
-  ["with_collaborator", "Đã giao cho cộng tác viên"],
-  ["in_repair", "Đang trong phiếu sửa nội bộ"],
-  ["inspecting", "Hàng cũ/thu cũ chờ kiểm tra đạt"],
-  ["sold", "Đã bán cho khách"],
+  ["in_stock", "Có thể bán ngay — kể cả khi đang giao cho CTV"],
+  ["inspecting", "Hàng cũ chờ chụp ảnh và kiểm tra đạt"],
+  ["in_repair", "Máy của cửa hàng đang sửa"],
+  ["sold", "Đã bán cho khách (hoặc CTV bán, cửa hàng đã xác nhận)"],
   ["written_off", "Đã ghi mất hoặc thanh lý"],
 ];
 
@@ -134,55 +131,19 @@ function UnitStates() {
   );
 }
 
-function PosCart() {
-  return (
-    <Frame label="Ví dụ phiếu bán: tiền hàng, giảm giá, thu cũ và số còn phải thu" caption="Ví dụ minh họa">
-      <div className="wf-gd-cart">
-        <div className="wf-cart-line">
-          <b>Seiko 5 Sports SRPD55</b>
-          <span className="wf-mute">DH-000010 · giá niêm yết 8.400.000 ₫</span>
-          <div className="price">{formatVnd(8_200_000)}</div>
-        </div>
-        <div className="wf-sum">
-          <div><span>Tiền hàng (niêm yết)</span><b>{formatVnd(8_400_000)}</b></div>
-          <div><span>Giảm giá (2,38%)</span><b>−{formatVnd(200_000)}</b></div>
-          <div><span>Thu cũ</span><b>−{formatVnd(1_500_000)}</b></div>
-          <div className="tot"><span>Còn phải thu</span><b>{formatVnd(6_700_000)}</b></div>
-        </div>
-      </div>
-    </Frame>
-  );
-}
-
-function MoneySplit({ caption }: { caption?: string }) {
-  return (
-    <Frame label="Ví dụ chia tiền đơn cộng tác viên: giá thu là doanh thu cửa hàng, phần chênh là của cộng tác viên" caption={caption}>
-      <div className="wf-gd-split">
-        <div className="bar">
-          <span className="a" style={{ flexGrow: 8 }}>{formatVnd(8_000_000)}</span>
-          <span className="b" style={{ flexGrow: 1 }}>{formatVnd(1_000_000)}</span>
-        </div>
-        <div className="lg">
-          <span><i className="a" />Giá thu = doanh thu cửa hàng</span>
-          <span><i className="b" />Phần CTV hưởng (giá bán − giá thu)</span>
-        </div>
-        <div className="tot">Khách trả <b>{formatVnd(9_000_000)}</b></div>
-      </div>
-    </Frame>
-  );
-}
-
-function PaymentMethods() {
-  const m = [
-    { icon: <Banknote size={20} />, t: "Tiền mặt", d: "Nhập Khách đưa → thấy tiền thừa" },
-    { icon: <QrCode size={20} />, t: "Chuyển khoản", d: "Hiện mã VietQR có sẵn số tiền" },
-    { icon: <Layers size={20} />, t: "Kết hợp", d: "Một phần tiền mặt, một phần chuyển khoản" },
+/** Một chiếc giao cho 3 CTV: ai báo "Đã bán" trước được giữ, hai người còn lại tự mất quyền */
+function MultiCtv({ caption }: { caption?: string }) {
+  const rows: { name: string; chip: ReactNode; note: string }[] = [
+    { name: "CTV An", chip: <StatusChip tone="hold">Báo “Đã bán” — chờ xác nhận</StatusChip>, note: "Báo trước ⇒ được giữ chiếc" },
+    { name: "CTV Bình", chip: <StatusChip tone="neutral">Mất chiếc này</StatusChip>, note: "Báo sau, hoặc chiếc đã bán" },
+    { name: "CTV Chi", chip: <StatusChip tone="info">Chưa báo</StatusChip>, note: "Vẫn thấy chiếc trong Hàng của tôi" },
   ];
   return (
-    <Frame label="Các hình thức thanh toán: tiền mặt, chuyển khoản, kết hợp">
-      <div className="wf-gd-pay">
-        {m.map((x) => (
-          <div key={x.t} className="c"><span className="wf-ib" data-tone="ok">{x.icon}</span><b>{x.t}</b><small>{x.d}</small></div>
+    <Frame label="Ví dụ một đồng hồ giao cho ba cộng tác viên: người báo đã bán trước được giữ, người khác mất quyền" caption={caption}>
+      <div className="wf-gd-states">
+        <div className="r"><Watch size={18} /><span><b>Seiko 5 Sports SRPD55</b> · DH-000010 · còn trong kho</span></div>
+        {rows.map((x) => (
+          <div key={x.name} className="r"><b style={{ minWidth: 72 }}>{x.name}</b>{x.chip}<span>{x.note}</span></div>
         ))}
       </div>
     </Frame>
@@ -196,8 +157,6 @@ export function DemoView({ name, caption }: { name: GuideDemo; caption?: string 
     case "badges": return <Badges />;
     case "shortcuts": return <Shortcuts />;
     case "unit-states": return <UnitStates />;
-    case "pos-cart": return <PosCart />;
-    case "money-split": return <MoneySplit caption={caption} />;
-    case "payment-methods": return <PaymentMethods />;
+    case "multi-ctv": return <MultiCtv caption={caption} />;
   }
 }

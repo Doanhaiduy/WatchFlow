@@ -1,27 +1,25 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import useSWR from "swr";
-import { ApiClientError, api, newIdempotencyKey, swrFetcher } from "@/lib/api-client";
+import { ApiClientError, api, newIdempotencyKey } from "@/lib/api-client";
 import { errMsg, fieldErrors, sapi } from "../auth/helpers";
-import type { Customer, CustomerGroup } from "../catalog/types";
+import type { Customer } from "../catalog/types";
 import { Button } from "../ui/Button";
 import { Field } from "../ui/Field";
 import { Modal, ModalClose } from "../ui/Modal";
 import { normalizePhone, PhoneInput } from "../ui/PhoneInput";
-import { Select, Textarea, TextInput } from "../ui/TextInput";
+import { Textarea, TextInput } from "../ui/TextInput";
 import { useToast } from "../ui/Toast";
 
 type Dup = { id: string; fullName: string; code: string };
 
 /**
- * Tạo nhanh / sửa khách (BottomSheet). Trùng SĐT ⇒ API trả 409 WF-CUS-PHONE-DUPLICATE (errors[].message là id khách trùng):
- * hiện khách đó cho chọn "Mở khách đó" hoặc "Vẫn tạo" (gửi lại với force=true).
+ * Thêm nhanh / sửa khách: họ tên, SĐT, địa chỉ, ghi chú. Trùng SĐT ⇒ API trả 409 WF-CUS-PHONE-DUPLICATE (errors[].message là id khách trùng):
+ * hiện khách đó cho chọn “Mở khách đó” hoặc “Vẫn tạo” (gửi lại với force=true).
  */
 export function CustomerModal({ customer, open, onClose, onDone }: { customer: Customer | null; open: boolean; onClose: () => void; onDone: (id?: string) => Promise<unknown> | void }) {
   const toast = useToast();
-  const groups = useSWR<{ items: CustomerGroup[] }>(open ? "/api/v1/customer-groups" : null, swrFetcher);
-  const [f, setF] = useState({ fullName: "", email: "", address: "", groupId: "", note: "", idNumber: "" });
+  const [f, setF] = useState({ fullName: "", address: "", note: "" });
   const [phone, setPhone] = useState("");
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [dups, setDups] = useState<Dup[]>([]);
@@ -30,23 +28,20 @@ export function CustomerModal({ customer, open, onClose, onDone }: { customer: C
 
   useEffect(() => {
     if (!open) return;
-    setF({ fullName: customer?.fullName ?? "", email: customer?.email ?? "", address: customer?.address ?? "", groupId: customer?.groupId ?? "", note: customer?.note ?? "", idNumber: "" });
+    setF({ fullName: customer?.fullName ?? "", address: customer?.address ?? "", note: customer?.note ?? "" });
     setPhone(normalizePhone(customer?.phone ?? ""));
     setErrs({});
     setDups([]);
     setKey(newIdempotencyKey());
   }, [open, customer]);
-  // Đã sửa so với lúc mở (khách mới: có nhập gì là tính) ⇒ đóng sẽ hỏi "Bỏ thay đổi chưa lưu?"
-  const dirty = open && (f.fullName !== (customer?.fullName ?? "") || f.email !== (customer?.email ?? "") || f.address !== (customer?.address ?? "") || f.groupId !== (customer?.groupId ?? "") || f.note !== (customer?.note ?? "") || f.idNumber !== "" || phone !== normalizePhone(customer?.phone ?? ""));
+  // Đã sửa so với lúc mở (khách mới: có nhập gì là tính) ⇒ đóng sẽ hỏi “Bỏ thay đổi chưa lưu?”
+  const dirty = open && (f.fullName !== (customer?.fullName ?? "") || f.address !== (customer?.address ?? "") || f.note !== (customer?.note ?? "") || phone !== normalizePhone(customer?.phone ?? ""));
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((x) => ({ ...x, [k]: e.target.value }));
 
   const submit = async (force = false) => {
     setBusy(true);
     setErrs({});
-    const body = {
-      fullName: f.fullName, phone: phone || null, email: f.email.trim() || null, address: f.address.trim() || null, groupId: f.groupId || null, note: f.note.trim() || null,
-      ...(f.idNumber.trim() ? { idNumber: f.idNumber.trim() } : {}), ...(force ? { force: true } : {}),
-    };
+    const body = { fullName: f.fullName, phone: phone || null, address: f.address.trim() || null, note: f.note.trim() || null, ...(force ? { force: true } : {}) };
     try {
       let id = customer?.id;
       if (customer) await sapi(`/api/v1/customers/${customer.id}`, { method: "PATCH", ifMatch: customer.version, body });
@@ -89,12 +84,7 @@ export function CustomerModal({ customer, open, onClose, onDone }: { customer: C
       <form onSubmit={(e: FormEvent) => (e.preventDefault(), void submit())} noValidate>
         <Field label="Họ tên" required error={errs.fullName}><TextInput data-autofocus value={f.fullName} onChange={set("fullName")} autoComplete="off" /></Field>
         <Field label="Số điện thoại" error={errs.phone}><PhoneInput value={phone} onChange={(v) => { setPhone(v); setDups([]); }} /></Field>
-        <Field label="Email" error={errs.email}><TextInput type="email" inputMode="email" autoCapitalize="none" value={f.email} onChange={set("email")} /></Field>
-        <Field label="Nhóm khách" error={errs.groupId}><Select placeholder="Không thuộc nhóm" value={f.groupId} onChange={set("groupId")} options={(groups.data?.items ?? []).filter((g) => g.isActive).map((g) => ({ value: g.id, label: g.name }))} /></Field>
         <Field label="Địa chỉ" error={errs.address}><TextInput value={f.address} onChange={set("address")} /></Field>
-        <Field label={customer?.hasIdNumber ? "CCCD/giấy tờ (để trống nếu không đổi)" : "CCCD/giấy tờ (tùy chọn)"} hint="Lưu mã hóa; chỉ người có quyền mới xem được đầy đủ" error={errs.idNumber}>
-          <TextInput value={f.idNumber} onChange={set("idNumber")} autoComplete="off" inputMode="text" />
-        </Field>
         <Field label="Ghi chú" error={errs.note}><Textarea rows={2} value={f.note} onChange={set("note")} /></Field>
         {errs.form && <p className="wf-fld-err" role="alert">{errs.form}</p>}
         <div className="wf-modal-f">

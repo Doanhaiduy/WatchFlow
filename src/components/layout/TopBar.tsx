@@ -22,7 +22,7 @@ type Props = {
 };
 
 /** Thanh trên dạng viên thuốc kính (desktop): tiêu đề + mô tả, ô tìm 300px, quét QR, chuông, nút hành động chính (§4.2). */
-export function TopBar({ pathname, title, description, unread, primary, search = true, className }: Props) {
+export function TopBar({ pathname, title, description, primary, search = true, className }: Props) {
   const nav = matchNav(pathname);
   const hint = useShortcutHint();
   const PIcon = primary?.icon;

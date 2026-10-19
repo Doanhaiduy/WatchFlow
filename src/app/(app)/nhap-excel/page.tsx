@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { IMPORT_KINDS, IMPORT_KIND_INFO, type ImportKind } from "@/lib/import/columns";
 import { ALL_IMPORT_PERMS } from "@/lib/import/perms";
 
-// Nhập Excel hàng loạt (khách, đồng hồ tồn đầu kỳ, linh kiện). ?loai=khach|dong-ho|linh-kien chọn sẵn loại.
+// Nhập Excel hàng loạt (khách, đồng hồ). ?loai=khach|dong-ho chọn sẵn loại.
 export default function ImportPage() {
   const [kind, setKind] = useState<ImportKind | undefined>();
   const [ready, setReady] = useState(false);
@@ -17,7 +17,7 @@ export default function ImportPage() {
   }, []);
   return (
     <>
-      <PageHeader title="Nhập từ Excel" description="Nhập hàng loạt khách hàng, đồng hồ tồn đầu kỳ, linh kiện — xem trước từng dòng rồi mới ghi" />
+      <PageHeader title="Nhập từ Excel" description="Nhập hàng loạt khách hàng hoặc đồng hồ — xem trước từng dòng rồi mới ghi" />
       <RequirePerm perm={ALL_IMPORT_PERMS}>{ready && <ImportWizard initialKind={kind} />}</RequirePerm>
     </>
   );

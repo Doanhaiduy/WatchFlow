@@ -21,16 +21,17 @@ type Props = {
   href?: string;
   onAdd?: () => void;
   inCart?: boolean;
+  /** Nút chữ dưới thẻ (vd. CTV bấm “Đã bán”); disabled + hint khi không bấm được */
+  action?: { label: string; onClick?: () => void; disabled?: boolean; hint?: string };
   className?: string;
 };
 
 /** `.pc` — ảnh vuông gradient nhạt + chip trạng thái, tên, mã, giá 800, nút tròn "+". Lưới 2 cột (mobile) / 4 cột (desktop) `.wf-pgrid`. */
-export function ProductCard({ name, code, price, status, imageSrc, placeholder, href, onAdd, inCart, className }: Props) {
+export function ProductCard({ name, code, price, status, imageSrc, placeholder, href, onAdd, inCart, action, className }: Props) {
   const body = (
     <>
       <span className="im">
         {imageSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={imageSrc} alt="" loading="lazy" width={240} height={240} />
         ) : (
           placeholder
@@ -62,6 +63,11 @@ export function ProductCard({ name, code, price, status, imageSrc, placeholder, 
           </button>
         )}
       </div>
+      {action && (
+        <button type="button" className="wf-btn wf-btn-sm" style={{ marginTop: 8, width: "100%" }} onClick={action.onClick} disabled={action.disabled || !action.onClick} title={action.hint}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

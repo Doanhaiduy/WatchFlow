@@ -1,12 +1,13 @@
 import type { Tone } from "./cx";
 
 // Ánh xạ trạng thái nghiệp vụ → nhãn + tone (ui-design-system §3). Luôn kèm chữ, tone chỉ là phụ.
-export type StatusKind = "unit" | "repair" | "doc" | "warranty" | "reservation";
+export type StatusKind = "unit" | "repair" | "doc" | "warranty" | "claim";
 export type StatusInfo = { label: string; tone: Tone };
 
 export const STATUS_MAP: Record<StatusKind, Record<string, StatusInfo>> = {
   unit: {
     in_stock: { label: "Sẵn sàng bán", tone: "ok" },
+    // reserved / with_collaborator: trạng thái cũ (trước bản gọn) — dữ liệu cũ vẫn hiện đúng nhãn
     reserved: { label: "Đã giữ", tone: "hold" },
     with_collaborator: { label: "Đang ở CTV", tone: "info" },
     sold: { label: "Đã bán", tone: "neutral" },
@@ -20,13 +21,14 @@ export const STATUS_MAP: Record<StatusKind, Record<string, StatusInfo>> = {
     inspecting: { label: "Đang kiểm tra", tone: "check" },
     repairing: { label: "Đang sửa", tone: "repair" },
     waiting_parts: { label: "Chờ linh kiện", tone: "hold" },
-    completed: { label: "Hoàn thành", tone: "ok" },
+    completed: { label: "Sửa xong", tone: "ok" },
     delivered: { label: "Đã giao", tone: "neutral" },
     cancelled: { label: "Đã hủy", tone: "bad" },
   },
+  // Đơn bán (chỉ có đã ghi / đã hủy). draft/debt giữ cho dữ liệu cũ.
   doc: {
     draft: { label: "Nháp", tone: "neutral" },
-    confirmed: { label: "Đã xác nhận", tone: "ok" },
+    confirmed: { label: "Đã ghi", tone: "ok" },
     voided: { label: "Đã hủy", tone: "bad" },
     debt: { label: "Còn nợ", tone: "hold" },
   },
@@ -36,12 +38,13 @@ export const STATUS_MAP: Record<StatusKind, Record<string, StatusInfo>> = {
     expired: { label: "Hết hạn", tone: "neutral" },
     voided: { label: "Đã hủy", tone: "bad" },
   },
-  reservation: {
-    active: { label: "Đang giữ", tone: "hold" },
-    expired: { label: "Quá hạn", tone: "bad" },
-    converted: { label: "Đã chuyển bán", tone: "ok" },
-    cancelled: { label: "Đã hủy", tone: "neutral" },
-    forfeited: { label: "Tịch thu cọc", tone: "neutral" },
+  // CTV báo đã bán
+  claim: {
+    pending: { label: "Chờ xác nhận", tone: "hold" },
+    confirmed: { label: "Đã xác nhận", tone: "ok" },
+    rejected: { label: "Bị từ chối", tone: "bad" },
+    cancelled: { label: "Đã rút", tone: "neutral" },
+    voided: { label: "Đơn đã hủy", tone: "bad" },
   },
 };
 

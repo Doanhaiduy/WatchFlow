@@ -1,55 +1,67 @@
 "use client";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Undo2 } from "lucide-react";
+import { useState } from "react";
 import useSWR from "swr";
-import { errMsg } from "@/components/auth/helpers";
+import { errMsg, sapi } from "@/components/auth/helpers";
 import { RequirePerm } from "@/components/auth/RequirePerm";
-import type { MySale } from "@/components/collab/types";
+import { joinTitle } from "@/components/catalog/types";
+import type { MyClaim } from "@/components/collab/types";
+import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { useToast } from "@/components/ui/Toast";
 import { swrFetcher } from "@/lib/api-client";
-import { formatDateVn } from "@/lib/dates";
-import { formatVnd } from "@/lib/money";
+import { formatDateTimeVn } from "@/lib/dates";
 import { useSession } from "@/lib/session";
 
-const LABEL: Record<string, string> = { draft: "Chờ xác nhận", confirmed: "Đã xác nhận", voided: "Đã hủy" };
-
-export default function CtvOrdersPage() {
+// Các lần tôi báo đã bán và kết quả. Không có giá bán/doanh thu (CTV không xem).
+export default function CtvClaimsPage() {
   const { can } = useSession();
-  const { data, error, isLoading, mutate } = useSWR<{ items: MySale[] }>(can("collab.view_own") ? "/api/v1/collab/me/sales" : null, swrFetcher);
+  const toast = useToast();
+  const { data, error, isLoading, mutate } = useSWR<{ items: MyClaim[] }>(can("collab.view_own") ? "/api/v1/collab/me/claims" : null, swrFetcher, { refreshInterval: 60_000 });
+  const [busy, setBusy] = useState<string | null>(null);
+  const cancel = async (id: string) => {
+    setBusy(id);
+    try {
+      await sapi(`/api/v1/collab/me/claims/${id}/cancel`, { body: {} });
+      toast.success("Đã rút báo bán");
+      await mutate();
+    } catch (e) {
+      toast.error("Không rút được", errMsg(e));
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <>
-      <PageHeader title="Đơn của tôi" description="Trạng thái, phần bạn hưởng và đã nộp chưa" />
+      <PageHeader title="Báo bán của tôi" description="Kết quả các chiếc bạn đã báo bán" />
       <RequirePerm perm="collab.view_own">
         {isLoading ? <SkeletonList rows={4} /> : error ? (
           <div className="g wf-pad"><ErrorState description={errMsg(error)} onRetry={async () => (await mutate()) !== undefined} /></div>
         ) : data && data.items.length === 0 ? (
-          <div className="g wf-pad"><EmptyState icon={<ClipboardList size={24} />} title="Bạn chưa có đơn nào" description="Tạo đơn khi bán được một chiếc đang giữ." action={can("sale.create_draft") ? { label: "Tạo đơn", href: "/ctv/tao-don" } : undefined} /></div>
+          <div className="g wf-pad"><EmptyState icon={<ClipboardList size={24} />} title="Bạn chưa báo bán chiếc nào" description="Bán được chiếc nào, vào “Hàng của tôi” và bấm “Đã bán”." action={{ label: "Hàng của tôi", href: "/ctv" }} /></div>
         ) : (
-          <div className="wf-stack">
-            {data?.items.map((s) => (
-              <section key={s.id} className="g wf-pad" aria-label={s.code ?? "Đơn chờ xác nhận"}>
-                <div className="wf-dev-row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
-                  <b>{s.code ?? "Đơn chờ xác nhận"}</b>
-                  <StatusChip kind="doc" status={s.status} label={LABEL[s.status]} />
+          <ul className="wf-rcards" aria-label="Báo bán của tôi">
+            {data?.items.map((c) => (
+              <li key={c.id} className="wf-rcard">
+                <div className="wf-dev-row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <b className="wf-rcard-h">{joinTitle(c.brandName, c.modelName)}</b>
+                  <StatusChip kind="claim" status={c.status} />
                 </div>
-                <p className="wf-mute" style={{ fontSize: 12.5 }}>{s.customerName ?? "Khách"}{s.customerPhone ? ` · ${s.customerPhone}` : ""} · {formatDateVn(s.docDate)}</p>
-                {s.voidReason && <p className="wf-fld-err">Lý do hủy: {s.voidReason}</p>}
-                {s.lines.map((l, i) => (
-                  <div key={i} className="wf-cart-line">
-                    <div className="wf-dev-row" style={{ justifyContent: "space-between", flexWrap: "nowrap", alignItems: "flex-start" }}><span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{l.modelName} · {l.assetCode}</span><b className="wf-num" style={{ flex: "none" }}>{formatVnd(l.salePrice)}</b></div>
-                    {l.basePrice != null && (
-                      <p className="wf-mute" style={{ fontSize: 12.5 }}>
-                        Giá thu {formatVnd(l.basePrice)} · phần bạn hưởng <b style={{ color: "var(--wf-ink)" }}>{formatVnd(l.salePrice - l.basePrice)}</b> · {s.status === "confirmed" ? (l.settled ? "đã nộp" : "chưa nộp") : "chờ xác nhận"}
-                      </p>
-                    )}
+                <p className="wf-mute" style={{ fontSize: 12.5 }}>{c.assetCode} · khách {c.customerName} · {c.customerPhone}</p>
+                <p className="wf-mute" style={{ fontSize: 12.5 }}>Báo lúc {formatDateTimeVn(c.createdAt)}{c.decidedAt ? ` · xử lý ${formatDateTimeVn(c.decidedAt)}` : ""}</p>
+                {c.status === "rejected" && c.rejectReason && <p className="wf-fld-err">Lý do từ chối: {c.rejectReason}</p>}
+                {c.status === "pending" && (
+                  <div className="wf-dev-row" style={{ marginTop: 8 }}>
+                    <Button sm icon={<Undo2 size={14} aria-hidden="true" />} loading={busy === c.id} onClick={() => void cancel(c.id)}>Rút lại báo bán</Button>
                   </div>
-                ))}
-              </section>
+                )}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </RequirePerm>
     </>

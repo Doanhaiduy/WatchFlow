@@ -50,7 +50,7 @@ function View() {
             <div className="rl"><span>Mã phiếu</span><b>{r.code}</b></div>
             <div className="rl"><span>Ngày nhận</span><span>{formatDateTimeVn(r.receivedAt)}</span></div>
             {giao && r.deliveredAt && <div className="rl"><span>Ngày giao</span><span>{formatDateTimeVn(r.deliveredAt)}</span></div>}
-            <div className="rl"><span>Khách</span><span>{r.kind === "internal" ? "Máy cửa hàng" : (r.customerName ?? "—")}</span></div>
+            <div className="rl"><span>Khách</span><span>{r.customerName ?? "—"}</span></div>
             {r.customerPhone && <div className="rl"><span>SĐT</span><span>{r.customerPhone}</span></div>}
             <hr />
             <div>Máy: {r.watchLabel ?? "—"}{r.serialNo ? ` · SN ${r.serialNo}` : ""}</div>
@@ -61,15 +61,12 @@ function View() {
               <>
                 <hr />
                 {r.lines.map((l) => (
-                  <div key={l.id} className="rl" style={{ fontSize: "9.5pt" }}><span>{l.lineType === "service" ? l.serviceName : l.lineType === "part" ? `${l.partName} × ${l.qty}` : l.description}</span><span>{formatVnd(l.lineTotal)}</span></div>
+                  <div key={l.id} className="rl" style={{ fontSize: "9.5pt" }}><span>{l.lineType === "service" ? l.serviceName : l.description}</span><span>{formatVnd(l.lineTotal)}</span></div>
                 ))}
-                <div className="rl" style={{ fontWeight: 800 }}><span>Tổng</span><span>{formatVnd(r.finalTotal ?? r.linesTotal)}</span></div>
-                {(r.paidNet ?? 0) > 0 && <div className="rl"><span>Đã thu</span><span>{formatVnd(r.paidNet ?? 0)}</span></div>}
-                {(r.due ?? 0) > 0 && <div className="rl"><b>Còn nợ{r.dueDate ? ` (hẹn ${formatDateVn(r.dueDate)})` : ""}</b><b>{formatVnd(r.due ?? 0)}</b></div>}
-                {r.warranty && <div style={{ fontSize: "9pt", marginTop: "2mm" }}>Bảo hành {r.warranty.code} đến {formatDateVn(r.warranty.endDate)}</div>}
+                <div className="rl" style={{ fontWeight: 800 }}><span>Tổng</span><span>{r.chargeMode === "warranty_free" ? "Miễn phí (bảo hành)" : formatVnd(r.finalTotal ?? r.linesTotal)}</span></div>
+                {r.warranty && <div style={{ fontSize: "9pt", marginTop: "2mm" }}>Bảo hành sau sửa đến {formatDateVn(r.warranty.endDate)}</div>}
               </>
             )}
-            {!giao && (r.held ?? 0) > 0 && <div className="rl"><span>Đã đặt cọc</span><span>{formatVnd(r.held ?? 0)}</span></div>}
             <hr />
             <p style={{ fontSize: "9pt" }}>Trạng thái: {statusInfo("repair", r.status).label}</p>
             {!giao && st("store.repair_terms") && <p style={{ fontSize: "8.5pt" }}>{st("store.repair_terms")}</p>}
