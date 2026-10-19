@@ -1,7 +1,8 @@
 # Quy tắc nghiệp vụ (BR)
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · **Đây là nguồn sự thật nghiệp vụ.** Code và test bám theo; mâu thuẫn ⇒ sửa ở đây trước.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02`) · **Đây là nguồn sự thật nghiệp vụ.** Code và test bám theo; mâu thuẫn ⇒ sửa ở đây trước.
 > Cột **Thực thi**: `DB` ràng buộc/trigger · `FN` hàm `app.fn_*` · `API` lớp API · `UI` giao diện (chỉ là phần thưởng, không bao giờ là chốt chặn duy nhất). Tham số trong `[ ]` là khóa cấu hình ở `settings-catalog`.
+> **Từ `customer-feedback-02` (2026-10-18) nhóm LEAN ở dưới là luật hiện hành cho bán hàng/CTV/sửa chữa/báo cáo.** Các quy tắc còn lại của PUR, PART, SALE (01–16), RSV, TRD, WAR (02–04), COST, REP (04–06, 09–11, 13, 15), PAY, INV, COL (01–11) được **đóng băng**: hàm DB còn nhưng KHÔNG còn giao diện/API gọi tới (xem §Đã bỏ cuối file). Quy tắc nền (GEN, UNIT, SEC, BAK) vẫn đúng.
 > Quy tắc đã **hoãn/bỏ** (tài chính-quỹ, NCC, đổi trả, tiền công thợ, hoa hồng) liệt kê ở §Hoãn cuối file; nội dung đầy đủ ở `docs/99-archive/2026-10-16-full-scope/`.
 
 ## GEN — Quy tắc chung
@@ -214,6 +215,26 @@
 | BR-IMP-05 | **Linh kiện:** mã/tên/danh mục (danh mục phải có sẵn)/đơn vị/tồn đầu/giá vốn/ngưỡng cảnh báo. Linh kiện mới tạo (cần `part.manage`); tồn đầu > 0 ghi bằng một phiếu `opening` (giá vốn bình quân theo BR-PART/costing §4). Mã đã có ⇒ "trùng", mặc định bỏ qua; nếu người dùng chọn nhập thì **cộng** số lượng vào tồn. | `commitParts` | m11-import, SC-11 |
 | BR-IMP-06 | Quyền (cần đủ): khách `customer.create`; đồng hồ `purchase.create` + `purchase.confirm` + `catalog.view`; linh kiện `purchase.create` + `purchase.confirm` + `part.view` (+ `part.manage` cho mã mới). Mỗi lần nhập ghi **một** dòng audit tổng hợp `import.{kind}` (số đếm + mã phiếu, không dữ liệu cá nhân) qua `app.fn_audit_import`. | `src/lib/import/perms.ts`, 0019 | m11-import |
 
+## LEAN — Bản gọn (customer-feedback-02): ghi đơn bán, CTV nhiều người bán, sửa chữa gọn, báo cáo
+
+| ID | Quy tắc | Thực thi | Test |
+|---|---|---|---|
+| BR-SALE-20 | **Ghi đơn bán** (`fn_record_sale`, quyền `sale.confirm`): 1–20 chiếc `in_stock` (mỗi chiếc một dòng), **khách bắt buộc**, giá ≥ 0 từng chiếc, ngày chứng từ (BR-GEN-08), ghi chú. Đơn có hiệu lực ngay (`confirmed`, mã `HD-…`); **không** có nháp, thanh toán, nợ, giảm giá, thu cũ, giữ hàng, linh kiện. Chiếc → `sold`. Khách mới nhập tên (+ SĐT) ngay trên đơn: cùng SĐT dùng lại khách cũ. | FN, API | SC-19, UAT-03 |
+| BR-SALE-21 | **Hạn bảo hành của đơn:** mỗi dòng có bảo hành `sale` theo tình trạng chiếc [`warranty.shop_months.<tình trạng>`] hoặc số tháng chỉ định 0–120 (0 = không bảo hành); hiện trên đơn và phiếu in. Không có màn tra cứu bảo hành riêng. | FN | SC-19 |
+| BR-SALE-22 | **Hủy đơn** (`fn_void_sale`): trong [`sales.void_window_hours`] kể từ lúc ghi, `sale.void` + lý do ≥ 10 ký tự + nhập lại mật khẩu; chiếc → `in_stock`, báo bán CTV đã xác nhận → `voided`, bảo hành → `voided`. Đơn **cũ** có linh kiện / thu cũ / cọc / thanh toán / giá thu CTV đi đường cũ (`fn_void_sale_v1`). Sai nhập liệu ⇒ hủy rồi ghi lại (đơn đã ghi không sửa). | FN | SC-19, SC-15 |
+| BR-SALE-23 | **Doanh thu dòng = giá bán ghi trên đơn** (không có hạn mức giảm giá hay "bán dưới giá vốn" ở bản gọn); ghi nhận theo **ngày đơn**; đơn `voided` không tính. | Báo cáo | SC-19 |
+| BR-SALE-24 | Đơn bán **không theo dõi tiền**: không thanh toán, không còn nợ, không QR chuyển khoản. (Hàm thanh toán cũ còn trong DB nhưng không API nào gọi — BR-PAY-02 vẫn đúng: doanh thu không tính từ thanh toán.) | API | — |
+| BR-COL-12 | **Giao nhiều CTV:** chủ (`collab.manage`) giao một hay nhiều chiếc `in_stock` cho một hay nhiều CTV đang hoạt động — người dùng có quyền `collab.view_own`, tài khoản `active`, hồ sơ CTV chưa bị tắt (hồ sơ không bắt buộc) (`fn_offer_units`) ⇒ mỗi (chiếc, CTV) có một chào hàng `active` (`collaborator_offers`). Chiếc **vẫn `in_stock`** và cửa hàng vẫn bán trực tiếp được. Thu hồi theo từng CTV hoặc tất cả (`fn_withdraw_offer`), trừ khi có báo bán đang chờ. | FN, DB (unique một chào hàng/CTV/chiếc) | SC-18 |
+| BR-COL-13 | **Ai báo trước được giữ:** CTV bấm "Đã bán" (`fn_collab_claim`) kèm **tên + SĐT khách** (bắt buộc) và ghi chú; **không nhập giá**. Mỗi chiếc chỉ có **một** báo bán `pending` (unique index + khóa chiếc) ⇒ người sau nhận `WF-COL-CLAIMED`. Cửa hàng không ghi đơn bán chiếc đang có báo bán chờ (`WF-SALE-UNIT-CLAIMED`). | FN, DB | CT-14, SC-18 |
+| BR-COL-14 | **Chủ xác nhận báo bán** (`fn_confirm_claim`, `sale.confirm`) trong MỘT transaction: tạo đơn bán `confirmed` có `collaborator_id` (khách dùng lại theo SĐT), giá = **giá niêm yết hiện hành mặc định, chủ sửa được**, chiếc → `sold`, chào hàng của CTV thắng → `won`, các chào hàng còn lại → `lost` (+ thông báo), bảo hành theo BR-SALE-21. **Doanh thu cửa hàng = giá xác nhận**; giá CTV bán cho khách không ghi nhận. | FN | SC-18 |
+| BR-COL-15 | **Từ chối / rút:** `sale.confirm` từ chối kèm lý do ≥ 10 ký tự (`fn_reject_claim`) ⇒ báo bán `rejected`, chào hàng còn nguyên, chiếc mở lại cho CTV khác; CTV rút báo bán còn `pending` (`fn_cancel_claim`) ⇒ `cancelled`. Báo bán đã xử lý không đổi. | FN | SC-18 |
+| BR-COL-16 | **Tự đóng:** chiếc rời `in_stock` bằng bất kỳ đường nào (bán, ghi mất, kiểm tra lại…) ⇒ trigger đóng mọi chào hàng `active` (`lost`) và hủy báo bán `pending`. Hủy đơn không mở lại chào hàng cũ (giao lại nếu cần). Bất biến I13–I15 kiểm hằng đêm. | DB trigger, `fn_consistency_check` | CT-14, SC-18 |
+| BR-COL-17 | **CTV chỉ thấy** chiếc được giao (+ **giá niêm yết** tham khảo), báo bán của mình, **số chiếc** đã bán theo ngày/tháng/quý/năm. **Không bao giờ** thấy doanh thu, giá vốn, đơn, khách của người khác, chiếc không giao cho mình. Vai trò CTV chỉ còn `collab.view_own`; đọc qua `fn_my_offers/fn_my_claims/fn_my_collab_stats` (không có quyền SELECT bảng đơn/khách/chiếc). | RLS, FN | PT-14 |
+| BR-COL-18 | **Thống kê CTV cho chủ** (`rpt_collab_sales`, `collab.view`): theo kỳ (ngày/tháng/quý/năm) và theo từng CTV — số chiếc + doanh thu (Σ giá xác nhận). | FN, API | SC-18 |
+| BR-REP-17 | **Sửa chữa gọn (chỉ chủ):** phiếu chỉ cho máy khách; khách bắt buộc có SĐT; khoản tiền = dịch vụ (giá mặc định theo loại việc) hoặc khoản khác tự nhập; không linh kiện, cọc, thu tiền, nợ, duyệt báo giá, sửa nội bộ. Doanh thu = tổng khoản **lúc giao máy** (BR-REP-07); bảo hành miễn phí chọn từ bảo hành còn hạn của khách; bảo hành sau sửa theo [`warranty.repair_days`]. | FN, API | SC-08 |
+| BR-RPT-01 | **Chỉ 3 báo cáo:** Doanh thu (cửa hàng / CTV / sửa chữa; số đơn, số chiếc), Số lượng đồng hồ (đã bán theo hãng & kênh, đang có theo hãng), Cộng tác viên (chỉ `collab.view`); theo ngày/tháng/quý/năm; xuất Excel cần `report.export` (BR-SEC-02, PT-05). Tổng quan chỉ trả khóa theo quyền (không giá vốn/lãi/nợ/cọc). | FN | SC-10, PT-05 |
+| BR-IMP-07 | **Nhập Excel gọn:** chỉ còn *khách* (tên, SĐT, địa chỉ, ghi chú) và *đồng hồ* (loại, serial, tình trạng, hạng, giá niêm yết, vị trí, ghi chú — một phiếu `opening`, giá nhập 0). Bỏ linh kiện, CCCD, nhóm khách, giá vốn. Các quy tắc BR-IMP-01…03, 06 giữ nguyên. | API | UAT-02 |
+
 ## Hoãn / thay thế (không còn trong phạm vi xây)
 
 | Quy tắc cũ | Số phận | Lý do |
@@ -231,3 +252,9 @@
 | BR-FIN-10 (hủy phiếu thu/chi) | → BR-PAY-05 | |
 | BR-COM-01…04 (hoa hồng) | Thay bằng BR-COL-01…11 | CF-03 |
 | BR-SEC-05 (phần `ledger_entries`) | Rút gọn | CF-07 |
+| BR-PUR-02…03, 05…10; BR-PART-*; BR-INV-*; BR-COST-* | **Đóng băng** (CF-14): nhập nhiều dòng & chi phí, linh kiện, kiểm kê, giá vốn/lãi — còn hàm DB, không còn giao diện/API | customer-feedback-02 |
+| BR-SALE-01…16 (trừ nền BR-SALE-02 "không bán trùng", 10 "hủy", 11 "in lại") | Thay bằng BR-SALE-20…24 | CF-13 |
+| BR-RSV-*, BR-TRD-*, BR-PAY-01, 03…07 | **Đóng băng** (CF-14, CF-13) — BR-PAY-02 vẫn đúng | customer-feedback-02 |
+| BR-WAR-02…04 | Thay bằng BR-SALE-21 (hạn bảo hành trên đơn) + chọn bảo hành khi nhận máy sửa (BR-REP-17) | CF-15 |
+| BR-COL-01…11 (giá thu, đơn nháp CTV, quyết toán, thu hồi, thống kê cũ) | Thay bằng BR-COL-12…18 | CF-10…12 |
+| BR-REP-04…06, 09…11, 13, 15 | Thay bằng BR-REP-17 | CF-16 |

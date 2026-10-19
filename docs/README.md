@@ -1,13 +1,13 @@
 # Bản đồ tài liệu WatchFlow
 
-> Phiên bản bộ docs: **v0.2 — 2026-10-16** (giai đoạn thiết kế; đã cập nhật theo phản hồi khách vòng 1 và chốt giao diện Glass). Tài liệu là **nguồn sự thật**; mã nguồn bám theo. Mâu thuẫn ⇒ dừng và hỏi (xem `CLAUDE.md`).
-> Thay đổi lớn so với v0.1: bỏ Thu chi/quỹ, NCC & công nợ, Đổi trả, Thợ; đổi mô hình CTV; thêm Bảo hành thay đổi trả; thêm hệ giao diện Glass + Lucian. **Đọc `01-product/customer-feedback-01` trước.** Bản v0.1 đầy đủ lưu ở `99-archive/`.
+> Phiên bản bộ docs: **v0.3 — 2026-10-18** (đã cập nhật theo phản hồi khách vòng 2: rút gọn về **sáu việc** của chủ cửa hàng). Tài liệu là **nguồn sự thật**; mã nguồn bám theo. Mâu thuẫn ⇒ dừng và hỏi (xem `CLAUDE.md`).
+> Thay đổi lớn: vòng 1 (`customer-feedback-01`) bỏ Thu chi/quỹ, NCC & công nợ, Đổi trả, Thợ; vòng 2 (**`customer-feedback-02`, đọc trước**) bỏ thêm thanh toán/công nợ/giữ hàng/thu cũ/nhập nhiều dòng/linh kiện/kiểm kê/giá vốn–lãi, đổi mô hình CTV thành **"giao nhiều CTV – ai báo bán trước được giữ – chủ xác nhận"**, đơn bán chỉ ghi *chiếc + khách + giá + ngày*. Phần đã bỏ vẫn còn ở DB (đóng băng) và ở `99-archive/` + lịch sử git.
 
 ## Cách đọc
 
 | Bạn là | Đọc theo thứ tự |
 |---|---|
-| Chủ cửa hàng / người ra quyết định | `01-product/customer-feedback-01` → `01-product/vision-scope` → `01-product/requirements` → `01-product/ux-and-navigation` → `06-quality/uat-acceptance` |
+| Chủ cửa hàng / người ra quyết định | `01-product/customer-feedback-02` → `01-product/customer-feedback-01` → `01-product/vision-scope` → `01-product/requirements` → `01-product/ux-and-navigation` → `06-quality/uat-acceptance` |
 | AI/dev bắt đầu code | `CLAUDE.md` → `04-engineering/build-plan` → (module cần làm) `02-domain/*` → `03-architecture/data-model` + `integrity-and-concurrency` → `04-engineering/migrations`; **làm giao diện:** `03-architecture/ui-design-system` + `01-product/ux-and-navigation` + `design/ui-preview/v6-glass.html` (+ skill `/lucian-uxui:lucian-uxui`) |
 | Người kiểm thử / kiểm định | `02-domain/business-rules` → `06-quality/golden-scenarios` → `06-quality/test-plan` |
 | Người vận hành | `05-operations/runbook` → `05-operations/backup-restore` |
@@ -16,6 +16,7 @@
 
 | # | Tài liệu | Nội dung | Trạng thái |
 |---|---|---|---|
+| 01 | [customer-feedback-02](01-product/customer-feedback-02.md) | **Phản hồi vòng 2 (hiện hành, thắng vòng 1 nếu mâu thuẫn)** → sáu việc của chủ cửa hàng, mô hình CTV mới, danh sách cái bỏ (CF-10…18) | Duyệt |
 | 01 | [customer-feedback-01](01-product/customer-feedback-01.md) | **Phản hồi của khách vòng 1** → quyết định thay đổi phạm vi (CF-01…09), phần cần khách xác nhận (Q8–Q19) | Duyệt (chốt sơ) |
 | 01 | [vision-scope](01-product/vision-scope.md) | Mục tiêu, phạm vi, **quyết định đã chốt**, giả định, câu hỏi mở | Duyệt |
 | 01 | [requirements](01-product/requirements.md) | Toàn bộ yêu cầu chức năng đánh số FR-xxx, gắn module/mốc/BR/test | Duyệt |
@@ -65,8 +66,8 @@
 | `CT-nn` | Ca kiểm thử đồng thời | test-plan |
 | `PT-nn` | Ca kiểm thử phân quyền | test-plan |
 | `UAT-nn` | Ca nghiệm thu | uat-acceptance |
-| `M0…M9` (+`M5a`,`M5b`) | Mốc xây dựng | build-plan |
-| `CF-nn` | Phản hồi của khách (vòng 1) | customer-feedback-01 |
+| `M0…M10` (+`M5a`,`M5b`) | Mốc xây dựng (M10 = đợt rút gọn vòng 2) | build-plan |
+| `CF-nn` | Phản hồi của khách (vòng 1: CF-01…09, vòng 2: CF-10…18) | customer-feedback-01, customer-feedback-02 |
 | `Q<n>` | Câu hỏi mở cần khách/kế toán xác nhận | vision-scope §7, customer-feedback-01 §4 |
 | `WF-<MODULE>-<LỖI>` | Mã lỗi hiển thị cho người dùng | api-conventions |
 

@@ -1,6 +1,6 @@
 # Kịch bản vàng (Golden Scenarios)
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`; số liệu SC-07, SC-08, SC-12, SC-13, SC-16 là **mới**) · **Số liệu ở đây là kết quả đúng** — code lệch số ⇒ code sai (hoặc docs sai và phải sửa ở đây trước). Mỗi SC có file test `scripts/test-api/sc-NN-*.mjs`; ID dùng trong tên test.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02`: **SC-18, SC-19 là mới và là kịch bản hiện hành cho CTV / ghi đơn bán**; **SC-07, SC-08, SC-10, SC-15 đã viết lại cho bản gọn**; SC-01…06, 09, 11, 12, 13, 14, 16, 17 thuộc phần đã đóng băng — thiết kế tham khảo, không còn test chạy) · **Số liệu ở đây là kết quả đúng** — code lệch số ⇒ code sai (hoặc docs sai và phải sửa ở đây trước). Mỗi SC hiện hành được kiểm bởi `tests/api/*.test.mjs` (ID dùng trong tên test: `m12-sales` SC-19/CT-01/CT-07, `m12-collab` SC-18/CT-14/PT-14, `m6-repairs` SC-07/SC-08, `m8-reports` SC-10, `db-simple-mode` SC-18/19 mức DB).
 > Bản có quỹ/đổi trả/thợ (SC cũ): `docs/99-archive/2026-10-16-full-scope/06-quality/golden-scenarios.md`.
 
 ## 0. Quy ước
@@ -134,49 +134,45 @@ Chi phí: **Vận chuyển 120.000** (`by_value`). Xác nhận.
 
 ---
 
-## SC-07 — Bảo hành (thay cho đổi trả — CF-02)
-**BR:** BR-WAR-01…05, BR-COST-03, BR-REP-16 · **FR:** FR-WAR-01…03, FR-REP-18 · **Nối tiếp SC-02** (A bán 2026-11-03 cho KH-A, bảo hành đến 2027-11-03)
+## SC-07 — Bảo hành: sửa miễn phí theo hạn trên đơn bán (thay cho đổi trả — CF-02, CF-15)
+**BR:** BR-SALE-21, BR-REP-17, BR-WAR-01 · **FR:** FR-SALE-21, FR-REP-19 · Người dùng: owner (sales xem được phiếu bán nhưng không mở phiếu sửa) · Tiền đề: F0 + chiếc **A** (mới, niêm yết 8.500.000) bán 2026-11-03 cho KH-A giá **8.200.000** (bảo hành mặc định 12 tháng ⇒ đến 2027-11-03)
 
 **Bước:**
-1. 2026-11-20 khách quay lại vì lỗi dây. `owner` vào **Bảo hành**, tìm theo serial `SK-A-001` ⇒ thấy bảo hành `active`, hạn 2027-11-03.
-2. **Nhận máy bảo hành** ⇒ phiếu sửa `warranty_free` liên kết `warranty_id` (khách, máy điền sẵn). Dùng `LK-0001` Dây da ×1 (bình quân 80.000), xác nhận dùng, hoàn thành, giao. Không thu tiền.
-3. Sau đó, đồng hồ giả 2027-11-10 (bảo hành đã hết hạn): mở phiếu `warranty_free` ⇒ `WF-WAR-EXPIRED`; mở phiếu `paid` bình thường được.
+1. 2026-11-20 khách quay lại vì lỗi dây. `owner` mở **Nhận máy sửa**, chọn KH-A ⇒ danh sách "Bảo hành còn hạn" của khách có A (hạn 2027-11-03); `sales` gọi cùng danh sách ⇒ 403.
+2. Chọn bảo hành ⇒ phiếu sửa `warranty_free` liên kết `warranty_id` (khách, máy điền sẵn). Thêm một khoản *Bảo dưỡng máy*; sửa xong; giao máy. Không thu tiền, không ghi nợ.
+3. Đồng hồ giả 2027-11-10 (bảo hành đã hết hạn): nhận máy chọn lại bảo hành đó ⇒ `WF-WAR-EXPIRED`; nhận máy tính phí bình thường được.
 
 **Kỳ vọng:**
 | Mục | Giá trị |
 |---|---|
-| Phiếu bảo hành | `charge_mode=warranty_free`; doanh thu sửa chữa **0**; không thanh toán |
-| Kho | `LK-0001` 10 → **9** |
-| Chi phí bảo hành | **80.000** (giá vốn linh kiện) ⇒ **lãi gộp sửa chữa ngày 2026-11-20 = −80.000** |
-| Lãi gộp bán hàng SC-02 | **Không đổi** (2.140.000); chi phí bảo hành không vào giá vốn hàng đã bán (BR-COST-03) |
-| Bảo hành bán | Vẫn `active` đến 2027-11-03; sau 2027-11-03 job đặt `expired` |
-| Thợ | Không có phân công; chỉ `owner` thao tác (PT-04) |
-**Phủ định:** `sales` (không có `repair.*`) mở phiếu ⇒ 403; **không tồn tại** endpoint đổi trả/hoàn tiền (`/returns` ⇒ 404); hủy phiếu bán SC-02 ⇒ bảo hành `voided` ⇒ `WF-WAR-NOT-FOUND`/không mở được phiếu bảo hành.
+| Phiếu bảo hành | `charge_mode=warranty_free`; doanh thu sửa chữa **0** (dù có khoản tiền ghi trên phiếu) |
+| Doanh thu đơn bán A | **Không đổi** (8.200.000) |
+| Bảo hành bán | Vẫn `active` đến 2027-11-03; sau đó job đặt `expired` |
+**Phủ định:** không tồn tại API đổi trả/hoàn tiền (404); `warranties/{id}/open-repair` đã gỡ (404); hủy đơn bán ⇒ bảo hành `voided` ⇒ không còn trong danh sách chọn. Kiểm bởi `tests/api/m6-repairs.test.mjs`.
 
 ---
+---
 
-## SC-08 — Sửa chữa máy khách có cọc, linh kiện (gọn)
-**BR:** BR-REP-01…07/09, BR-PART-02/03, BR-WAR-01 · **FR:** FR-REP-01…14, FR-PAY-02 · Người dùng: owner
+## SC-08 — Sửa chữa máy khách (gọn): nhận máy → khoản tiền → giao ⇒ doanh thu
+**BR:** BR-REP-01…03, 07, 16, 17, BR-WAR-01 · **FR:** FR-REP-19 · Người dùng: owner
 
 **Bước:**
-1. 2026-11-04 `owner` nhận máy của KH-A: Casio, serial `CS-9999`, tình trạng "trầy kính, dây mòn", lỗi "chạy chậm", **không chụp ảnh** (hợp lệ — ảnh tùy chọn), cọc **200.000 tiền mặt**. `received`.
-2. `inspecting` → `repairing` (không cần ghi khách đồng ý vì `repair.require_quote_approval=false`); thêm dòng: **Bảo dưỡng máy 300.000** (dịch vụ), **Dây da 20mm ×1 = 150.000** (`LK-0001`), **Kính sapphire ×1 = 450.000** (`LK-0002`). Tạm tính **900.000**.
-3. **Xác nhận dùng** từng linh kiện ⇒ trừ kho. `completed`.
-4. 2026-11-08 `delivered`: khách trả thêm **700.000 chuyển khoản**.
+1. 2026-11-04 `owner` nhận máy: khách mới "Anh Mới" SĐT `0977 111 222` (nhập ngay trên phiếu), Casio serial `CS-9999`, tình trạng "trầy kính, dây mòn", lỗi "chạy chậm", hẹn trả 2026-11-10. Không ảnh (hợp lệ). `received`, mã `SC-2026-nnnn`.
+   *Phủ định:* khách chưa có SĐT ⇒ `WF-VALIDATION`; thiếu lỗi/khách ⇒ 422; lần nhận sau cùng SĐT dùng lại **cùng khách**.
+2. `inspecting` → `repairing`; thêm khoản: **Bảo dưỡng máy** (dịch vụ, mặc định **300.000**) + **Thay dây da** (khoản khác) **200.000**. Tạm tính **500.000**. Khoản khác không nội dung ⇒ 422.
+3. `completed` ⇒ khóa các khoản (thêm khoản ⇒ `WF-REP-LOCKED`); doanh thu **chưa** ghi.
+4. 2026-11-08 `delivered` (không thu tiền ở hệ thống).
 
 **Kỳ vọng:**
 | Mục | Giá trị |
 |---|---|
-| Kho | `LK-0001` **10 → 9** (bình quân 80.000); `LK-0002` **5 → 4** (bình quân 250.000) |
-| Giá vốn linh kiện chốt | 80.000 + 250.000 = **330.000** |
-| Doanh thu sửa chữa (ghi nhận ngày 2026-11-08) | **900.000** |
-| **Lãi gộp sửa chữa** | 900.000 − 330.000 = **570.000** (không có tiền công thợ) |
-| Thanh toán | `repair_receipt`: 200.000 `cash` (2026-11-04) + 700.000 `bank_transfer` (2026-11-08); `due` = 0 |
+| Doanh thu sửa chữa (ghi nhận ngày giao 2026-11-08) | **500.000** |
 | Bảo hành sau sửa | 90 ngày từ 2026-11-08 → **2027-02-06** |
-**Phủ định:** `sales` (không có `repair.*`) mở phiếu ⇒ 403 (PT-04); dùng linh kiện vượt tồn ⇒ `WF-REP-PART-INSUFFICIENT`; nhận máy khách thiếu SĐT ⇒ `WF-VALIDATION`.
+| Phiếu | Không có cọc/thanh toán/còn nợ/giá vốn/lãi (phản hồi không chứa các trường đó) |
+| Hủy | Hủy phiếu `received…repairing` cần lý do ≥ 10 ký tự ⇒ `cancelled`, doanh thu 0; hủy phiếu đã giao ⇒ lỗi |
+**Phủ định:** `sales`/`warehouse`/CTV mở màn/API sửa chữa ⇒ 403 (PT-04); không có API thợ/linh kiện (404). Kiểm bởi `tests/api/m6-repairs.test.mjs`.
 
-**8b — Chỉ thay pin:** nhận máy, dòng dịch vụ **Thay pin 100.000** + linh kiện `LK-0004` Pin ×1 giá bán **40.000** (bình quân 15.000). Giao & thu **140.000 tiền mặt**. **Kỳ vọng:** doanh thu 140.000; giá vốn linh kiện 15.000; **lãi gộp sửa = 125.000**; `LK-0004` 50 → 49.
-
+---
 ---
 
 ## SC-09 — Sửa nội bộ (vốn hóa vào giá vốn) rồi bán
@@ -196,26 +192,28 @@ Chi phí: **Vận chuyển 120.000** (`by_value`). Xác nhận.
 
 ---
 
-## SC-10 — Tổng hợp ngày (SC-01 → SC-04): đối chiếu doanh thu – thực thu – nợ – báo cáo
-**BR:** BR-PAY-02/07, BR-SALE-12, BR-COST-02, BR-UNIT-04 · **FR:** FR-DASH-*, FR-RPT-*, FR-COST-06/07, FR-PAY-06 · Người dùng: owner
+## SC-10 — Báo cáo gọn: doanh thu / số lượng đồng hồ / CTV trên một ngày (2027-01-03)
+**BR:** BR-RPT-01, BR-SALE-23, BR-COL-14, BR-COL-18, BR-REP-17 · **FR:** FR-RPT-13, FR-DASH-01/11, FR-COL-17 · Người dùng: owner (+ sales, warehouse, CTV cho phần quyền)
 
-Chạy SC-01, SC-02, SC-03, SC-04(a) [2026-11-02/03], rồi SC-04(b) [2026-11-05] trên cùng DB.
+Dữ liệu trong ngày 2027-01-03 (đồng hồ giả): `sales` ghi đơn #1 A **8.200.000** (niêm yết 8.500.000) và đơn #2 C **6.500.000** (khách vãng lai); CTV C1 được giao E (niêm yết **1.800.000**), báo "đã bán", `owner` xác nhận với giá mặc định; `owner` nhận và giao một máy sửa thu **140.000**.
 
-**Kỳ vọng (cuối ngày 2026-11-03):**
+**Kỳ vọng (khoảng 2027-01-03 → 2027-01-03):**
 | Chỉ số | Giá trị |
 |---|---|
-| Doanh thu | 8.200.000 + 6.500.000 + 1.800.000 = **16.500.000** |
-| Giá vốn hàng bán | 6.060.000 + 4.848.000 + 1.212.000 = **12.120.000** |
-| Lãi gộp | 2.140.000 + 1.652.000 + 588.000 = **4.380.000** (= 16.500.000 − 12.120.000 ✓) |
-| Thực thu (ngày 03) | tiền mặt 5.000.000 + 6.500.000 + 500.000 = 12.000.000; chuyển khoản 3.200.000 ⇒ **15.200.000** |
-| Khách còn nợ | **1.300.000** (KH-B) = Doanh thu 16.500.000 − Thực thu 15.200.000 ✓ |
-| Số đồng hồ tồn kho / có thể bán | **0 / 0**; đã bán **3** |
-| Giá trị tồn | Đồng hồ **0**; linh kiện **2.750.000** |
+| Doanh thu bán tại cửa hàng | 8.200.000 + 6.500.000 = **14.700.000** |
+| Doanh thu CTV bán | **1.800.000** (giá chủ xác nhận) |
+| Doanh thu sửa chữa | **140.000** |
+| **Tổng doanh thu** | **16.640.000** |
+| Số đơn bán / số chiếc / trong đó CTV / số máy sửa | **3 / 3 / 1 / 1** |
+| Số lượng đồng hồ đã bán trong kỳ (tổng, cửa hàng, CTV) | **3 / 2 / 1** |
+| Báo cáo CTV (owner) | C1: **1 chiếc, 1.800.000**; theo kỳ cùng số |
+| Cùng khoảng, nhóm tháng/quý/năm | Tổng vẫn **16.640.000** (1 dòng mỗi nhóm) |
+| Ngày 2027-01-05 (không phát sinh) | `[]` |
 
-**Sau 2026-11-05 (thu thêm 1.000.000 chuyển khoản):** khách còn nợ **300.000**; thực thu ngày 05 = **1.000.000**; **tổng thực thu 16.200.000** = Doanh thu 16.500.000 − nợ 300.000 ✓.
+**Kiểm chéo:** Tổng quan (`rpt_dashboard`) = báo cáo cho cùng khoảng; xuất Excel cùng số.
+**Phủ định (PT-05, PT-14):** không có giá vốn/lãi/nợ/thực thu trong bất kỳ phản hồi nào; `sales` xem doanh thu + số lượng và xuất file được (có `report.export`) nhưng báo cáo CTV ⇒ 403; `warehouse` chỉ xem số lượng đồng hồ (doanh thu ⇒ 403, xuất file ⇒ 403); CTV: mọi báo cáo ⇒ 403 và Tổng quan không có thẻ số. Kiểm bởi `tests/api/m8-reports.test.mjs`.
 
-**Kiểm chéo:** dashboard = báo cáo R1/R2/R4/R6/R8 cho cùng khoảng ngày; xuất Excel cùng số; `sales` xem R1 chỉ thấy doanh thu, **không** thấy giá vốn/lãi (PT-05).
-
+---
 ---
 
 ## SC-11 — Làm tròn, phân bổ & bình quân linh kiện
@@ -302,14 +300,15 @@ Thuộc tính (property test): với mọi đầu vào ngẫu nhiên, **Σ phân
 
 ---
 
-## SC-15 — Hủy phiếu bán trong cửa sổ
-**BR:** BR-SALE-10, BR-PAY-05, BR-WAR-05 · **FR:** FR-SALE-15, FR-PAY-04, FR-WAR-05 · **Nối tiếp SC-02**
+## SC-15 — Hủy đơn bán trong cửa sổ (nhập nhầm)
+**BR:** BR-SALE-22, BR-SALE-21 · **FR:** FR-SALE-22 · Tiền đề: đơn **Q** ghi 2026-11-03 (chiếc niêm yết 8.500.000 bán 8.200.000 cho KH-A, bảo hành 12 tháng)
 
-**Bước:** cùng ngày 2026-11-03 (≤ 24 giờ) `owner` hủy phiếu SC-02 với lý do "Nhập nhầm khách".
+**Bước:** cùng ngày (≤ 24 giờ) `sales` thử hủy ⇒ 403; `owner` hủy khi chưa nhập lại mật khẩu ⇒ `WF-SEC-REAUTH`; lý do ngắn ("ngắn") ⇒ 422; sau nhập lại mật khẩu + lý do "Nhập nhầm khách hàng" ⇒ thành công; hủy lần hai ⇒ `WF-DOC-NOT-DRAFT`.
 
-**Kỳ vọng:** A `in_stock` (đảo `sold`); hai `payments` của phiếu `voided` (không xóa); phiếu `voided` loại khỏi doanh thu (doanh thu ngày 03 = 0) và thực thu (0); bảo hành `voided`; khách không còn nợ phiếu này.
-**Phủ định:** `sales` thử hủy ⇒ 403; hủy sau 25 giờ ⇒ `WF-SALE-VOID-EXPIRED`; phiếu đã dùng cọc (SC-05a) ⇒ `WF-SALE-VOID-NOT-ALLOWED`.
+**Kỳ vọng:** chiếc `in_stock` (đảo `sold`); đơn `voided` (không xóa), loại khỏi doanh thu; bảo hành `voided`; báo bán CTV (nếu đơn do CTV bán) `voided` và chào hàng **không** tự mở lại (giao lại được).
+**Phủ định:** ghi lại đơn mới cho cùng chiếc rồi để quá 25 giờ ⇒ hủy bị `WF-SALE-VOID-EXPIRED`. Kiểm bởi `tests/api/m12-sales.test.mjs`, `m12-collab.test.mjs`.
 
+---
 ---
 
 ## SC-16 — Hủy đơn bán CTV & hủy quyết toán
@@ -348,3 +347,38 @@ Thuộc tính (property test): với mọi đầu vào ngẫu nhiên, **Σ phân
 | Tách bạch doanh thu/thực thu/cọc/phần CTV | 10, 13 |
 | Kiểm kê, tồn lâu, cảnh báo | 14 |
 | Làm tròn | 11 |
+
+---
+
+## SC-18 — Cộng tác viên: giao nhiều người → ai báo trước được → xác nhận → thống kê (CF-10…12)
+**BR:** BR-COL-12…18, BR-SALE-21, BR-SEC-08 · **FR:** FR-COL-12…17, FR-SALE-21 · Người dùng: owner, sales, C1, C2 · Tiền đề: F0 + 4 chiếc `in_stock` **A** (niêm yết 8.500.000), **B** (5.000.000), **C** (6.000.000), **D** (3.000.000)
+
+**Bước:**
+1. `owner` giao **A cho C1 và C2**, **B cho C2**. Kỳ vọng: A, B vẫn `in_stock`; chào hàng: A×2, B×1 (`active`); giao lại A cho C1 ⇒ không tạo thêm; `sales` giao ⇒ 403; giao chiếc `inspecting` ⇒ `WF-COL-UNIT-NOT-OFFERABLE`. C1 thấy đúng A (niêm yết 8.500.000), **không** thấy giá vốn/đơn/khách; C2 thấy A, B.
+2. **C1** báo "Đã bán" A (khách "Khách Thử", 0988 123 456). ⇒ báo bán `pending`; **C2** báo A ⇒ `WF-COL-CLAIMED`; C1 báo lại ⇒ `WF-COL-CLAIMED-SELF`; máy C2 hiện A "CTV khác đã báo bán". `sales` ghi đơn bán A ⇒ `WF-SALE-UNIT-CLAIMED`; `owner` thu hồi chào hàng A của C1 ⇒ `WF-COL-CLAIM-PENDING`. C1/C2 không tự xác nhận được (403).
+3. **Đua đồng thời:** C1 và C2 cùng báo bán B ⇒ đúng **một** thành công, người kia `WF-COL-CLAIMED` (CT-14).
+4. `sales` **xác nhận** báo bán A với giá mặc định ⇒ đơn `HD-…` **8.500.000**, A `sold`; chào hàng C1 `won`, C2 `lost` (+ thông báo cho C2); khách "Khách Thử" tạo mới (cùng SĐT lần sau dùng lại); bảo hành 12 tháng (hàng mới); dòng bán có giá vốn chốt (nội bộ). C1 xem được báo bán `confirmed`, **không** xem được đơn/giá bán.
+5. `owner` xác nhận báo bán B với giá **4.500.000** (sửa giá) ⇒ doanh thu dòng 4.500.000; `sales` từ chối một báo bán với lý do ngắn ⇒ `WF-REASON-REQUIRED`; lý do đủ ⇒ `rejected`, chào hàng còn nguyên, chiếc mở lại.
+6. Ghi mất chiếc C khi đang giao C1 và có báo bán chờ ⇒ chào hàng `lost`, báo bán `cancelled` (trigger). `owner` hủy đơn A trong 24 giờ ⇒ A `in_stock`, báo bán `voided`, bảo hành `voided`; chào hàng KHÔNG tự mở lại; giao lại được.
+
+**Kỳ vọng tổng hợp:**
+| Mục | Giá trị |
+|---|---|
+| Doanh thu CTV (sau bước 5, trước hủy A) | 8.500.000 + 4.500.000 = **13.000.000**, số chiếc **2** |
+| `rpt_collab_sales` (owner) | theo CTV: C1 8.500.000 (1 chiếc), C2 4.500.000 (1 chiếc) hoặc ngược lại theo người báo trước; `sales`/CTV gọi ⇒ `WF-AUTH-FORBIDDEN` |
+| `fn_my_collab_stats` (C1) | chỉ `period_start`, `units_sold` — **không cột tiền** |
+| Bất biến | `fn_consistency_check()` sạch (I4, I8, I11, I13, I14, I15) |
+
+---
+
+## SC-19 — Ghi đơn bán gọn, bảo hành, hủy trong hạn, in (CF-13/15)
+**BR:** BR-SALE-20…24, BR-SALE-11 · **FR:** FR-SALE-20…22 · Người dùng: sales, owner · Tiền đề: F0 + chiếc **A** (mới, niêm yết 9.000.000), **B** (cũ hạng A, 2.500.000)
+
+**Bước:**
+1. `sales` ghi đơn: khách mới "Khách Mẫu" (0912 000 111), A giá **8.700.000** (bảo hành mặc định), B giá **2.500.000** với bảo hành **0**. ⇒ đơn `HD-…` tổng **11.200.000**; A, B `sold`; bảo hành chỉ cho A (đến +12 tháng); **không** có thanh toán/nợ; niêm yết 11.500.000 nên "bán thấp hơn 300.000" chỉ hiển thị, không bị chặn.
+2. Ghi lại chiếc đã bán / trùng chiếc trong đơn / ngày tương lai / ghi lùi quá hạn mức (không có `doc.backdate`) / thiếu khách / `warehouse` ghi đơn ⇒ lần lượt `WF-SALE-UNIT-UNAVAILABLE`, `WF-VALIDATION`, `WF-DOC-FUTURE`, `WF-DOC-BACKDATE`, `WF-SALE-CUSTOMER-REQUIRED`, `WF-AUTH-FORBIDDEN`.
+3. `sales` thử hủy ⇒ 403; `owner` hủy với lý do ngắn ⇒ `WF-REASON-REQUIRED`; lý do đủ ⇒ A, B về `in_stock`, bảo hành `voided`. Hủy lần hai ⇒ `WF-DOC-NOT-DRAFT`. Đơn ghi quá 24 giờ ⇒ `WF-SALE-VOID-EXPIRED`.
+4. In phiếu lần 1 ⇒ phiếu thường (kèm hạn bảo hành từng chiếc); lần 2 ⇒ "BẢN IN LẠI" + audit.
+
+**Kỳ vọng:** `rpt_revenue` ngày đó: doanh thu **11.200.000** (trước khi hủy), số đơn 1, số chiếc 2, không giá vốn/lãi trong bất kỳ phản hồi nào; `fn_consistency_check()` sạch.
+

@@ -1,6 +1,6 @@
 # Mô hình bảo mật & phân quyền
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Quy tắc gốc: BR-SEC-*, BR-COST-06, BR-COL-09, ADR-003/004/005
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02` — xem **§8c**: CTV chỉ còn `collab.view_own`, không còn API giá vốn/CCCD) · Quy tắc gốc: BR-SEC-*, BR-COL-17, ADR-003/004/005
 
 ## 1. Các lớp bảo vệ (phòng thủ chiều sâu)
 
@@ -78,6 +78,8 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | | `stock.writeoff` | Thanh lý/ghi mất / khôi phục chiếc — nhạy cảm |
 | **reports** | `report.sales`, `report.inventory`, `report.export` | Báo cáo doanh thu / kho / quyền xuất file (xuất vẫn tuân quyền dữ liệu) |
 
+**Đóng băng từ `customer-feedback-02`** (`RETIRED_PERMISSIONS` trong `src/lib/permissions.ts` — còn trong DB vì hàm cũ kiểm quyền, nhưng **ẩn khỏi Quản trị → Vai trò & quyền** và không API mới nào dùng): `part.view`, `part.manage`, `part.stock.adjust`, `customer.pii.view`, `cost.view`, `cost.adjust`, `profit.view`, `debt.view`, `purchase.view`, `purchase.void`, `sale.view_own`, `sale.create_draft`, `sale.below_cost`, `reservation.manage`, `reservation.forfeit`, `payment.create`, `payment.void`, `stocktake.manage`. Quyền **đang dùng cho CTV/đơn gọn**: `collab.view`, `collab.manage`, `collab.view_own`, `sale.view`, `sale.confirm`, `sale.void`, `customer.view`, `customer.create`, `customer.manage`, `repair.*`, `report.sales`, `report.inventory`, `report.export`, `catalog.*`, `purchase.create`, `purchase.confirm`, `unit.release`, `stock.writeoff`.
+
 **Đã bỏ** (CF-05/06/07): `supplier.*`, `debt.view_supplier`, `techpay.view`, `finance.*`, `payment.pay`, `ledger.adjust`, `account.manage`, `period.*`, `return.*`, `commission.*`, `catalog.view_collab`, `repair.view_assigned`, `repair.assign`, `repair.approve_quote`.
 
 ## 4. Ma trận vai trò mặc định
@@ -93,7 +95,7 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | `part.view` | ● | ● | ● | ○ |
 | `part.manage`, `part.stock.adjust` | ● | ○ | ● | ○ |
 | `customer.view` | ● | ● | ○ | ○ |
-| `customer.view_own`, `customer.create` | ●/● | ●/● | ○ | ●/● |
+| `customer.view_own`, `customer.create` | ●/● | ●/● | ○ | ○/○ (CF-12: CTV không đọc/tạo khách — khách do chủ nhập khi xác nhận báo bán) |
 | `customer.manage` | ● | ● | ○ | ○ |
 | `customer.pii.view` | ● | ○ | ○ | ○ |
 | `cost.view` | ● | ○ | ● | ○ |
@@ -102,8 +104,8 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | `purchase.view`, `purchase.create`, `purchase.confirm` | ● | ○ | ● | ○ |
 | `purchase.void` | ● | ○ | ○ | ○ |
 | `sale.view` | ● | ● | ○ | ○ |
-| `sale.view_own` | ○ | ○ | ○ | ● |
-| `sale.create_draft` | ● | ● | ○ | ● (chỉ chiếc đang giữ) |
+| `sale.view_own` | ○ | ○ | ○ | ○ (đóng băng) |
+| `sale.create_draft` | ● | ● | ○ | ○ (đóng băng — CTV không tạo đơn, chỉ "báo đã bán") |
 | `sale.confirm` | ● | ● | ○ | ○ |
 | `sale.below_cost`, `sale.void` | ● | ○ | ○ | ○ |
 | `reservation.manage` | ● | ● | ○ | ○ |
@@ -112,14 +114,14 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | `payment.create` | ● | ● | ○ | ○ |
 | `payment.void` | ● | ○ | ○ | ○ |
 | `collab.view`, `collab.manage` | ● | ○ | ○ | ○ |
-| `collab.view_own` | ○ | ○ | ○ | ● |
+| `collab.view_own` | ○ | ○ | ○ | ● (quyền duy nhất của vai trò CTV) |
 | `repair.view`, `repair.create`, `repair.update`, `repair.price.edit`, `repair.deliver` | ● | ○ | ○ | ○ |
 | `stocktake.manage` | ● | ○ | ● | ○ |
 | `stock.writeoff` | ● | ○ | ○ | ○ |
 | `report.sales` | ● | ◐ chỉ doanh thu, không lãi | ○ | ○ |
 | `report.inventory` | ● | ○ | ● | ○ |
 | `report.export` | ● | ● | ● | ○ |
-| **`roles.max_discount_pct`** | 100 | 5 | 0 | 0 (không áp — CTV tự định giá) |
+| **`roles.max_discount_pct`** | 100 | 5 | 0 | 0 (không còn dùng: đơn gọn không có giảm giá/hạn mức — BR-SALE-23) |
 
 > Chủ có thể cấp `repair.*` cho nhân viên bán hàng nếu muốn nhân viên nhận máy; mặc định chỉ chủ (CF-04/05).
 > Quy tắc nhất quán: nếu một quyền "tiền nhạy cảm" không có, thì **mọi** endpoint/báo cáo/export/in chứa dữ liệu đó trả 403 (hàm) hoặc không có cột (khung nhìn công khai cho vai trò đó). Ví dụ `sales` xem phiếu bán nhưng danh sách phiếu **không có** cột giá vốn/lãi (`sale_lines` đọc được, `sale_line_costs` không).
@@ -129,14 +131,15 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | Đối tượng | Chính sách `SELECT` (rút gọn) |
 |---|---|
 | `users`, `roles` | Mỗi người thấy hồ sơ mình; `user.manage` thấy tất cả; danh sách nhân viên để chọn qua view rút gọn |
-| `watch_units` | `catalog.view` ⇒ tất cả. CTV (`collab.view_own`) ⇒ chỉ chiếc `held_by_collaborator_id = me`, **qua view `v_units_collab`** (cột: mã, loại, ảnh, thông số, **giá thu giao**, ngày giao; không giá vốn) |
+| `watch_units` | `catalog.view` ⇒ tất cả. CTV (`collab.view_own`) **không có quyền đọc bảng**; chỉ đọc qua hàm `fn_my_offers()` ⇒ chiếc có chào hàng `active` cho mình (mã, loại, ảnh, thông số, **giá niêm yết**, ngày giao, đã có CTV khác báo chưa; không giá vốn) |
 | `unit_cost_entries`, `part_costs`, `sale_line_costs`, `repair_line_costs` | `cost.view` |
 | `purchase_*` | `purchase.view` |
-| `sales`, `sale_lines` | `sale.view` ⇒ tất cả; `sale.view_own` ⇒ `created_by = me OR collaborator_id = me`. `sale_lines.base_price_vnd` & `shop_revenue_vnd`: `cost.view`/`collab.view`, hoặc dòng của CTV đó |
-| `customers` | `customer.view` ⇒ tất cả; `customer.view_own` ⇒ `created_by = me` |
+| `sales`, `sale_lines` | `sale.view` ⇒ tất cả (chủ, bán hàng). CTV **không** đọc được (kể cả đơn do mình bán — chỉ thấy báo bán của mình qua `fn_my_claims`). Danh sách/chi tiết đơn không có cột giá vốn/lãi/thanh toán |
+| `customers` | `customer.view` ⇒ tất cả; `customer.view_own` ⇒ `created_by = me` (không vai trò mặc định nào còn dùng). CTV: 0 dòng |
 | `repair_orders`, `repair_lines` | `repair.view` |
 | `payments` | `debt.view`/`payment.create` ⇒ tất cả; nhân viên bán hàng đọc thanh toán của phiếu mình xem; CTV chỉ thanh toán `collab_settlement` của mình |
-| `collaborator_assignments`, `_lines`, `collaborator_settlements` | `collab.view` ⇒ tất cả; `collab.view_own` ⇒ `collaborator_id = me` |
+| `collaborator_offers`, `collaborator_claims` | `collab.view` (+ `sale.confirm` cho báo bán) ⇒ tất cả; `collab.view_own` ⇒ `collaborator_id = me`. Ghi chỉ qua `fn_*` |
+| `collaborator_assignments`, `_lines`, `collaborator_settlements` | **đóng băng** (dữ liệu cũ): `collab.view` ⇒ tất cả; `collab.view_own` ⇒ `collaborator_id = me` |
 | `audit_logs` | `audit.view` |
 | `files` | Theo quyền của thực thể chứa tệp (`entity_table`/`entity_id`); ảnh giấy tờ người bán chỉ `customer.pii.view`/`purchase.view` |
 
@@ -149,10 +152,10 @@ Quy ước mã: `<đối tượng>.<hành động>`. Nguồn sự thật: bảng
 | CCCD người bán / khách | `id_number_enc` AES-256-GCM (khóa `PII_KEY_V1`, version hóa), `id_number_bidx` (HMAC-SHA256 với `PII_BIDX_KEY`) để tìm chính xác; giao diện chỉ hiện `*** *** 123`; xem đủ ⇒ `customer.pii.view` + lý do + audit `pii.reveal` |
 | Ảnh giấy tờ người bán | Bucket riêng tư `documents`; URL ký ngắn hạn (≤ 5 phút); hạn chế quyền; không hiện trong danh sách chung. **Ẩn danh khách ⇒ XÓA THẬT** (BR-SEC-09, migration 0014): `fn_anonymize_customer` đánh dấu xóa mọi ảnh `id_document` của khách (gắn khách, phiếu thu mua có `seller_customer_id`, phiếu bán) ⇒ `purge_after = now()` ⇒ job DAILY `storage-purge` xóa ảnh chính + thumb khỏi kho (local: `fs.rm`; Supabase: `DELETE /storage/v1/object/<bucket>`) rồi mới chốt `purged_at` (lỗi ⇒ thử lại lượt sau). Tệp bất biến khác (nhận máy/chứng từ) không bao giờ tự xóa |
 | SĐT, email, địa chỉ | Lưu rõ nhưng theo RLS; không đưa vào URL/log; xuất Excel cần quyền |
-| Khách do CTV tạo | Chỉ CTV đó + người có `customer.view`; CTV không xem khách của người khác |
+| Tên + SĐT khách do CTV nhập khi báo bán | Lưu ở `collaborator_claims`; che (`***`) trong `audit_logs`; chỉ CTV đó và người có `collab.view`/`sale.confirm` đọc; khi chủ xác nhận, khách được tạo/dùng lại trong `customers` (chủ nhập liệu, CTV không đọc được) |
 | Nhật ký | Che cột nhạy cảm (`id_number_*`, `password_hash`, `totp_secret_enc`) trước khi ghi `before/after` |
 | AI | Không gửi PII; ẩn danh hóa mọi thứ trước khi gọi (xem `integrations`) |
-| Quyền chủ thể dữ liệu | Có thể ẩn danh khách (xóa PII **và ảnh giấy tờ thật**, giữ giao dịch) khi được yêu cầu: `fn_anonymize_customer` (audit `customer.anonymized` ghi số ảnh giấy tờ đã xóa; `storage.purged` khi kho đã xóa). Bản sao lưu cũ vẫn chứa dữ liệu cũ đến hết vòng đời sao lưu (xem `backup-restore`) |
+| Quyền chủ thể dữ liệu | (Bản gọn không còn nút/API ẩn danh — hàm `fn_anonymize_customer` vẫn còn ở DB, chủ chạy qua SQL khi cần.) Có thể ẩn danh khách (xóa PII **và ảnh giấy tờ thật**, giữ giao dịch) khi được yêu cầu: `fn_anonymize_customer` (audit `customer.anonymized` ghi số ảnh giấy tờ đã xóa; `storage.purged` khi kho đã xóa). Bản sao lưu cũ vẫn chứa dữ liệu cũ đến hết vòng đời sao lưu (xem `backup-restore`) |
 
 Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm trong trình quản lý mật khẩu của chủ và là mục bắt buộc của runbook.
 
@@ -175,10 +178,10 @@ Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm tron
 | Mối đe dọa | Biện pháp |
 |---|---|
 | Nhân viên bán hàng lấy giá vốn/lãi qua API hoặc Excel | Bảng giá vốn riêng + RLS, hàm báo cáo kiểm quyền, PT-01/PT-05 |
-| CTV xem hàng/khách/đơn của CTV khác; CTV thấy giá vốn | RLS theo `held_by_collaborator_id`/`created_by`/`collaborator_id`, view `v_units_collab` không có giá vốn, PT-02/PT-03 |
-| CTV khai giá bán thấp hơn thực tế để giữ chênh lệch | Rủi ro nghiệp vụ (cửa hàng không thấy tiền khách trả CTV — BR-COL-05); giảm thiểu: chủ xác nhận từng đơn, đối chiếu ngoài hệ thống, báo cáo bất thường theo CTV (giá bán so giá niêm yết) |
+| CTV xem hàng/khách/đơn/doanh thu của CTV khác hoặc của cửa hàng; CTV thấy giá vốn | CTV chỉ có `collab.view_own`; không `SELECT` bảng đơn/khách/chiếc/bảo hành/giá vốn; đọc qua hàm `fn_my_*` chỉ trả cột an toàn; RLS `collaborator_id = me` ở chào hàng/báo bán; **PT-14** |
+| CTV báo "đã bán" nhưng thực tế chưa bán / bán rồi giấu | Rủi ro nghiệp vụ nằm ngoài hệ thống (cửa hàng không thấy tiền khách trả CTV — CF-12); giảm thiểu: chủ xác nhận từng báo bán (tên + SĐT khách bắt buộc để gọi lại), thấy ai báo gì, thống kê số chiếc theo CTV |
 | Mass-assignment (tự đổi vai trò, trạng thái, `held_by_collaborator_id`, số tiền) | `wf_app` không UPDATE cột nhạy cảm; thao tác qua `fn_*`; PT-07 |
-| Hai người bán một chiếc / giao một chiếc cho hai CTV / kho lệch thanh toán | Khóa dòng + unique một phần + giao dịch nguyên tử; CT-01, CT-06, SC-* |
+| Hai người bán một chiếc / hai CTV cùng báo bán một chiếc | Khóa chiếc + unique một phần `ux_collab_claims_pending_unit` + giao dịch nguyên tử; CT-01, CT-14, SC-18/19 |
 | Sửa quá khứ để che gian lận | Bất biến + hủy có lý do + audit append-only; PT-08/09 |
 | Lộ khóa/chuỗi kết nối | Không bí mật trong repo (hiện public ⇒ càng nghiêm; chuyển private trước khi có dữ liệu thật), secret scanning, khóa riêng từng môi trường, xoay vòng định kỳ (runbook) |
 | Chiếm tài khoản qua đổi email | Đổi email xóa `email_verified_at`, yêu cầu xác thực lại; chủ mới đổi được email người khác |
@@ -208,8 +211,8 @@ Mất `PII_*` = mất khả năng đọc CCCD đã mã hóa ⇒ khóa nằm tron
 Bổ sung cho `audit_logs` (thay đổi **dữ liệu**, do trigger/hàm DB ghi): `activity_logs` trả lời "**ai đã gọi API nào, lúc nào, kết quả gì, từ máy nào**" ở mức yêu cầu — kể cả thao tác thất bại/bị từ chối và các lần **đọc nhạy cảm** (audit chỉ thấy khi dữ liệu đổi).
 
 - **Ghi** (`src/server/activity.ts`, móc ở `api()` trong `http.ts`): xếp vào hàng chờ trong bộ nhớ rồi `after()` (Next) ghi **sau khi đã trả phản hồi**, gộp mọi request đang chờ thành **một** `INSERT … unnest` dưới `wf_worker` (pool phụ) ⇒ không thêm độ trễ cho request; lỗi ghi không bao giờ làm hỏng request (chỉ `console.error`); hàng chờ tràn (DB hỏng) ⇒ bỏ bớt. Ghi: **mọi thao tác ghi** (POST/PUT/PATCH/DELETE, kể cả 4xx/5xx và 403), trừ `SKIP_ROUTES` (đánh dấu thông báo đã đọc, báo lỗi trình duyệt, heartbeat); **GET chỉ khi** là sự kiện nhạy cảm hoặc bị từ chối quyền (403, trừ khi chỉ thiếu 2FA/đổi mật khẩu). Không bao giờ ghi: health, huy hiệu, thông báo (poll), tìm kiếm gõ từng phím, `/auth/me`, `/system/status`, tra cứu chiếc.
-- **Mã sự kiện nhạy cảm** (`activity_logs.action`, gắn ở máy chủ từ method + route + `format=xlsx`, không lưu query): `export` (xuất Excel báo cáo/phiếu nhập), `print` (in phiếu bán, tem), `view_cost` (xem giá vốn chiếc), `view_report` (xem báo cáo, báo cáo CTV; trang Tổng quan tự nạp nên không ghi), `reveal_pii` (xem CCCD đầy đủ), `view_audit` (xem nhật ký). Các sự kiện đã có audit riêng (`pii.reveal`, `report.exported`) **cùng `request_id`** ⇒ nối được hai bảng.
-- **Riêng tư theo cấu trúc**: cột `route` là **mẫu** (`/api/v1/sales/[id]/confirm`), không chứa giá trị tham số, query, nội dung gửi lên, tên/SĐT/CCCD; CHECK ở DB chặn ký tự lạ (`?`, `=`, khoảng trắng, chữ có dấu), `entity_id` chỉ nhận UUID, `ip_hash` chỉ hex (IP băm HMAC, không IP thô). Tham số không phải UUID (có thể là PII) chỉ tồn tại ở dạng `[id]`.
+- **Mã sự kiện nhạy cảm** (`activity_logs.action`, gắn ở máy chủ từ method + route + `format=xlsx`, không lưu query): `export` (xuất Excel báo cáo), `print` (in phiếu bán/phiếu sửa, tem), `view_report` (xem báo cáo, báo cáo CTV; trang Tổng quan tự nạp nên không ghi), `view_audit` (xem nhật ký). (`view_cost`, `reveal_pii` đã gỡ cùng các API giá vốn/CCCD — CF-14.) Các sự kiện đã có audit riêng (`report.exported`) **cùng `request_id`** ⇒ nối được hai bảng.
+- **Riêng tư theo cấu trúc**: cột `route` là **mẫu** (`/api/v1/collab/claims/[id]/confirm`), không chứa giá trị tham số, query, nội dung gửi lên, tên/SĐT/CCCD; CHECK ở DB chặn ký tự lạ (`?`, `=`, khoảng trắng, chữ có dấu), `entity_id` chỉ nhận UUID, `ip_hash` chỉ hex (IP băm HMAC, không IP thô). Tham số không phải UUID (có thể là PII) chỉ tồn tại ở dạng `[id]`.
 - **Đọc**: chỉ quyền `audit.view` (policy RLS `has_permission('audit.view')`; API kiểm sớm); `wf_app` không INSERT/UPDATE/DELETE. Tên người dùng qua `app.user_display_name`. Giao diện Quản trị → **Hoạt động** (`/quan-tri/hoat-dong`): tab "Thao tác" (lọc người, khu vực, khoảng ngày, kết quả, chỉ sự kiện nhạy cảm) và tab "Đăng nhập".
 - **Lịch sử đăng nhập không nhân đôi dữ liệu**: tab "Đăng nhập" đọc lại `audit_logs` với `action` thuộc `auth.*` (đăng nhập, sai mật khẩu, khóa tạm, sai mã 2FA, dùng mã khôi phục, dùng lại refresh token, đổi mật khẩu, thiết bị tin cậy…) và `user.password_reset`/`user.status` do `activity-labels.ts` (`AUTH_EVENT_LABEL`) gắn nhãn tiếng Việt.
 - **Append-only + dọn có kiểm**: trigger `tg_activity_immutable` chặn UPDATE; `tg_no_truncate` chặn TRUNCATE; DELETE **chỉ** thành công khi chạy trong `app.fn_activity_purge()` (SECURITY DEFINER, owner `wf_definer`, `EXECUTE` chỉ `wf_worker`): trigger yêu cầu đồng thời `current_user = 'wf_definer'` và cờ cục bộ `app.activity_purge='on'` do chính hàm đặt/xóa trong transaction ⇒ `wf_definer`/`wf_worker` gọi DELETE trực tiếp đều bị chặn. Giữ `activity.retention_days` ngày (mặc định **180**, **sàn 30** dù cài đặt/tham số nhỏ hơn); job `activity-purge` chạy hằng ngày; mỗi lần xóa ghi audit `activity.purged` (số dòng).
@@ -218,3 +221,11 @@ Bổ sung cho `audit_logs` (thay đổi **dữ liệu**, do trigger/hàm DB ghi)
 ## 9. Kiểm thử bảo mật
 
 Bộ **PT-xx** (`test-plan`) chạy trong CI mỗi lần phát hành: ma trận vai trò × endpoint nhạy cảm; truy vấn trực tiếp dưới `wf_app` không `SET app.current_user_id` ⇒ 0 dòng ở mọi bảng; thử UPDATE/DELETE/TRUNCATE trên bảng bất biến; thử mass-assignment; kiểm test cấu trúc "mọi bảng `public` có RLS bật + FORCE".
+
+## 8c. Vòng 2 — CTV chỉ ở mức giới hạn (customer-feedback-02, migration 0023)
+
+- **Vai trò CTV chỉ còn `collab.view_own`.** Migration 0023 gỡ `customer.view_own`, `customer.create`, `sale.view_own`, `sale.create_draft` khỏi vai trò `collaborator`. Vì không còn quyền đọc bảng nào ngoài `collaborator_offers`/`collaborator_claims` (đúng hàng của mình), CTV phải đọc qua ba hàm `SECURITY DEFINER` chỉ trả cột an toàn: `app.fn_my_offers()` (chiếc được giao + **giá niêm yết** + cờ "đã có CTV khác báo"), `app.fn_my_claims(n)` (báo bán của mình: trạng thái, lý do từ chối — **không giá**), `app.fn_my_collab_stats(from,to,period)` (**chỉ** `period_start, units_sold`).
+- **CTV không bao giờ thấy:** doanh thu (cửa hàng hay của mình), giá vốn, giá bán ghi trên đơn, đơn bán, khách hàng, sửa chữa, báo cáo, chiếc không giao cho mình, chào hàng/báo bán của CTV khác. Tổng quan của CTV không có thẻ số. Kiểm bằng **PT-14** (`tests/api/m12-collab.test.mjs`, `db-simple-mode.test.mjs`, `m8-reports`, `m11-search`).
+- **Không còn đường lấy giá vốn/CCCD qua API:** đã gỡ `GET /catalog/units/[id]/cost`, `POST /catalog/units/[id]/cost-adjust`, `POST /customers/[id]/reveal-id`, `POST /customers/[id]/anonymize`. Giá nhập vẫn được ghi **nội bộ** (`unit_cost_entries`, `sale_line_costs`) để dữ liệu và bất biến I8 nhất quán, nhưng `wf_app` không `SELECT` và không API nào trả ra (m1-catalog kiểm `!/"cost/`).
+- **Tên + SĐT khách do CTV nhập** là PII: không vào URL/log; `tg_audit` che `customer_name`, `customer_phone`, `note` của `collaborator_claims`; chuông thông báo chỉ nêu mã chiếc, không nêu tên khách.
+- **Bất biến liên quan** (kiểm hằng đêm bởi `fn_consistency_check`): I13 chào hàng `active` ⇒ chiếc `in_stock`; I14 báo bán `pending` ⇒ chiếc `in_stock` + chào hàng `active`; I15 báo bán `confirmed` ⇒ có đơn bán.

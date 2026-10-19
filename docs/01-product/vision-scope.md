@@ -1,6 +1,7 @@
 # Tầm nhìn & phạm vi
 
 > Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo phản hồi khách vòng 1 — `customer-feedback-01`; khách chốt sơ, chi tiết sâu sẽ báo lại)
+> **Cập nhật 2026-10-18 (`customer-feedback-02`, ADR-028):** phạm vi hiện hành rút về **sáu việc** — kho đồng hồ · ghi đơn bán (chiếc + khách + giá + ngày) · giao CTV bán (nhiều CTV, ai báo trước được, chủ xác nhận) · sửa chữa (chỉ chủ) · báo cáo doanh thu/số lượng/CTV · CTV dùng ở mức giới hạn. Các mục "trong phạm vi" bên dưới về thanh toán/công nợ, giữ hàng/cọc, thu cũ đổi mới, nhập nhiều dòng, linh kiện, kiểm kê, giá vốn/lãi, giá thu CTV **đã đóng băng** — đọc `01-product/customer-feedback-02` và `requirements` §22 trước.
 
 ## 1. Mục tiêu
 

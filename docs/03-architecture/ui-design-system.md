@@ -1,6 +1,6 @@
 # Hệ thống giao diện — phong cách Glass
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (khách chốt mẫu **v6-glass**, CF-09) · ADR-026, ADR-027
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (khách chốt mẫu **v6-glass**, CF-09; §4.3 và §6 đã cập nhật theo `customer-feedback-02` — bản đồ màn hình hiện hành) · ADR-026, ADR-027
 > Tài liệu này là **đặc tả để AI/dev dựng giao diện**. Nguồn hình ảnh tham chiếu: `design/ui-preview/v6-glass.html` (+ `assets/shared.js`: dữ liệu minh họa, biểu tượng, hàm vẽ biểu đồ). Mâu thuẫn giữa đặc tả này và mẫu ⇒ **đặc tả này thắng** (mẫu còn các màn đã bị loại và dữ liệu minh họa). Cách đọc nhanh: mở `design/ui-preview/v6-glass.html` trong trình duyệt (điện thoại 390px và máy tính ≥ 1000px).
 
 ## 1. Nguyên tắc
@@ -103,12 +103,12 @@ Mục hiển thị theo **quyền** (không theo tên vai trò); bảng là mặ
 
 | Vai trò | 4 mục dock (trái, trái, phải, phải) | Hành động trong "+" |
 |---|---|---|
-| Chủ cửa hàng | Tổng quan · Đồng hồ · **(+)** · Bán hàng · Menu | Bán hàng · Nhập hàng · Nhận máy sửa · Giữ hàng/đặt cọc · Giao hàng cho CTV |
-| Nhân viên bán hàng | Bán hàng · Đồng hồ · **(+)** · Khách · Menu | Bán hàng · Giữ hàng/đặt cọc · Thêm khách · Đơn CTV chờ xác nhận |
-| Quản lý kho | Tổng quan · Đồng hồ · **(+)** · Linh kiện · Menu | Nhập hàng · Nhập nhanh một chiếc · Kiểm kê · In tem QR |
-| Cộng tác viên | Hàng · Đơn của tôi · **(+ Tạo đơn)** · Thống kê · Tôi | Tạo đơn bán · Quét QR chiếc |
+| Chủ cửa hàng | Tổng quan · Đồng hồ · **(+)** · Bán hàng · Menu | Ghi đơn bán · Nhận máy sửa · Giao đồng hồ cho CTV · CTV báo bán chờ xác nhận · Thêm đồng hồ |
+| Nhân viên bán hàng | Bán hàng · Đồng hồ · **(+)** · Khách · Menu | Ghi đơn bán · CTV báo bán chờ xác nhận · Thêm khách |
+| Quản lý kho | Tổng quan · Đồng hồ · **(+)** · Vị trí kho · Menu | Thêm đồng hồ · In tem QR |
+| Cộng tác viên | Hàng · Báo bán · **(+)** · Thống kê · Tôi | Tìm chiếc được giao |
 
-Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, Nhập hàng, Sửa chữa) · *Khách & đối tác* (Khách hàng, Giữ hàng, Bảo hành, Cộng tác viên) · *Kho & hệ thống* (Linh kiện, Kiểm kê, Báo cáo, Quản trị). Đăng ký trong `src/components/layout/nav.ts` (đường dẫn, nhãn, biểu tượng, quyền, nhóm, thứ tự).
+Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, Cộng tác viên, Sửa chữa) · *Khách & báo cáo* (Khách hàng, Báo cáo) · *Kho & hệ thống* (Vị trí kho, Nhập từ Excel, Quản trị) · *Tài khoản* (Hướng dẫn, Tài khoản). Đăng ký trong `src/components/layout/nav.ts` (đường dẫn, nhãn, biểu tượng, quyền, nhóm, thứ tự); dock/"+" suy từ **quyền** (`detectProfile`), không theo tên vai trò.
 
 ## 5. Thành phần Glass dùng chung (`src/components/ui/`)
 
@@ -149,7 +149,7 @@ Nhóm trong Menu (chủ): *Vận hành* (Tổng quan, Bán hàng, Đồng hồ, 
 | `Toast`, `EmptyState`, `ErrorState`, `OfflineBanner`, `Skeleton` | Không có trong mẫu — dựng theo Glass hoặc phần tử Lucian (§8) | Văn bản tiếng Việt, hành động tiếp theo rõ ràng |
 | `Chart` (area/bars/donut/ring) | Mẫu dùng SVG tự vẽ (`WF.chart.*`) | Tooltip kéo (scrub), nhãn trục nhỏ trải đều; màu: tím `--wf-accent` (doanh thu), xanh lá `--wf-ok` (lãi gộp). `AreaChart` hỗ trợ **2 đường** (`data2`, `legend`), `BarChart` hỗ trợ **cột đôi** (`value2`) |
 
-Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permission="cost.view"` và kèm `LockNote`; người không có quyền **không render và không gọi API** (FR-DASH-11).
+Quy tắc dùng chung: khối dữ liệu theo quyền (vd. doanh thu, báo bán chờ xác nhận) bọc `CanSee permission="…"`; người không có quyền **không render và không gọi API** (FR-DASH-11). Giá vốn/lãi/giá thu không còn trong giao diện (CF-14).
 
 ### 5.2 Bảo vệ form: `dirty` / `busy` / `useDirtyGuard` (cập nhật 2026-10-17)
 
@@ -160,7 +160,7 @@ Quy tắc dùng chung: mọi khối giá vốn/lãi/giá thu bọc `CanSee permi
 | `dirty` | `Modal`, `ActionSheet`, `DetentSheet` | Có thay đổi chưa lưu ⇒ mọi đường đóng (bấm nền, Esc, nút X, vuốt xuống tờ 3 nấc, nút Hủy dùng `<ModalClose>`) hỏi **"Bỏ thay đổi chưa lưu?"** — "Ở lại" là nút mặc định (focus + Esc = ở lại), "Bỏ thay đổi" đỏ. Tờ 3 nấc vuốt xuống mà hỏi thì tự bật về mức cũ. Chọn một hành động của `ActionSheet` không hỏi (là chủ ý). Kèm `beforeunload` (đóng tab/tải lại). |
 | `busy` | cùng ba thành phần | Đang gửi dữ liệu ⇒ chặn đóng, nội dung `inert` (không bấm/Tab được), phủ lớp **"Đang xử lý…"** (hiện sau 0,2 giây để lần xử lý nhanh không nháy), trả focus sau khi xong. `locked` cũ vẫn dùng được (chỉ chặn đóng, không có lớp phủ). Mọi `locked={busy}` hiện có đã đổi thành `busy={busy}`. |
 | `<ModalClose>Hủy</ModalClose>` / `useModalClose()` | trong `Modal` | Nút Hủy/Đóng của chân hộp thoại phải đi qua cổng này (không phải `onClick={onClose}` trần) để `dirty` có tác dụng. |
-| `useDirtyGuard(dirty)` → `{ dialog, release }` | trang/biểu mẫu dài (POS, phiếu nhập, nhận máy sửa, thêm đồng hồ, giao CTV) | `beforeunload` + chặn bấm liên kết nội bộ (menu, dock, `<Link>`) bằng hộp trên; nút "Quay lại" của app đi qua `guardedNavigate`. Phải render `{dialog}` trong trang. Liên kết có `data-allow-leave` không bị chặn. **Giới hạn đã biết:** App Router không có `router.events` — `router.push()` trong mã và nút Back/vuốt Back của trình duyệt **không chặn được** (chỉ `beforeunload` còn tác dụng khi tải lại), nên biểu mẫu quan trọng vẫn nên tự lưu nháp (POS, phiếu nhập đã làm). |
+| `useDirtyGuard(dirty)` → `{ dialog, release }` | trang/biểu mẫu dài (ghi đơn bán, nhận máy sửa, thêm đồng hồ, giao CTV) | `beforeunload` + chặn bấm liên kết nội bộ (menu, dock, `<Link>`) bằng hộp trên; nút "Quay lại" của app đi qua `guardedNavigate`. Phải render `{dialog}` trong trang. Liên kết có `data-allow-leave` không bị chặn. **Giới hạn đã biết:** App Router không có `router.events` — `router.push()` trong mã và nút Back/vuốt Back của trình duyệt **không chặn được** (chỉ `beforeunload` còn tác dụng khi tải lại), nên biểu mẫu quan trọng vẫn nên tự lưu nháp (POS, phiếu nhập đã làm). |
 | `Button guard` | mọi nút | Bỏ lần bấm thứ hai trong 600ms (hoặc số ms nêu). **Mặc định bật cho `type="submit"`**; nút xác nhận/gửi khác (Xác nhận thu, Giữ hàng, Nhận máy…) bật tay bằng `guard`. Không bật mặc định cho nút primary thường vì nút "Tiếp" của wizard có thể bấm liên tiếp hợp lệ. Logic thuần: `src/lib/submit-guard.ts` (có test). |
 
 Cách tính `dirty`: **khác giá trị lúc mở** (hộp sửa) hoặc **đã nhập/chọn gì** (hộp thêm mới); xong lưu (`onDone`) đóng bằng `open=false` thì không hỏi. Biểu mẫu tự lưu nháp chỉ tính dirty khi chưa kịp lưu / lưu lỗi (POS: `!saleId || saving || error || body ≠ bản đã gửi`).
@@ -171,30 +171,29 @@ Cách tính `dirty`: **khác giá trị lúc mở** (hộp sửa) hoặc **đã 
 - Desktop: `Popover` (lật lên/xuống) + chữ mờ hoàn thành, **Tab** nhận. Điện thoại: danh sách nối liền dưới ô (không chiếm cả màn hình, không che bàn phím).
 - Phím: ↑↓ chọn · **Enter chỉ nhận khi đang trỏ một gợi ý** (còn lại Enter vẫn gửi biểu mẫu) · **Esc chỉ đóng danh sách** (hộp thoại chứa nó vẫn mở) · danh sách chỉ mở khi gõ / bấm vào ô / ↓ (không tự bật khi vừa focus).
 - A11y: `role="combobox"` + `aria-expanded/controls/activedescendant/autocomplete`, `role="listbox"`/`option`.
-- Đang dùng: **Nguồn hàng** (phiếu nhập "Mua vào", Thêm đồng hồ) với gợi ý từ `GET /api/v1/purchases/sources` (tên nguồn đã dùng, RLS theo người gọi, gộp không phân biệt hoa/thường/dấu, mới nhất trước; chỉ tên + số phiếu + ngày, không có tiền).
+- Đang dùng: ô **Khách** trên Ghi đơn bán / Nhận máy sửa (gợi ý khách đã có theo tên/SĐT). (Gợi ý "Nguồn hàng" từ `/purchases/sources` đã gỡ cùng màn Nhập hàng — CF-14.)
 
-## 6. Màn hình: mẫu v6-glass → ứng dụng
+## 6. Màn hình: mẫu v6-glass → ứng dụng (hiện hành — customer-feedback-02)
 
 | Màn trong mẫu | Quyết định | Ghi chú |
 |---|---|---|
-| `home` Tổng quan | **Giữ, sửa** | Bỏ "Thực chi", "Quỹ tiền", "Khách nợ/NCC"; thẻ gồm Doanh thu, Lãi gộp, Thực thu, Tồn kho (kèm "ở CTV"), Giá trị tồn, Đã bán; thêm việc cần xử lý: đơn nháp CTV, chiếc ở CTV quá hạn |
-| `stock` Đồng hồ + chip trạng thái | **Giữ, sửa** | Thêm chip "Đang ở CTV"; thêm bộ lọc theo vị trí/tình trạng (drawer #305) |
-| `unit` Chi tiết chiếc (Bán/Giữ/In tem/Vị trí; tab Thông tin/Giá vốn/Lịch sử) | **Giữ, sửa** | Tab "Giá vốn" đổi nhãn **"Giá thu"** cho người có `cost.view`; thêm nút "Giao CTV" (chủ); hiển thị bảo hành |
-| `pos` Bán hàng + giỏ | **Giữ, gọn** | Phiếu tập trung: thông tin chiếc, khách, **giá thu & giá bán** (người có quyền), thanh toán tiền mặt/chuyển khoản/kết hợp, tiền thừa, nợ + hẹn trả; "Thêm máy cũ" (thu cũ đổi mới) |
-| `sales` Phiếu bán | **Giữ, sửa** | Bộ lọc "Còn nợ"; nút "Thu thêm"; "Hủy trong 24 giờ" (chủ) |
-| `repair` Sửa chữa (thẻ có vòng %, nhận máy 4 bước) | **Giữ, gọn** | Bỏ cột/nhãn thợ, "chưa gán thợ", doanh thu "công + linh kiện" → "doanh thu sửa"; bước "Máy" **ảnh tùy chọn**; mở rộng nhận máy bảo hành |
-| `cash` Thu chi & công nợ | **BỎ** (CF-06/07) | Không dựng; "Thu thêm" nằm trên phiếu; báo cáo "Tiền thu" thay thế |
-| `buy` Nhập hàng | **Giữ, sửa** | Bỏ NCC, công nợ; nguồn hàng nhập chữ |
-| `cust` Khách hàng | **Giữ, sửa** | Bỏ "công nợ" như tab riêng; hiển thị phiếu còn nợ + cọc đang giữ |
-| `reserve` Giữ hàng | **Giữ** | |
-| `returns` Đổi trả | **BỎ** (CF-02) | Thay bằng màn **Bảo hành** (mới) |
-| `parts` Linh kiện | **Giữ** | |
-| `stocktake` Kiểm kê | **Giữ** | |
-| `report` Báo cáo (R1–R8 trong mẫu) | **Giữ, sửa** | Danh sách báo cáo theo `reports-and-dashboard` §3 (bỏ công nợ KH&NCC, thu chi & số dư, tiền công thợ; thêm Phiếu còn nợ, Tiền thu, Thống kê CTV) |
-| `collab` Cộng tác viên (hoa hồng) | **THIẾT KẾ LẠI** | Mô hình giao hàng + giá thu: danh sách CTV, chi tiết CTV (hàng đang giữ, đơn, quyết toán), phiếu giao, quyết toán, thống kê tháng/quý/năm |
-| `admin` Quản trị | **Giữ, sửa** | Người dùng, vai trò & quyền, cài đặt, nhật ký, hệ thống & sao lưu, phiên bản; bỏ thợ |
+| `home` Tổng quan | **Giữ, gọn** | Thẻ theo quyền: Doanh thu (▲▼ kỳ trước), Số chiếc bán, Đồng hồ trong kho (kèm "đang giao CTV"), Báo bán CTV chờ xác nhận, Máy đang sửa; biểu đồ doanh thu; việc cần xử lý. Bỏ Lãi gộp, Thực thu, Giá trị tồn, Nợ |
+| `stock` Đồng hồ + chip trạng thái | **Giữ, sửa** | Chip "Đang giao CTV" khi có chào hàng; bộ lọc vị trí/tình trạng; bỏ giá vốn/giá thu |
+| `unit` Chi tiết chiếc | **Giữ, gọn** | Ghi đơn bán · In tem · Đổi vị trí · Giao CTV (chủ); tab Thông tin · Ảnh · Giá & lịch sử giá · Lịch sử trạng thái; **bỏ tab giá vốn/giá thu** |
+| `pos` Bán hàng + giỏ | **Thay bằng "Ghi đơn bán"** | Chọn chiếc + khách + giá + ngày + hạn bảo hành → Lưu. Bỏ thanh toán, tiền thừa, nợ, giảm giá, thu cũ đổi mới |
+| `sales` Phiếu bán | **Giữ, gọn** | Danh sách đơn tìm tên/SĐT/mã/serial, lọc kênh (cửa hàng/CTV); chi tiết: in, hủy trong hạn (chủ). Bỏ "Còn nợ"/"Thu thêm" |
+| `repair` Sửa chữa | **Giữ, gọn** | Nhận máy 1 trang; khoản tiền (dịch vụ/khoản khác); sửa xong; giao máy. Bỏ thợ, linh kiện, cọc, thu tiền |
+| `cash` Thu chi & công nợ | **BỎ** (CF-06/07) | Không dựng |
+| `buy` Nhập hàng | **BỎ** (CF-14) | Thay bằng "Thêm đồng hồ" (1 chiếc) + Nhập từ Excel |
+| `cust` Khách hàng | **Giữ, gọn** | Hồ sơ, lịch sử mua/sửa; bỏ công nợ/cọc |
+| `reserve` Giữ hàng | **BỎ** (CF-13) | |
+| `returns` Đổi trả | **BỎ** (CF-02) | Thay bằng hạn bảo hành trên đơn + nhận máy sửa bảo hành |
+| `parts` Linh kiện · `stocktake` Kiểm kê | **BỎ** (CF-14) | |
+| `report` Báo cáo | **Giữ, gọn** | 3 báo cáo: Doanh thu · Số lượng đồng hồ · Cộng tác viên (`reports-and-dashboard` §3) |
+| `collab` Cộng tác viên (hoa hồng) | **THIẾT KẾ LẠI** (CF-10…12) | Chủ: danh sách CTV + thống kê, Giao hàng nhiều CTV, Hàng đang giao, Báo bán chờ xác nhận. CTV: Hàng của tôi (giá niêm yết) + "Đã bán", Báo bán của tôi, Thống kê (số chiếc) |
+| `admin` Quản trị | **Giữ, gọn** | Người dùng, vai trò & quyền, cài đặt, **nhật ký (gộp)**, hệ thống & sao lưu; bỏ tab Phiên bản |
 
-**Màn mới cần thiết kế bổ sung theo Glass** (chưa có trong mẫu; làm bản tĩnh trong `design/ui-preview/` để khách xem trước khi code — xem §10): Đăng nhập · Đổi mật khẩu · Xác thực 2 bước · Bảo hành (tra cứu + nhận máy bảo hành) · Màn hình của **CTV** (Hàng đang giữ, Tạo đơn, Đơn của tôi, Thống kê, Tôi) · Cộng tác viên (chủ): Giao hàng, Quyết toán, Thống kê · Thông báo · Hướng dẫn sử dụng · Trạng thái rỗng/lỗi/mất mạng · Cài đặt cá nhân.
+**Màn đã có bản dựng ngoài mẫu** (theo ngôn ngữ Glass; chủ dự án đã duyệt qua bản chạy): Đăng nhập · Đổi mật khẩu · Xác thực 2 bước · Màn hình của **CTV** · Cộng tác viên (chủ): Giao hàng, Hàng đang giao, Báo bán · Thông báo · Hướng dẫn sử dụng · Nhập từ Excel · Trạng thái rỗng/lỗi/mất mạng · Cài đặt cá nhân. Màn mới sau này vẫn cần bản tĩnh được duyệt trước khi code (§10).
 
 ## 7. Quy tắc triển khai kỹ thuật
 

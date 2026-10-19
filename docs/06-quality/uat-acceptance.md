@@ -1,6 +1,6 @@
 # Nghiệm thu (UAT) & checklist go-live
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Thay cho "V. Tiêu chí nghiệm thu" của bản yêu cầu gốc · Số liệu chuẩn: `golden-scenarios` · Kiểm thử tự động: `test-plan`
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (viết lại theo `customer-feedback-02`: sáu việc của chủ cửa hàng — không còn giá vốn/thanh toán/nợ/cọc/linh kiện/kiểm kê) · Thay cho "V. Tiêu chí nghiệm thu" của bản yêu cầu gốc · Số liệu chuẩn: `golden-scenarios` · Kiểm thử tự động: `test-plan`
 
 ## 1. Nguyên tắc
 
@@ -31,90 +31,80 @@ Ký hiệu người làm: **CH** chủ · **BH** bán hàng · **KHO** quản l�
 | Bước | Người | Kết quả đúng |
 |---|---|---|
 | Tạo thương hiệu, loại (mã sản phẩm) | KHO | Mã sản phẩm duy nhất; trùng ⇒ báo lỗi tiếng Việt |
-| Nhập nhanh một chiếc (qua phiếu nhập) kèm 3 ảnh, vị trí | KHO | Có mã nội bộ + tem QR in được; chiếc `Sẵn sàng bán`; ảnh có ảnh thu nhỏ |
-| Nhập serial đã tồn tại (cùng thương hiệu) | KHO | Chặn, gợi ý mở chiếc cũ |
+| **Thêm đồng hồ** (1 chiếc) kèm ảnh, giá niêm yết, vị trí | KHO | Có mã nội bộ + tem QR in được; chiếc `Sẵn sàng bán`; ảnh có ảnh thu nhỏ; **không** có ô giá nhập/giá vốn/nguồn bắt buộc |
+| Thêm đồng hồ có serial đã tồn tại (cùng thương hiệu) | KHO | Chặn `WF-UNIT-SERIAL-DUPLICATE`, gợi ý mở chiếc cũ |
 | Tìm "seiko 5", "SRPD55", serial, mã nội bộ, quét QR bằng camera điện thoại | BH | Ra đúng chiếc ≤ 1 giây; gõ không dấu/sai nhẹ vẫn ra |
 | Đổi giá niêm yết, đặt khuyến mãi theo ngày | CH | Có lịch sử giá (cũ, mới, ai, lúc nào); BH không sửa được giá |
 | Đổi vị trí; xem lịch sử trạng thái | KHO | Lịch sử đủ, không sửa/xóa được |
 | Chiếc cũ không có ảnh tình trạng/hạng ⇒ thử đưa vào bán | KHO | Chặn (BR-UNIT-10) |
-| BH xem chi tiết chiếc | BH | **Không** thấy tab Giá thu (giá vốn) |
+| Mọi vai trò xem chi tiết chiếc, danh sách, tìm kiếm | CH, BH, KHO | **Không** có giá thu/giá vốn/lãi ở bất kỳ màn nào (CF-14) |
+| **Nhập Excel** (Menu): khách và đồng hồ; xem trước → chọn dòng → nhập | KHO, CH | Xem trước không ghi gì; dòng trùng/lỗi nêu lý do; không có cột giá vốn/CCCD/nhóm (BR-IMP-07) |
 
-### UAT-02 — Nhập hàng & giá vốn  *(SC-01, SC-11, SC-17)*
+### UAT-02 — Giao diện thêm hàng gọn  *(FR-UNIT-01; thay "Nhập hàng & giá vốn" — CF-14)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Làm lại **SC-01** (3 đồng hồ + vận chuyển 120.000, nguồn hàng chữ) | KHO, CH | Giá vốn A/B/C = **6.060.000 / 1.212.000 / 4.848.000**; không có công nợ/thanh toán phiếu nhập |
-| Thiếu "nguồn hàng" | KHO | Chặn |
-| Thu mua từ khách (thiếu ảnh giấy tờ ⇒ chặn; đủ ⇒ in biên bản) | KHO | Đúng BR-PUR-09; CCCD hiện dạng che |
-| Hủy phiếu nhập chưa phát sinh gì (SC-17a); hủy phiếu có chiếc đã bán/đã giao CTV (SC-17b/c) | CH | Ca a: về 0; ca b/c: chặn `WF-PUR-HAS-DEPENDENTS` |
-| Điều chỉnh giá vốn +200.000 có lý do (SC-17d) | CH | Có bút toán điều chỉnh; KHO không có quyền |
-| Xuất phiếu nhập ra PDF/Excel | KHO | Số liệu khớp màn hình; BH không xem được phiếu nhập |
-| Phiếu tồn đầu kỳ (`opening`) | CH | Không tạo thanh toán; báo cáo ghi "Tồn đầu kỳ" |
+| Thêm 3 chiếc liên tiếp (nút "Thêm chiếc khác") | KHO | Mỗi lần ≤ 3 chạm tới lúc lưu; bấm đúp chỉ tạo **một** chiếc |
+| Tìm menu "Nhập hàng", "Nhà cung cấp", "Linh kiện", "Kiểm kê" | CH, KHO | **Không tồn tại** (đã bỏ) |
+| Sai ngày (tương lai) | KHO | Chặn `WF-DOC-FUTURE` |
 
-### UAT-03 — Bán hàng, thanh toán, in, giữ hàng, thu cũ đổi mới  *(SC-02…06, SC-15)*
+### UAT-03 — Ghi đơn bán, bảo hành, in, hủy  *(SC-19, SC-15)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| **SC-02**: bán A 8.200.000 (giảm 300.000), 5.000.000 tiền mặt + 3.200.000 chuyển khoản | BH | Lãi gộp **2.140.000** (chủ thấy; BH không thấy); A `Đã bán`; thanh toán đúng; bảo hành 12 tháng; ≤ 3 chạm từ trang chủ |
-| Phiếu hiển thị **thông tin + giá thu + giá bán** (CF-01) | CH | Đúng; BH không thấy giá thu/lãi |
-| In phiếu 80mm và A5; in lại | BH | Đúng nội dung; bản in lại có "BẢN IN LẠI" |
-| Bán chiếc đã bán / đang giữ | BH | Chặn `WF-SALE-UNIT-UNAVAILABLE` |
-| Giảm giá quá hạn mức 5% | BH | Chặn `WF-SALE-DISCOUNT-LIMIT`; CH làm được |
-| **SC-03**: khách đưa 7.000.000, hàng 6.500.000 | BH | Tiền thừa **500.000**; thanh toán ghi 6.500.000 |
-| **SC-04**: bán nợ, hẹn trả, **Thu thêm** trên phiếu | BH | Còn nợ **1.300.000 → 300.000**; thu vượt bị chặn; lọc "Còn nợ" ở danh sách; không có màn công nợ riêng |
-| **SC-05**: giữ hàng có cọc → chuyển thành bán; hoàn cọc; tịch thu (CH) | BH, CH | Cọc không là doanh thu; BH không tịch thu được |
-| **SC-06**: thu cũ đổi mới | BH | Doanh thu **20.000.000**; máy cũ `Chờ kiểm tra`, giá vốn **6.000.000**; thiếu giấy tờ người bán bị chặn |
-| **SC-15**: hủy phiếu trong 24 giờ | CH | Như chưa xảy ra; BH không hủy được |
-| Bán linh kiện lẻ (dây) cùng phiếu | BH | Trừ kho linh kiện; giá vốn bình quân |
-| Tra cứu lịch sử hóa đơn theo khách, theo ngày | BH | Đúng và nhanh |
-| Mất mạng giữa lúc lập phiếu → có mạng lại → bấm xác nhận 2 lần | BH | Nháp còn nguyên; chỉ **một** phiếu được tạo |
+| **SC-19**: ghi đơn khách mới "Khách Mẫu" (0912 000 111), A 8.700.000 (bảo hành mặc định) + B 2.500.000 (bảo hành 0) | BH | Đơn `HD-…` tổng **11.200.000**; A, B `Đã bán`; bảo hành chỉ cho A (+12 tháng); không có thanh toán/nợ; bán thấp hơn niêm yết chỉ hiển thị chênh; ≤ 3 chạm từ trang chủ |
+| Ghi đơn lần sau cùng SĐT | BH | Dùng lại khách cũ, không tạo trùng |
+| Ghi chiếc đã bán / trùng chiếc trong đơn / ngày tương lai / thiếu khách | BH | `WF-SALE-UNIT-UNAVAILABLE` / `WF-VALIDATION` / `WF-DOC-FUTURE` / `WF-SALE-CUSTOMER-REQUIRED` |
+| Hai người cùng ghi một chiếc | BH, CH | Đúng một đơn thành công (CT-01) |
+| In phiếu lần 1 và lần 2 (PDF A5/80mm) | BH | Đúng nội dung + hạn bảo hành; lần 2 có "BẢN IN LẠI" |
+| Tra cứu đơn theo tên không dấu, SĐT, mã đơn, serial; lọc kênh | BH | Đúng và nhanh |
+| **SC-15**: hủy đơn (lý do ≥ 10 ký tự + nhập lại mật khẩu) | CH | Chiếc về `Sẵn sàng bán`, bảo hành hủy; BH không hủy được; quá 24 giờ ⇒ chặn |
+| Mất mạng giữa lúc lập đơn → có mạng lại → bấm lưu 2 lần | BH | Nháp cục bộ còn nguyên; chỉ **một** đơn được tạo |
+| Tìm màn thanh toán, nợ, giữ hàng, thu cũ đổi mới, giảm giá | BH, CH | **Không tồn tại** (CF-13) |
 
-### UAT-04 — Kho, linh kiện, kiểm kê, thông báo  *(SC-14; FR-STK-*, FR-PART-*, FR-PLAT-02)*
+### UAT-04 — Thông báo & việc cần xử lý  *(FR-PLAT-02, FR-NAV-02)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Nhập/điều chỉnh linh kiện (cần lý do) | KHO | Có lịch sử xuất–nhập; giá bình quân đúng (SC-11d/e) |
-| **SC-14**: kiểm kê bằng quét QR; chiếc không thấy ⇒ ghi mất; linh kiện lệch | KHO | Tổn thất **3.080.000**; chốt thiếu lý do bị chặn; chiếc ở CTV không nằm trong kiểm kê kho |
-| Cảnh báo linh kiện ≤ ngưỡng; hàng tồn > 90 ngày; giữ hàng quá hạn; bảo hành sắp hết; chiếc ở CTV quá hạn | KHO, CH | Chuông thông báo đúng người, có liên kết mở thẳng màn hình xử lý |
-| Hàng tồn lâu có trong báo cáo R5 | CH | Đúng 123 ngày cho chiếc I |
+| CTV báo "đã bán" | CTV, CH | Chuông + thông báo đẩy tới người xác nhận, mở thẳng "Báo bán chờ xác nhận"; huy hiệu số vàng; đỏ khi chờ > 1 ngày |
+| Máy sửa mới nhận / quá hẹn / xong chưa lấy | CH | Huy hiệu đúng (vàng/đỏ) ở mục Sửa chữa; chỉ số lượng, không tiền |
+| Vai trò kho / CTV | KHO, CTV | Không thấy huy hiệu việc bán/sửa |
 
-### UAT-05 — Tổng quan & lãi gộp  *(SC-10)*
+### UAT-05 — Tổng quan  *(SC-10)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Làm **SC-10** (chạy lần lượt SC-01…04) | CH | Doanh thu **16.500.000**, giá vốn **12.120.000**, lãi gộp **4.380.000**; thực thu **15.200.000**; khách còn nợ **1.300.000** |
-| So Tổng quan với báo cáo R1/R2/R4/R6/R8 cùng khoảng ngày | CH | Giống nhau tuyệt đối |
-| BH mở Tổng quan | BH | Thấy doanh thu, **không** thấy lãi/giá vốn |
-| Đổi khoảng ngày; biểu đồ doanh thu–lãi | CH | Cập nhật đúng; dùng được trên điện thoại |
+| Làm **SC-10** (2 đơn cửa hàng + 1 đơn CTV + 1 máy sửa trong ngày) | CH | Doanh thu **16.640.000** (cửa hàng 14.700.000 + CTV 1.800.000 + sửa 140.000); 3 đơn, 3 chiếc |
+| So Tổng quan với báo cáo Doanh thu / Số lượng cùng khoảng ngày | CH | Giống nhau tuyệt đối |
+| BH, KHO, CTV mở Tổng quan | BH, KHO, CTV | BH: doanh thu + số chiếc; KHO: chỉ kho; CTV: không thẻ số cửa hàng |
+| Đổi khoảng ngày (hôm nay/7 ngày/tháng/quý/năm); biểu đồ | CH | Cập nhật đúng; so sánh kỳ trước; dùng được trên điện thoại |
 
-### UAT-06 — Sửa chữa (gọn) & bảo hành  *(SC-07, SC-08, SC-09)*
+### UAT-06 — Sửa chữa (gọn) & bảo hành  *(SC-07, SC-08)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Nhận máy **không ảnh** (hợp lệ), cọc 200.000, in phiếu nhận | CH | Có mã phiếu; chụp ảnh là tùy chọn, đã lưu thì không xóa được |
-| Ghi trạng thái; thêm dịch vụ + linh kiện; xác nhận dùng | CH | Kho giảm đúng (LK-0001 10→9; LK-0002 5→4); không thể âm |
-| Hoàn thành → giao → thu 700.000 | CH | **SC-08**: doanh thu **900.000**, giá vốn linh kiện **330.000**, lãi gộp sửa **570.000**; bảo hành 90 ngày |
-| Chỉ thay pin — **SC-08, ca 8b** | CH | Lãi gộp sửa **125.000** |
-| **SC-07**: tra bảo hành theo serial → **Nhận máy bảo hành** | CH | Phiếu `warranty_free`: doanh thu 0; chi phí bảo hành 80.000; lãi gộp bán hàng cũ không đổi; không có chức năng đổi trả |
-| Bảo hành hết hạn | CH | Phiếu miễn phí bị chặn; phiếu tính phí được |
-| Sửa nội bộ rồi bán — **SC-09** | CH, BH | Giá vốn **4.350.000**; lãi gộp bán **1.650.000** |
-| BH/KHO/CTV mở màn Sửa chữa | BH, KHO | Không có quyền (không thấy màn); không có phân công thợ, không "Việc của tôi" |
-| Máy hoàn thành quá 14 ngày chưa lấy (`repair.pickup_alert_days`) | CH | Có cảnh báo |
-| Tra lịch sử sửa chữa theo serial | CH | Gộp cả máy khách và máy của cửa hàng |
+| Nhận máy của khách mới (tên + SĐT bắt buộc), **không ảnh** (hợp lệ), in phiếu nhận | CH | Có mã phiếu; cùng SĐT lần sau dùng lại khách; thiếu SĐT bị chặn |
+| Ghi tiến độ; thêm *Bảo dưỡng máy* (300.000) + khoản khác *Thay dây da* 200.000 | CH | Tạm tính **500.000**; khoản khác phải có nội dung |
+| Sửa xong → khóa khoản → giao máy | CH | **SC-08**: doanh thu **500.000** ghi ngày giao; bảo hành 90 ngày; không có ô thu tiền/cọc/linh kiện |
+| **SC-07**: nhận máy chọn bảo hành còn hạn của khách | CH | Phiếu `warranty_free`: doanh thu 0; BH không thấy danh sách bảo hành |
+| Bảo hành hết hạn | CH | Chọn bảo hành bị chặn `WF-WAR-EXPIRED`; nhận máy tính phí được |
+| Hủy phiếu (lý do ≥ 10 ký tự) | CH | `cancelled`, doanh thu 0 |
+| BH/KHO/CTV mở màn Sửa chữa | BH, KHO, CTV | Không có quyền (không thấy màn, API 403) |
+| Máy hoàn thành quá 14 ngày chưa lấy | CH | Có cảnh báo |
 
-### UAT-07 — Tiền thu & báo cáo & xuất file  *(SC-10, SC-13; bản gốc "báo cáo")*
+### UAT-07 — Báo cáo & xuất file  *(SC-10)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Xem báo cáo **Tiền thu** theo ngày 03 và 05 | CH | Ngày 03: tiền mặt 12.000.000 + chuyển khoản 3.200.000; ngày 05: 1.000.000 chuyển khoản; **không** có số dư quỹ/phiếu chi/khóa kỳ |
-| **SC-13**: chạy 8 sự kiện, kiểm hằng đẳng thức sau mỗi bước | CH | Doanh thu − Thực thu = Khách nợ + CTV chưa nộp − Cọc giữ − Cọc tịch thu − Nhận trước sửa (đúng ở cả 8 bước) |
-| Báo cáo R1…R12: lọc ngày, xuất Excel/PDF | CH | Số liệu Excel = màn hình; có người xuất, thời điểm |
-| BH xuất báo cáo doanh thu | BH | File **không** có cột giá vốn/lãi |
-| Báo cáo phiếu còn nợ (R6) | CH | Khớp SC-04 |
+| Báo cáo **Doanh thu** theo ngày/tháng/quý/năm | CH | Cửa hàng / CTV / sửa chữa / tổng, số đơn, số chiếc; ngày không phát sinh trống |
+| Báo cáo **Số lượng đồng hồ** | CH, KHO | Đã bán theo hãng & kênh; đang có theo hãng; đang giao CTV |
+| Báo cáo **Cộng tác viên** | CH | Số chiếc + doanh thu theo CTV và theo kỳ; BH/KHO/CTV ⇒ 403 |
+| Xuất Excel, in | CH, BH | Số liệu Excel = màn hình; ghi audit; **không** có cột giá vốn/lãi/nợ |
+| Tìm báo cáo Lợi nhuận, Tồn kho theo giá vốn, Phiếu còn nợ, Tiền thu | CH | **Không tồn tại** (CF-14) |
 
 ### UAT-08 — Điện thoại, máy tính, PWA, mất mạng, giao diện Glass  *(FR-BAK-06/07, FR-PLAT-06/07)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| Mở bằng điện thoại thật (≥ 1 iPhone/Android) và máy tính; làm lại **SC-02** và nhận máy sửa | BH, CH | Không phải kéo ngang; nút bấm đủ lớn; chữ nhập không bị phóng to |
+| Mở bằng điện thoại thật (≥ 1 iPhone/Android) và máy tính; làm lại **SC-19** và nhận máy sửa | BH, CH | Không phải kéo ngang; nút bấm đủ lớn; chữ nhập không bị phóng to |
 | **So giao diện với mẫu v6-glass**: dock nổi + nút "+", tiêu đề lớn, thẻ kính, màu trạng thái; desktop: sidebar đảo nổi + thanh trên | CH | Đúng phong cách khách đã chọn; không có màn đã loại (Thu chi, Đổi trả, Thợ, NCC) |
 | Cài lên màn hình chính | BH | Mở như ứng dụng, có biểu tượng đúng |
 | Chụp ảnh + quét QR bằng camera (Android và iOS) | KHO | Quét được; iOS dùng được đường dự phòng |
 | Ngắt mạng khi lập phiếu; có biểu ngữ "Mất kết nối" | BH | Nháp giữ; nút Xác nhận khóa tới khi có mạng; không mất dữ liệu |
-| Đo tốc độ POS với 20 người đồng thời (script tải nhẹ) | KT | p95 mở màn hình bán hàng ≤ 2 giây trên 4G |
+| Đo tốc độ màn ghi đơn bán với 20 người đồng thời (script tải nhẹ) | KT | p95 mở màn hình bán hàng ≤ 2 giây trên 4G |
 | Máy yếu: dock/sheet có mượt (CPU throttle 4×) | KT | Không giật rõ rệt; có phương án khi không hỗ trợ blur |
 
 ### UAT-09 — Sao lưu, khôi phục, giám sát  *(BR-BAK-*)*
@@ -131,37 +121,41 @@ Ký hiệu người làm: **CH** chủ · **BH** bán hàng · **KHO** quản l�
 |---|---|---|
 | Đăng nhập, đổi mật khẩu, bật TOTP, đăng xuất; sai mật khẩu 5 lần | tất cả | Khóa tạm 15 phút; TOTP bắt buộc với CH |
 | Lần lượt mỗi vai trò thử mở màn hình/URL/API **không có quyền** (script PT + thao tác tay) | tất cả | Bị chặn bằng 403/ẩn menu; **giá vốn, giá thu, lãi không lộ** ở UI, báo cáo, Excel, in |
-| Đổi hạn mức giảm giá của vai trò BH; hạ quyền một người | CH | Có hiệu lực ngay; có nhật ký |
+| Hạ quyền một người / đổi vai trò | CH | Có hiệu lực ngay; có nhật ký; mục của tính năng đã bỏ không hiện ở Vai trò & quyền |
 | Thử khóa/hạ quyền chủ cuối cùng | CH | Chặn (BR-SEC-07) |
-| Xem Nhật ký hoạt động: ai tạo/sửa/xác nhận/hủy | CH | Đủ, không sửa/xóa được |
+| Xem **Nhật ký** (một trang, hai mục: "Thay đổi dữ liệu" và "Truy cập & đăng nhập"): ai tạo/sửa/xác nhận/hủy | CH | Đủ, không sửa/xóa được |
 | Đổi cài đặt (ngưỡng, hạn bảo hành, thông tin in phiếu) | CH | Có lịch sử thay đổi |
 | Mở **Hướng dẫn sử dụng** theo vai trò; đọc "Hướng dẫn nhanh" | tất cả | Đúng vai trò, làm theo được |
 | Buổi đào tạo: mỗi người **tự làm đúng** kịch bản của vai trò mình | tất cả | Danh sách đã đào tạo lưu ở `runbook` |
 | Bàn giao: checklist `runbook` §7 | CH, KT | Tất cả ☑ |
 
-### UAT-11 — Cộng tác viên: giao hàng → bán → quyết toán → thống kê  *(SC-12, SC-16; CF-03/08)*
+### UAT-11 — Cộng tác viên: giao nhiều người → ai báo trước được → xác nhận → thống kê  *(SC-18; CT-14; PT-14; CF-10…12)*
 | Bước | Người | Kết quả đúng |
 |---|---|---|
-| **SC-12 bước 1**: chủ giao A/B/C cho C1 với giá thu 7.000.000 / 1.500.000 / 5.500.000, in phiếu giao | CH | A/B/C `Đang ở CTV`; vẫn tính tồn kho; doanh thu 0 |
-| C1 đăng nhập điện thoại | CTV | Chỉ thấy 3 chiếc với **giá thu**; không giá vốn; không chiếc/khách của người khác; không xác nhận được đơn |
-| C1 tạo khách + đơn bán A giá 8.200.000; BH xác nhận | CTV, BH | Doanh thu cửa hàng 7.000.000; lãi gộp **940.000**; phần C1 hưởng **1.200.000**; bảo hành cho khách |
-| C1 bán C giá 5.200.000 (dưới giá thu) | CTV, BH | Có cảnh báo; cho phép; phần C1 hưởng **−300.000**; lãi cửa hàng **652.000** |
-| **Quyết toán** dòng A (7.000.000 chuyển khoản) | CH | Thực thu +7.000.000; quyết toán lại bị chặn |
-| **Thu hồi** B về kho | CH | B `Sẵn sàng bán`, giá vốn không đổi; thu hồi chiếc đã bán bị chặn |
-| **Thống kê CTV** tháng 11 | CH, CTV | Số chiếc 2; bán ra **13.400.000**; phải nộp **12.500.000**; hưởng **900.000**; đã nộp 7.000.000; chưa nộp 5.500.000 (CH xem tất cả; CTV chỉ của mình); lọc tháng/quý/năm |
-| **SC-16**: hủy đơn CTV (chưa quyết toán) và hủy quyết toán | CH | Chiếc về `Đang ở CTV`; hủy khi đã quyết toán bị chặn tới khi hủy quyết toán |
-| Cảnh báo chiếc ở CTV quá 30 ngày | CH | Có thông báo |
+| **SC-18 bước 1**: chủ giao A cho C1 **và** C2, B cho C2 (chọn nhiều chiếc × nhiều CTV) | CH | Chiếc **vẫn `Sẵn sàng bán`**; mỗi cặp một chào hàng; giao lại không nhân đôi; BH giao ⇒ chặn |
+| C1, C2 đăng nhập điện thoại | CTV | C1 thấy A; C2 thấy A, B — mỗi chiếc có ảnh, thông số, **giá niêm yết**; **không** giá vốn, doanh thu, đơn bán, khách, chiếc của người khác; menu chỉ có Hàng của tôi / Báo bán của tôi / Thống kê |
+| C1 bấm **Đã bán** A (tên + SĐT khách) | CTV | Báo bán chờ xác nhận; **không có ô nhập giá**; màn C2 hiện A "CTV khác đã báo bán" |
+| C2 bấm **Đã bán** A | CTV | Bị chặn `WF-COL-CLAIMED` |
+| C1 và C2 cùng bấm **Đã bán** B cùng lúc | CTV | Đúng một người thành công (CT-14) |
+| BH ghi đơn bán A trực tiếp trong lúc có báo bán chờ | BH | Chặn `WF-SALE-UNIT-CLAIMED` |
+| Chủ **Xác nhận** báo bán A (giá mặc định) | CH | Đơn **8.500.000**; A `Đã bán`; C2 thấy A biến mất; thông báo "chiếc đã có người bán" cho C2; bảo hành tạo |
+| Chủ **Xác nhận** báo bán B với giá **4.500.000**; một báo bán khác bị **Từ chối** (lý do ngắn bị chặn) | CH | Doanh thu CTV **13.000.000** (2 chiếc); báo bán từ chối ⇒ chiếc mở lại cho CTV |
+| CTV rút báo bán còn chờ | CTV | Về `cancelled` |
+| **Thu hồi** chào hàng một CTV / tất cả; thu hồi khi có báo bán chờ | CH | Thành công / chặn `WF-COL-CLAIM-PENDING` |
+| Hủy đơn A trong 24 giờ | CH | A về `Sẵn sàng bán`; báo bán `voided`; chào hàng không tự mở lại; giao lại được |
+| **Thống kê** CTV theo ngày/tháng/quý/năm | CH, CTV | CH: số chiếc + doanh thu theo CTV; CTV: **chỉ số chiếc** của mình |
+| Báo bán chờ > 1 ngày | CH | Nhắc trong chuông; huy hiệu đỏ |
 
 ## 4. Đối chiếu với tiêu chí nghiệm thu của bản gốc
 
 | Tiêu chí gốc (mục V) | Ca UAT | Tự động hóa tương ứng |
 |---|---|---|
-| Kiểm tra nhập hàng và tính đúng giá vốn | UAT-02 | SC-01, SC-11, SC-17 |
-| Kiểm tra bán hàng, thanh toán, in hóa đơn và trừ kho | UAT-03 | SC-02, SC-03, SC-04, CT-01, CT-07 |
-| Kiểm tra đổi trả hàng và hoàn kho | **Thay bằng bảo hành** (CF-02): UAT-06 (SC-07); hoàn kho = thu hồi CTV (UAT-11) | SC-07, SC-12, SC-15 |
-| Kiểm tra tính lãi gộp và báo cáo thu chi | UAT-05, UAT-07 (báo cáo Tiền thu; thu chi/quỹ đã bỏ — CF-07) | SC-10, SC-13 |
-| Kiểm tra phiếu sửa chữa, linh kiện sử dụng và tiền công | UAT-06 (không còn tiền công thợ — CF-04) | SC-08, SC-09, CT-04 |
-| Kiểm tra phân quyền nhân viên | UAT-10, UAT-11 | PT-01…PT-12 |
+| Kiểm tra nhập hàng và tính đúng giá vốn | **Bỏ** (CF-14); còn "Thêm đồng hồ" ở UAT-01/02 | CT-07, CT-09 (`m4-add-unit`) |
+| Kiểm tra bán hàng, in hóa đơn và trừ kho | UAT-03 (đơn bán gọn — không thanh toán) | SC-19, CT-01, CT-07 |
+| Kiểm tra đổi trả hàng và hoàn kho | **Thay bằng bảo hành** (CF-02): UAT-06 (SC-07); giao/thu hồi CTV ở UAT-11 | SC-07, SC-18, SC-15 |
+| Kiểm tra tính lãi gộp và báo cáo thu chi | **Bỏ** (CF-07, CF-14): thay bằng báo cáo doanh thu/số lượng/CTV — UAT-05, UAT-07 | SC-10 |
+| Kiểm tra phiếu sửa chữa, linh kiện sử dụng và tiền công | UAT-06 (không còn linh kiện, tiền công — CF-04, CF-16) | SC-08 |
+| Kiểm tra phân quyền nhân viên | UAT-10, UAT-11 | PT-01…PT-14 |
 | Kiểm tra sao lưu và khôi phục dữ liệu | UAT-09 | Q7 |
 | Kiểm tra sử dụng trên máy tính và điện thoại | UAT-08 | e2e 390/1366 |
 

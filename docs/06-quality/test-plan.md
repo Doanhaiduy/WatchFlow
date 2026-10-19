@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử & truy vết
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Chiến lược/công cụ: `04-engineering/testing-strategy` · Số liệu: `golden-scenarios`
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02`: CT-14, PT-14 mới; CT-02/04/05/06/08/10/12/13 thuộc phần đã đóng băng) · Chiến lược/công cụ: `04-engineering/testing-strategy` · Số liệu: `golden-scenarios`
 
 ## 1. Cổng chất lượng (bắt buộc đạt trước phát hành)
 
@@ -32,6 +32,7 @@
 | CT-11 | Sinh mã chứng từ | — | 100 phiên tạo+xác nhận phiếu | Mã không trùng, liên tục (gapless) | `number_sequences` cập nhật trong transaction |
 | CT-12 | Hủy phiếu nhập vs bán | Chiếc L `in_stock` từ phiếu R | `fn_void_purchase(R)` ∥ `fn_confirm_sale(L)` | Hoặc bán xong ⇒ hủy `WF-PUR-HAS-DEPENDENTS`; hoặc hủy xong ⇒ bán `WF-SALE-UNIT-UNAVAILABLE`; không trạng thái lai | Khóa chiếc trước; kiểm phụ thuộc |
 | CT-13 | Điều chỉnh tồn vs dùng | `LK-X` SL 5 | điều chỉnh kiểm kê ∥ dùng ∥ bán | `qty_on_hand` = Σ movements; I7 sạch | Khóa dòng `parts`; movements append-only |
+| CT-14 | Hai CTV cùng báo bán một chiếc | A `in_stock`, giao cho C1 và C2 | `fn_collab_claim(A)` của C1 ∥ của C2 (kết nối riêng, `Promise.all`) | Đúng **1** báo bán `pending`; người kia `WF-COL-CLAIMED`; không tạo hai đơn | Khóa chiếc + unique index `ux_collab_claims_pending_unit`. Mở rộng: `fn_confirm_claim` ∥ `fn_cancel_claim` cùng báo bán ⇒ một bên thắng, bên kia `WF-COL-CLAIM-DECIDED` |
 
 **Cách chạy:** bộ nhanh (CT-01…06, 07) trong PR; bộ đầy đủ lặp ≥ 20 lần ban đêm. Mỗi ca có chế độ "đột biến" (`MUTATE=1` tắt khóa/ràng buộc trên DB test) và khẳng định test **đỏ** — chứng minh test có khả năng bắt lỗi.
 
@@ -52,6 +53,7 @@
 | PT-11 | Hạn mức giảm giá và bán dưới giá vốn **do server/DB quyết định** (UI bị bỏ qua) với đơn cửa hàng; đơn CTV không áp | Gọi API thẳng với giá thấp ⇒ `WF-SALE-DISCOUNT-LIMIT`/`WF-SALE-BELOW-COST`; thông báo không lộ số giá vốn cho người không có `cost.view` |
 | PT-12 | PII: `id_number_enc` không bao giờ xuất hiện rõ trong API/log/audit; `reveal` cần `customer.pii.view` + lý do; ghi audit; ảnh giấy tờ chỉ người có quyền | Đọc `audit_logs.before/after`; `files` quyền |
 | PT-13 | Ảnh & lưu trữ: ẩn danh khách ⇒ job DAILY xóa thật ảnh giấy tờ (cả của phiếu thu mua) + thumb; tệp bất biến không bị xóa; `wf_app` không ghi được `purge_after/purged_at`; dung lượng kho cần `system.health` | `tests/api/m10-storage.test.mjs` |
+| PT-14 | **CTV chỉ thấy phần được phép:** vai trò CTV chỉ còn `collab.view_own`; `SELECT` bảng `sales`, `sale_lines`, `customers`, `watch_units`, `warranties`, `sale_line_costs` dưới CTV ⇒ 0 dòng/từ chối; `fn_my_offers/fn_my_claims` không có cột tiền ngoài giá niêm yết; `fn_my_collab_stats` chỉ `period_start, units_sold`; `rpt_revenue/rpt_collab_sales/rpt_collaborator/fn_record_sale/fn_confirm_claim` ⇒ `WF-AUTH-FORBIDDEN`; `rpt_dashboard` chỉ trả `from,to`; CTV không thấy chào hàng/báo bán của CTV khác | Dưới `wf_app` với C1/C2, `sales`, `owner` (db-simple-mode, m12-collab) |
 
 Ma trận vai trò × endpoint sinh tự động từ `permissions` + bản đồ endpoint (`api-conventions`); thiếu ô ⇒ test thất bại.
 

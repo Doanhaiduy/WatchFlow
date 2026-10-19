@@ -1,6 +1,6 @@
-# Kế hoạch xây dựng (M0 → M9)
+# Kế hoạch xây dựng (M0 → M10)
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo phản hồi khách vòng 1 + chốt giao diện Glass)
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (M0–M9 đã xây xong ở v0.14–0.15; **M10 = đợt rút gọn theo phản hồi vòng 2** — mô tả từng mốc M3–M8 bên dưới là thiết kế gốc, nhiều phần đã bị M10 gỡ khỏi giao diện/API)
 > Thứ tự theo **phụ thuộc**, không theo thời lượng (xây bằng AI nên không ước tính tháng). Mỗi mốc có **phạm vi**, **kiểm thử bắt buộc**, **Định nghĩa hoàn thành (DoD)**. Chỉ sang mốc sau khi DoD mốc trước xong và `fn_consistency_check()` sạch. Mapping FR→mốc: `requirements`. Số mốc **giữ nguyên** M0…M9; M5 tách **M5a** (bán hàng) và **M5b** (cộng tác viên); M3 đổi thành "Tiền tối giản".
 
 ## 0. Tổng quan phụ thuộc
@@ -24,6 +24,7 @@ flowchart LR
   M6 --> M8
   M7 --> M9[M9 Hoàn thiện & go-live]
   M8 --> M9
+  M9 --> M10[M10 Rút gọn vòng 2]
 ```
 (M5b và M6 độc lập sau M5a — có thể làm song song nếu dùng nhiều tác tử, xem §3.)
 
@@ -108,6 +109,11 @@ flowchart LR
 ### M9 — Hoàn thiện & go-live
 **Phạm vi:** chạy **đầy đủ** CT/PT/SC; kiểm định độc lập (`/code-review`, `/security-review`, rà RLS, thử tấn công mass-assignment/đồng thời); sửa lỗi; hiệu năng & tải nhẹ; a11y; PWA & camera trên điện thoại thật; **rà phần tử Lucian** (mã, CSP, hiệu năng); **sao lưu + diễn tập khôi phục có biên bản**; hướng dẫn sử dụng theo vai trò (`src/content/guide.ts` → `docs/07-user-guide`); sinh từ điển dữ liệu & ma trận quyền; `docs:check`; thiết lập production; nhập tồn đầu kỳ; đào tạo; UAT chính thức (`uat-acceptance`); bàn giao (`runbook` §Bàn giao).
 **DoD:** toàn bộ UAT-01…11 đạt; checklist go-live xong; báo cáo test phát hành lưu; chủ cửa hàng ký nghiệm thu; **các câu hỏi Q1–Q3, Q5–Q7 (vision-scope) và Q8–Q19 (feedback-01) đã có trả lời hoặc chấp nhận rủi ro bằng văn bản**.
+
+### M10 — Rút gọn theo phản hồi vòng 2 (`customer-feedback-02`, ADR-028/029)
+**Phạm vi:** migration `0023_simple_mode` (bảng `collaborator_offers`/`collaborator_claims`; hàm `fn_record_sale`, `fn_void_sale` (+`_v1` cho đơn cũ), `fn_offer_units`, `fn_withdraw_offer`, `fn_collab_claim`, `fn_cancel_claim`, `fn_reject_claim`, `fn_confirm_claim`, `fn_my_offers/claims/collab_stats`; `rpt_revenue` (+số chiếc), `rpt_units`, `rpt_collab_sales`, `rpt_dashboard` gọn; `fn_daily_alerts`, `fn_consistency_check` I13–I15; vai trò CTV chỉ còn `collab.view_own`); API/UI: ghi đơn bán gọn (`/ban-hang/moi`), giao CTV nhiều người + báo bán chờ xác nhận (`/cong-tac-vien/*`), trang CTV (`/ctv/*`), sửa chữa gọn, 3 báo cáo, điều hướng gọn (Nhật ký + Hoạt động gộp một trang, bỏ tab Phiên bản), Nhập Excel chỉ khách + đồng hồ, hướng dẫn sử dụng viết lại. **Gỡ** khỏi UI/API (giữ DB): thanh toán/nợ, giữ hàng, thu cũ, nhập nhiều dòng, linh kiện, kiểm kê, giá vốn/lãi, quyết toán CTV, màn bảo hành riêng.
+**Kiểm thử:** SC-18 (CTV nhiều người, ai báo trước), SC-19 (ghi đơn, bảo hành, hủy, in), SC-10 (báo cáo gọn), SC-08 (sửa chữa gọn); CT-14 (đua báo bán); PT-14 (CTV chỉ thấy phần được phép); `tests/api/{db-simple-mode,m12-sales,m12-collab,m4-add-unit,m6-repairs,m8-reports,m11-*}`; `fn_consistency_check()` sạch.
+**DoD:** FR-SALE-20…22, FR-COL-12…17, FR-REP-19, FR-RPT-13, FR-IMP-06, FR-NAV-04; UAT-03, UAT-05, UAT-06, UAT-07, UAT-11; `typecheck` + `build` + `test:api` xanh; `docs:check` xanh.
 
 ## 2. Quy trình làm việc trong **một mốc** (với Claude Code)
 

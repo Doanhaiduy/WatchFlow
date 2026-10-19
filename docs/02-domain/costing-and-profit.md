@@ -1,6 +1,7 @@
 # Giá vốn, phân bổ chi phí & lợi nhuận
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Quy tắc gốc: BR-COST-*, BR-PUR-03/05, BR-PART-02, BR-SALE-13, BR-COL-04, BR-WAR-03, BR-REP-09
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: **Chỉ còn tham khảo (đóng băng)** — từ `customer-feedback-02` sản phẩm không còn giá vốn/lãi gộp/linh kiện/phân bổ chi phí (ADR-028). Giá nhập vẫn được ghi nội bộ (không hiển thị); nếu bật lại tính năng, tài liệu này là thiết kế gốc.
+> (Bản vòng 1: đã cập nhật theo `customer-feedback-01`) · Quy tắc gốc: BR-COST-*, BR-PUR-03/05, BR-PART-02, BR-SALE-13, BR-COL-04, BR-WAR-03, BR-REP-09
 
 ## 1. Hai phương pháp giá vốn
 

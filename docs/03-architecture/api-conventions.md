@@ -1,6 +1,6 @@
 # Quy ước API & bản đồ endpoint
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01` + triển khai M0–M8) · Hợp đồng dữ liệu = schema Zod ở `src/lib/types/*` (dùng chung cho form và API); tài liệu này cố định **quy ước** và **bản đồ**.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02` — bản đồ endpoint **§2.0 là hiện hành**, các mục sau đó đánh dấu ⏸ là đóng băng/đã gỡ) · Hợp đồng dữ liệu = schema Zod ở `src/lib/types/*` (dùng chung cho form và API); tài liệu này cố định **quy ước** và **bản đồ**.
 
 ## 1. Quy ước chung
 
@@ -42,12 +42,14 @@
 | Thông báo đẩy | `WF-PUSH-DISABLED` (503, thiếu khóa VAPID) · `WF-PUSH-NO-DEVICE` (409, chưa có thiết bị bật khi "Gửi thử") — API `/api/v1/me/push-config` (GET, PUT), `/api/v1/me/push-subscriptions` (POST, DELETE), `/api/v1/me/push-subscriptions/test` (POST) |
 | Chung | `WF-AUTH-UNAUTHENTICATED` (401) · `WF-AUTH-FORBIDDEN` (403) · `WF-AUTH-MUST-CHANGE-PASSWORD` (403) · `WF-AUTH-MFA-REQUIRED` (403) · `WF-AUTH-LOCKED` (423) · `WF-VALIDATION` (422) · `WF-NOT-FOUND` (404) · `WF-CONFLICT-VERSION` (412) · `WF-IDEMPOTENCY-MISMATCH` (422) · `WF-RATE-LIMIT` (429) · `WF-BUSY` (409) · `WF-REASON-REQUIRED` (422) · `WF-DOC-NOT-DRAFT` (409) · `WF-DOC-BACKDATE` (422) |
 | Catalog | `WF-UNIT-SERIAL-DUPLICATE` (409) · `WF-UNIT-INVALID-TRANSITION` (409) · `WF-UNIT-PHOTO-REQUIRED` (422) · `WF-UNIT-GRADE-REQUIRED` (422) |
-| Nhập hàng & giá vốn | `WF-PUR-HAS-DEPENDENTS` (409) · `WF-PUR-SELLER-ID-REQUIRED` (422) · `WF-PUR-COST-ALLOCATION` (422) · `WF-COST-NOT-ADJUSTABLE` (409) |
-| Bán hàng | `WF-SALE-UNIT-UNAVAILABLE` (409) · `WF-SALE-STOCK-INSUFFICIENT` (409) · `WF-SALE-DISCOUNT-LIMIT` (403) · `WF-SALE-BELOW-COST` (403) · `WF-SALE-CUSTOMER-REQUIRED` (422) · `WF-SALE-TRADEIN-EXCEEDS` (422) · `WF-SALE-VOID-EXPIRED` (409) · `WF-SALE-VOID-NOT-ALLOWED` (409) |
-| Thanh toán | `WF-PAY-OVERPAY` (422) · `WF-PAY-DOC-INVALID` (422) · `WF-PAY-VOIDED` (409) |
-| Giữ hàng/cọc | `WF-RSV-UNIT-HELD` (409) · `WF-RSV-DEPOSIT-TOO-LOW` (422) · `WF-RSV-NOT-ACTIVE` (409) · `WF-RSV-SETTLE-MISMATCH` (422) |
+| Nhập hàng & giá vốn ⏸ (chỉ `WF-PUR-HAS-DEPENDENTS`, `WF-UNIT-SERIAL-DUPLICATE` còn gặp qua "Thêm đồng hồ") | `WF-PUR-HAS-DEPENDENTS` (409) · `WF-PUR-SELLER-ID-REQUIRED` (422) · `WF-PUR-COST-ALLOCATION` (422) · `WF-COST-NOT-ADJUSTABLE` (409) |
+| Bán hàng (gọn) | `WF-SALE-UNIT-UNAVAILABLE` (409) · `WF-SALE-UNIT-CLAIMED` (409, chiếc có CTV báo bán chờ xác nhận) · `WF-SALE-CUSTOMER-REQUIRED` (422) · `WF-SALE-VOID-EXPIRED` (409) · `WF-SALE-VOID-NOT-ALLOWED` (409) |
+| Bán hàng ⏸ | `WF-SALE-UNIT-UNAVAILABLE` (409) · `WF-SALE-STOCK-INSUFFICIENT` (409) · `WF-SALE-DISCOUNT-LIMIT` (403) · `WF-SALE-BELOW-COST` (403) · `WF-SALE-CUSTOMER-REQUIRED` (422) · `WF-SALE-TRADEIN-EXCEEDS` (422) · `WF-SALE-VOID-EXPIRED` (409) · `WF-SALE-VOID-NOT-ALLOWED` (409) |
+| Thanh toán ⏸ | `WF-PAY-OVERPAY` (422) · `WF-PAY-DOC-INVALID` (422) · `WF-PAY-VOIDED` (409) |
+| Giữ hàng/cọc ⏸ | `WF-RSV-UNIT-HELD` (409) · `WF-RSV-DEPOSIT-TOO-LOW` (422) · `WF-RSV-NOT-ACTIVE` (409) · `WF-RSV-SETTLE-MISMATCH` (422) |
 | Bảo hành | `WF-WAR-NOT-FOUND` (404) · `WF-WAR-EXPIRED` (409 — chỉ khi cố mở phiếu `warranty_free` quá hạn) |
-| Cộng tác viên | `WF-COL-UNIT-NOT-HELD` (409) · `WF-COL-UNIT-ASSIGNED` (409) · `WF-COL-PRICE-REQUIRED` (422) · `WF-COL-ALREADY-SETTLED` (409) · `WF-COL-HAS-SOLD` (409) · `WF-COL-NOT-OWN` (403) |
+| Cộng tác viên (mới) | `WF-COL-UNIT-NOT-OFFERABLE` (409, chiếc không ở "Sẵn sàng bán") · `WF-COL-NO-OFFER` (409, chiếc không giao cho bạn / đã bán) · `WF-COL-UNIT-GONE` (409) · `WF-COL-CLAIMED` (409, CTV khác báo bán trước) · `WF-COL-CLAIMED-SELF` (409, bạn đã báo rồi) · `WF-COL-CLAIM-PENDING` (409, đang có báo bán chờ ⇒ không thu hồi) · `WF-COL-CLAIM-DECIDED` (409, báo bán đã xử lý) |
+| Cộng tác viên ⏸ | `WF-COL-UNIT-NOT-HELD` (409) · `WF-COL-UNIT-ASSIGNED` (409) · `WF-COL-PRICE-REQUIRED` (422) · `WF-COL-ALREADY-SETTLED` (409) · `WF-COL-HAS-SOLD` (409) · `WF-COL-NOT-OWN` (403) |
 | Sửa chữa | `WF-REP-INVALID-STATUS` (409) · `WF-REP-QUOTE-NOT-APPROVED` (409) · `WF-REP-PART-INSUFFICIENT` (409) · `WF-REP-LOCKED` (409) |
 | Kiểm kê | `WF-INV-STOCKTAKE-CLOSED` (409) |
 | Bảo mật | `WF-SEC-LAST-OWNER` (409) · `WF-SEC-PII-REASON` (422) · `WF-SEC-REAUTH` (401, cần xác thực lại) |
@@ -58,7 +60,25 @@ Thêm mã mới: thêm vào `errors.ts` (có mô tả tiếng Việt) + bảng n
 
 ## 2. Bản đồ endpoint (theo module)
 
-Ký hiệu: **G** đọc · **P** tạo · **U** sửa nháp · **A** hành động (có `Idempotency-Key`). Cột quyền là quyền chính (kiểm thêm theo RLS).
+Ký hiệu: **G** đọc · **P** tạo · **U** sửa · **A** hành động (có `Idempotency-Key`). Cột quyền là quyền chính (kiểm thêm theo RLS).
+
+### 2.0 Hiện hành (customer-feedback-02) — tóm tắt endpoint của sáu việc
+
+| Việc | Endpoint | Quyền |
+|---|---|---|
+| Kho đồng hồ | G/U `/catalog/units`, `/catalog/units/{id}` · A `…/{price,move,release,writeoff,restore,identity}` · G `…/{history,label}` · G `/catalog/units/lookup?code=` · G/P/U `/catalog/{brands,models,locations}` · **P `/purchases/quick`** ("Thêm đồng hồ", `Idempotency-Key` bắt buộc) | `catalog.*`, `unit.*`, `purchase.create` |
+| Ghi đơn bán | **G/P `/sales`** (`P`: `{customerId \| customer:{fullName,phone?}, docDate?, note?, lines:[{unitId, price, warrantyMonths?}]}` ⇒ `{id,code,grandTotal,units}`; `G`: `q`, `status`, `channel=shop\|collab`, `from`, `to`) · G `/sales/{id}` · A `/sales/{id}/void` (lý do + reauth) · A `/sales/{id}/print` | `sale.view` · `sale.confirm` · `sale.void` |
+| Khách | G/P `/customers`, G/U `/customers/{id}`, G/P `/customers/{id}/watches` | `customer.*` |
+| Giao CTV (chủ) | **G/P `/collab/offers`** (`P`: `{unitIds, collaboratorIds, note?}`) · **A `/collab/offers/withdraw`** (`{unitId, collaboratorId?}`) · **G `/collab/claims?status=pending\|decided\|all`** · **A `/collab/claims/{id}/confirm`** (`{price?, docDate?, warrantyMonths?}`) · **A `/collab/claims/{id}/reject`** (`{reason}`) · G `/collaborators` · G/U `/collaborators/{id}` (hồ sơ) · G `/reports/collaborators` | `collab.view`/`collab.manage`/`sale.confirm` |
+| CTV (giới hạn) | **G `/collab/me/units`** · **G/P `/collab/me/claims`** (`P`: `{unitId, customerName, customerPhone, note?}`) · **A `/collab/me/claims/{id}/cancel`** · **G `/collab/me/stats?period=day\|month\|quarter\|year`** (chỉ số chiếc) | `collab.view_own` |
+| Sửa chữa (chủ) | G/P `/repairs` (`P`: `{customerId \| customer:{fullName,phone}, customerWatchId?, brandText?, modelText?, serialNo?, intakeCondition?, complaint, expectedDate?, warrantyId?}`) · G/U `/repairs/{id}` · P `/repairs/{id}/lines` · U/DELETE `/repairs/{id}/lines/{lineId}` · A `/repairs/{id}/{status,complete,deliver,cancel}` · G `/warranties?customerId=` (bảo hành còn hạn để chọn khi nhận máy) · G `/service-types` · ảnh nhận máy: P `/files` (`entityTable=repair_orders`) | `repair.*` |
+| Báo cáo | G `/reports/dashboard` · **G `/reports/{revenue,units,collab}?from&to&group=day\|month\|quarter\|year&format=json\|xlsx`** | theo từng báo cáo |
+| Nhập Excel | P `/import/{customers,watches}/{preview,commit}` · G `/import/{kind}/template` | xem §Nhập Excel |
+| Khác | G `/store-info` (thông tin cửa hàng để in) · G `/search?q=` · G `/me/badges` · G/A `/notifications` | đã đăng nhập |
+
+**Đã gỡ (trả 404):** `/purchases` (danh sách/nháp/xác nhận/hủy/xuất), `/purchases/sources`, `/parts*`, `/part-categories`, `/stocktakes*`, `/reservations*`, `/payments*`, `/sales/{id}/{confirm,payments,pdf}`, `/sales/quote`, `/assignments*`, `/settlements*`, `/collaborators/{id}/{assignments,settlements,return}`, `/catalog/units/{id}/{cost,cost-adjust}`, `/customers/{id}/{reveal-id,anonymize}`, `/technicians`, `/warranties/{id}/open-repair`, `/collab/me/sales`, và các báo cáo `profit, purchases, moves, stock, aging, open-balances, repairs, collections, shrinkage, warranty`.
+
+Các mục dưới đây là bản đồ **vòng 1** (đã triển khai M0–M8) — chỉ còn đúng với những endpoint nêu ở bảng trên; phần còn lại ⏸ đóng băng/đã gỡ.
 
 ### Auth & tài khoản (`iam`) — `/api/v1/auth`, `/api/v1/users`, `/api/v1/roles`
 | Method & đường dẫn | Mục đích | Quyền |

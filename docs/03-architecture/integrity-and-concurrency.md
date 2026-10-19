@@ -1,6 +1,6 @@
 # Toàn vẹn dữ liệu & xử lý đồng thời
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đáp ứng yêu cầu III.1, III.6 (kho và tiền luôn khớp) · Test: CT-01…CT-13, `fn_consistency_check`
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02` — **§3.0 và bảng B14–B16 là hiện hành** cho đơn bán/CTV; các hợp đồng hàm cũ bên dưới thuộc phần đóng băng) · Đáp ứng yêu cầu III.1, III.6 (kho và tiền luôn khớp) · Test: CT-01…CT-13, `fn_consistency_check`
 
 Bài học từ dự án mẫu: các lỗi nặng nhất (trùng chỗ, thất thoát tiền qua đường vòng, ghi lọt vào dữ liệu đã chốt) **chỉ lộ khi chạy hai phiên song song** — đọc tài liệu không thấy. Vì vậy phần này vừa là quy tắc thiết kế vừa là danh sách ca đồng thời bắt buộc.
 
@@ -25,6 +25,19 @@ Quy tắc: ai cần chiếc + chứng từ thì khóa chiếc trước rồi ch�
 > **Bẫy READ COMMITTED (0022):** `SELECT … FROM sale_lines JOIN sales … FOR UPDATE OF sale_lines` chỉ kiểm lại dòng **đã khóa** sau khi chờ khóa; cột của bảng nối (`sales.status`) giữ giá trị cũ từ snapshot của câu lệnh. Muốn đọc trạng thái chứng từ cha sau khi đối thủ commit thì phải khóa chứng từ cha bằng câu lệnh **riêng, đứng trước** (câu lệnh sau lấy snapshot mới) — hoặc `FOR UPDATE` cả hai bảng theo đúng thứ tự khóa chung.
 
 ## 3. Hợp đồng từng hàm trọng yếu
+
+## 3.0 Hợp đồng hiện hành (bản gọn — vòng 2)
+
+Thứ tự khóa: **chiếc (id tăng) → chào hàng/báo bán CTV → chứng từ (đơn bán, phiếu sửa)**. Mọi hàm đặt `lock_timeout = 5s`; quá hạn ⇒ `WF-BUSY` (409, thử lại).
+
+- **`fn_record_sale(customer, date, lines, note, backdate_reason)`** — kiểm quyền `sale.confirm`; 1–20 dòng, mỗi chiếc một dòng; **khóa mọi chiếc theo id tăng** (`SELECT … ORDER BY id FOR UPDATE`) rồi kiểm từng chiếc `in_stock` (`WF-SALE-UNIT-UNAVAILABLE`) và không có báo bán `pending` (`WF-SALE-UNIT-CLAIMED`); tạo đơn `confirmed` + dòng; `set_unit_status → sold` (trigger đóng chào hàng); chốt giá vốn nội bộ; bảo hành; audit + `sale.confirmed`. Hai phiên cùng bán một chiếc: phiên sau chờ khóa, thấy `sold` ⇒ `WF-SALE-UNIT-UNAVAILABLE` (CT-01); `UNIQUE (unit_id) WHERE is_effective` là lưới cuối.
+- **`fn_collab_claim(unit, name, phone, note)`** — khóa **chiếc** (`lock_unit`), rồi khóa chào hàng `active` của đúng CTV; kiểm chiếc `in_stock`; nếu đã có báo bán `pending`: của chính mình ⇒ `WF-COL-CLAIMED-SELF`, của người khác ⇒ `WF-COL-CLAIMED`. Hai CTV báo cùng lúc: người thứ hai chờ khóa chiếc rồi thấy báo bán của người thứ nhất; `UNIQUE (unit_id) WHERE status='pending'` (`ux_collab_claims_pending_unit`) là lưới cuối (**CT-14**).
+- **`fn_confirm_claim(claim, price, date, warranty, backdate_reason)`** — khóa chiếc → báo bán (kiểm còn `pending`, `WF-COL-CLAIM-DECIDED`) → các chào hàng của chiếc → tạo đơn (`fn_record`-tương đương: dòng, giá vốn nội bộ, bảo hành) → `sold` → chào hàng thắng `won`, còn lại `lost` + thông báo. Xác nhận ∥ rút báo bán cùng lúc: đúng một bên thắng (CT-14 mở rộng).
+- **`fn_offer_units` / `fn_withdraw_offer`** — khóa chiếc (id tăng) rồi thêm/đóng chào hàng; `UNIQUE (unit_id, collaborator_id) WHERE status='active'` chặn nhân đôi. Thu hồi khi có báo bán `pending` ⇒ `WF-COL-CLAIM-PENDING`.
+- **`fn_void_sale`** — khóa chiếc, rồi đơn; kiểm cửa sổ hủy; chiếc → `in_stock`; báo bán `confirmed` → `voided`; bảo hành → `voided`. Chào hàng **không** tự mở lại.
+- **Trigger đóng chào hàng:** khi chiếc rời `in_stock` (bán, ghi mất, kiểm tra lại…) ⇒ chào hàng `active` → `lost`, báo bán `pending` → `cancelled` (cùng transaction với việc đổi trạng thái).
+
+### Phần đóng băng (thiết kế vòng 1 — hàm còn ở DB nhưng không còn được gọi)
 
 ### `fn_confirm_sale(sale_id, payload)`
 1. Kiểm quyền (`sale.confirm`), phiếu `draft`.
@@ -72,7 +85,10 @@ Khóa chiếc; kiểm `in_stock`; chèn `reservations` (unique một phần `(un
 | B10 | Giá thu giao CTV không đổi sau xác nhận | `tg_assignment_price_guard` |
 | B11 | Luôn còn ≥ 1 owner | `tg_ensure_owner` |
 | B12 | Mã chứng từ không trùng | `U(code)` + `number_sequences` trong transaction |
-| B13 | Mỗi dòng bán CTV quyết toán tối đa một lần | `sale_lines.settlement_id` đặt trong khóa dòng; kiểm `NULL` trước khi gán |
+| B13 ⏸ | Mỗi dòng bán CTV quyết toán tối đa một lần | `sale_lines.settlement_id` đặt trong khóa dòng; kiểm `NULL` trước khi gán |
+| B14 | Mỗi chiếc có tối đa **một** báo bán CTV đang chờ ("ai báo trước được giữ") | `UNIQUE (unit_id) WHERE status = 'pending'` + khóa chiếc |
+| B15 | Một CTV chỉ có một chào hàng còn hiệu lực trên một chiếc | `UNIQUE (unit_id, collaborator_id) WHERE status = 'active'` |
+| B16 | Chào hàng `active`/báo bán `pending` chỉ tồn tại khi chiếc `in_stock`; báo bán `confirmed` luôn có đơn bán | Trigger đóng khi chiếc rời `in_stock` + `fn_consistency_check` I13–I15 |
 
 ## 5. Idempotency
 

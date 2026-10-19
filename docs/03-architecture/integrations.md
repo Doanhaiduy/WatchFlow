@@ -5,7 +5,7 @@
 ## 1. In ấn & PDF
 
 - **Phía máy chủ**: `pdfmake` dựng PDF từ DTO đã lọc quyền; font hỗ trợ tiếng Việt (Be Vietnam Pro hoặc Roboto, nhúng vào bundle). Mẫu ở `src/server/pdf/<mẫu>.ts`.
-- **Mẫu phiếu** (`ux-and-navigation` §7): phiếu bán (80mm & A5), giữ hàng, nhập (A4), biên bản thu mua (A4), nhận sửa/giao trả (80mm & A5), tem QR (50×30mm), báo cáo (A4).
+- **Mẫu phiếu** (`ux-and-navigation` §7): phiếu bán (80mm & A5, kèm hạn bảo hành), nhận sửa/giao trả (80mm & A5), tem QR (50×30mm), báo cáo (A4).
 - Phiếu có: tên/địa chỉ/SĐT cửa hàng, logo (tùy chọn), mã phiếu + mã vạch/QR của mã phiếu, người lập, điều khoản (`store.warranty_terms`/`store.repair_terms`), chân phiếu.
 - **In lại** thêm dòng "BẢN IN LẠI" và ghi audit (BR-SALE-11).
 - Trình duyệt mở PDF và gọi hộp thoại in; với máy in nhiệt 80mm người dùng chọn "không lề, khổ 80mm" (hướng dẫn trong `user-guide`). Không cần driver/ứng dụng đặc biệt.
@@ -31,13 +31,13 @@ Phạm vi hiện tại: **phiếu bán hàng nội bộ**. Khi cần hóa đơn 
 ## 5. Thông báo
 
 - **Hiện tại**: thông báo trong ứng dụng (`notifications`), sinh bởi cron và handler sự kiện; chuông + danh sách; lọc theo quyền người nhận.
-- **Loại**: giữ hàng sắp/quá hạn · khách hẹn trả đến hạn · đơn nháp của CTV chờ xác nhận · chiếc ở CTV quá hạn · linh kiện sắp hết · hàng tồn lâu · bảo hành sắp hết · máy sửa xong chưa lấy · cảnh báo sao lưu · lỗi cron · vi phạm bất biến (`fn_consistency_check`, nghiêm trọng).
+- **Loại**: CTV báo đã bán chờ xác nhận (và nhắc quá 1 ngày) · CTV: được giao hàng mới / báo bán được xác nhận–từ chối / chiếc đã có người bán · máy sửa xong chưa lấy · cảnh báo sao lưu · lỗi cron · vi phạm bất biến (`fn_consistency_check`, nghiêm trọng).
 - **Đã có (FR-PUSH-04)**: Web Push/VAPID tới thiết bị của chính người nhận — `notifications` (INSERT) → trigger `app.tg_notification_push` → `push_outbox` → `src/server/push.ts` (`web-push`; gửi ngoài transaction; thử lại ≤ 5 lần giãn 2^n phút; 404/410 ⇒ `disabled_at`; giờ yên tĩnh lùi `next_attempt_at`). Gọi sau mỗi request ghi (`kickOutbox`) và sau job cron. Thiếu `VAPID_*` ⇒ tắt êm. Test dùng bộ gửi giả `WF_PUSH_FAKE=1` (+ `WF_PUSH_FAKE_FILE`), không bao giờ bật ở production/Vercel. **Gửi thật tới Google FCM/Mozilla/Apple chỉ chạy được ở môi trường có mạng ra ngoài — ⏭ cloud** (`runbook` §8). Email (Resend), Zalo vẫn là "sau này".
 - **Sau này**: email (Resend), Zalo — thêm handler + hàng đợi theo mẫu push ở trên; người dùng chọn kênh.
 
 ## 6. Ngân hàng / mã thanh toán (tùy chọn, COULD)
 
-- **VietQR cho khách chuyển khoản**: sinh mã QR thanh toán theo chuẩn từ số tài khoản + số tiền + nội dung (`HD-2026-0001`) hiển thị trên màn thanh toán — chỉ hiển thị, **không** tự ghi nhận đã thu. (Số tài khoản của cửa hàng là cấu hình in/hiển thị, không phải "quỹ" trong app.)
+- **VietQR cho khách chuyển khoản**: ⏸ đã bỏ cùng thanh toán trên đơn bán (CF-13, CF-18); mã thiết kế cũ ở `99-archive/` và lịch sử git.
 - **Webhook biến động số dư** (SePay/Casso): route công khai lưu giao dịch (idempotent theo mã tham chiếu), màn hình "Giao dịch chưa khớp" gợi ý phiếu; người dùng bấm *Ghi thanh toán* (gọi `fn_record_payment`). Không bao giờ tự ghi.
 
 ## 7. AI (tắt mặc định, ngoài đường găng)

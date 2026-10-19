@@ -1,144 +1,93 @@
 # Quy trình nghiệp vụ
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`)
-> Mỗi quy trình: **ai làm · điều kiện · các bước · hiệu ứng hệ thống (kho / thanh toán / giá vốn / audit / sự kiện) · ngoại lệ**. Quy tắc chi tiết ở `business-rules`; số liệu ví dụ ở `golden-scenarios`. Giao diện từng màn: `ux-and-navigation`, phong cách: `ui-design-system`.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (viết lại theo `customer-feedback-02`: sáu việc của chủ cửa hàng)
+> Mỗi quy trình: **ai làm · điều kiện · các bước · hiệu ứng hệ thống (kho / bảo hành / audit / sự kiện) · ngoại lệ**. Quy tắc chi tiết ở `business-rules` (nhóm **LEAN**); số liệu ví dụ ở `golden-scenarios`. Giao diện từng màn: `ux-and-navigation`, phong cách: `ui-design-system`.
+> Các quy trình cũ (nhập hàng nhiều dòng & chi phí, thu mua từ khách, POS có thanh toán, thu cũ đổi mới, giữ hàng/cọc, kiểm kê, quyết toán CTV, thu chi) **đã bỏ khỏi sản phẩm** — thiết kế nằm ở `99-archive/` và lịch sử git (≤ v0.15.0).
 
-## W1. Nhập hàng (mua vào)
+## W1. Thêm đồng hồ vào kho
 
-**Ai:** quản lý kho hoặc chủ (`purchase.create`, `purchase.confirm`). **Màn hình:** `/nhap-hang/moi`.
+**Ai:** quản lý kho hoặc chủ (`purchase.create`; xác nhận ngay nếu có `purchase.confirm`). **Màn hình:** Đồng hồ → **Thêm đồng hồ** (`/dong-ho/moi`); hoặc **Nhập từ Excel** (W10).
 
-1. Chọn loại phiếu **Mua vào**; nhập **nguồn hàng** (tên người/đơn vị — chữ); ngày nhập (mặc định hôm nay).
-2. Thêm dòng:
-   - *Đồng hồ*: chọn **loại** (tìm theo mã/tên), nhập serial (hoặc tick "không serial"), tình trạng (mới/cũ/đã sửa; cũ ⇒ hạng + ảnh), giá nhập, vị trí lưu, trạng thái ban đầu (`in_stock`/`inspecting`). Mỗi chiếc một dòng; nút "nhân bản dòng" cho lô cùng loại.
-   - *Linh kiện*: chọn linh kiện, số lượng, đơn giá.
-3. Thêm **chi phí liên quan** (vận chuyển, kiểm định…) với cách phân bổ (theo giá trị / chia đều). Màn hình xem trước **giá vốn từng dòng sau phân bổ** (người có `cost.view`).
-4. Lưu nháp (tự lưu liên tục) → **Xác nhận**.
+1. Chọn **loại** (tìm theo mã/tên; thiếu thì tạo ở Loại & hãng), nhập **serial** (hoặc tick "không serial"), tình trạng (mới/cũ/đã sửa; cũ ⇒ hạng), **giá niêm yết**, vị trí lưu, ảnh (tùy chọn), nguồn hàng (tùy chọn, mặc định "Nhập kho").
+2. Lưu ⇒ hệ thống lập **một phiếu nhập một dòng** và xác nhận trong cùng transaction (`fn_confirm_purchase`): tạo chiếc + mã nội bộ `DH-…`, trạng thái `in_stock` (hàng cũ/đã sửa vào `inspecting` cho tới khi kiểm tra), ghi giá nhập **nội bộ** (không giao diện nào hiển thị — CF-14), audit, sự kiện `purchase.confirmed`.
+3. In **tem QR** cho chiếc mới (nút "In tem").
 
-**Hiệu ứng khi xác nhận** (`fn_confirm_purchase`, một transaction): tạo từng chiếc + mã nội bộ (`DH-…`); ghi `unit_cost_entries`; cộng kho linh kiện + tính lại giá bình quân; audit; sự kiện `purchase.confirmed`. **Sau đó** in tem QR cho các chiếc mới (nút "In tem"). Không ghi nhận trả tiền/công nợ (BR-PUR-06).
+**Ngoại lệ:** serial trùng ⇒ `WF-UNIT-SERIAL-DUPLICATE` (CT-09); ngày tương lai ⇒ `WF-DOC-FUTURE`; bấm đúp ⇒ cùng `Idempotency-Key` ⇒ một chiếc (BR-GEN-09).
 
-**Ngoại lệ:** serial trùng ⇒ chặn, gợi ý mở chiếc cũ (nhập lại: W2/BR-PUR-10); hủy phiếu: BR-PUR-07 (chỉ khi chưa có giao dịch phụ thuộc).
+## W2. Ghi đơn bán (khách mua tại cửa hàng)
 
-## W2. Thu mua từ khách / thu cũ đổi mới (phía nhập)
+**Ai:** nhân viên bán hàng / chủ (`sale.confirm`). **Màn hình:** `/ban-hang/moi` (mobile-first). Quy tắc: BR-SALE-20…24.
 
-**Ai:** nhân viên bán hàng hoặc quản lý kho. Dùng chung màn hình nhập, loại **Thu mua từ khách** (hoặc `trade_in` tự sinh từ W4).
+1. **Chọn chiếc:** ô tìm thống nhất (mã nội bộ, serial, tên, hãng) hoặc **quét QR**. Chỉ hiện chiếc **sẵn sàng bán** và không có báo bán CTV đang chờ. Nhiều chiếc/đơn (tối đa 20).
+2. **Khách:** chọn khách có sẵn hoặc **nhập ngay** họ tên (+ SĐT) — cùng SĐT thì dùng lại khách cũ (khách bắt buộc, BR-SALE-20).
+3. **Giá & ngày:** giá bán từng chiếc (điền sẵn giá niêm yết hiện hành, sửa tự do — chỉ hiển thị chênh lệch so với niêm yết, không chặn), ngày bán (mặc định hôm nay; ghi lùi theo BR-GEN-08), ghi chú, **hạn bảo hành** từng chiếc (mặc định theo tình trạng; 0 = không bảo hành).
+4. **Lưu** ⇒ `fn_record_sale` (một transaction): khóa chiếc theo id tăng → kiểm trạng thái → tạo đơn `HD-…` `confirmed` + dòng → chiếc `sold` → chốt giá vốn nội bộ (giữ bất biến I8) → bảo hành → audit → `sale.confirmed`. Không thanh toán, không nợ, không QR chuyển khoản.
+5. **Sau lưu:** xem đơn, **in phiếu** (PDF A5/80mm, kèm hạn bảo hành; in lần 2 là "BẢN IN LẠI" + audit — BR-SALE-11), tìm lại sau theo tên/SĐT/mã đơn/serial.
 
-1. Chọn/tạo khách (người bán): họ tên, SĐT, **CCCD** (mã hóa), chụp **ảnh giấy tờ** và **ảnh máy** (bắt buộc [`purchase.require_seller_id`]).
-2. Nếu máy là chiếc cửa hàng từng bán: tìm theo mã nội bộ/serial ⇒ hệ thống dùng lại bản ghi cũ, **chu kỳ giá vốn +1** (BR-PUR-10).
-3. Nhập giá thu, tình trạng/hạng, vị trí, trạng thái ban đầu (thường `inspecting`).
-4. Xác nhận ⇒ như W1. In **biên bản thu mua**. (Tiền trả người bán nằm ngoài hệ thống, hoặc là phần trừ trong W4.)
+**Ngoại lệ:** chiếc vừa bị người khác bán ⇒ `WF-SALE-UNIT-UNAVAILABLE` (CT-01), các dòng khác giữ nguyên để sửa; chiếc có CTV báo bán đang chờ ⇒ `WF-SALE-UNIT-CLAIMED` (xử lý báo bán trước — W5); mất mạng khi gõ ⇒ nháp lưu cục bộ, đồng bộ khi có mạng.
 
-## W3. Bán hàng (POS)
+## W3. Hủy đơn (nhập sai)
 
-**Ai:** nhân viên bán hàng / chủ (`sale.create_draft`, `sale.confirm`). **Màn hình:** `/ban-hang/moi` (mobile-first).
+**Ai:** chủ (`sale.void`). Đơn đã ghi **không sửa** — sai thì hủy rồi ghi lại (BR-SALE-22).
 
-1. Tìm/quét chiếc: ô tìm thống nhất (mã nội bộ, serial, tên, thương hiệu, mã sản phẩm) hoặc nút **quét QR**. Chỉ hiện hàng **sẵn sàng bán** (chiếc `reserved` của chính khách hiện ở mục "Đang giữ cho khách này"). Có thể thêm linh kiện/phụ kiện lẻ.
-2. Phiếu hiển thị **thông tin chiếc, giá bán** (giá hiệu lực điền sẵn) và — với người có `cost.view` — **giá thu** cùng lãi (BR-SALE-16). Có thể giảm theo dòng hoặc giảm tổng; hiện % giảm so với hạn mức của mình, vượt hạn mức ⇒ nút xác nhận bị khóa + thông báo (BR-SALE-03). Bán dưới giá vốn cần quyền (BR-SALE-04).
-3. Chọn khách (tìm SĐT/tên, tạo nhanh) — **bắt buộc nếu còn nợ**, thu cũ đổi mới, giữ hàng.
-4. **Thanh toán:** thêm nhiều dòng (tiền mặt/chuyển khoản). Nhập "khách đưa" ⇒ hiện tiền thừa. Phần chưa trả ⇒ còn nợ (đặt hạn hẹn).
-5. (Tùy chọn) **thu cũ đổi mới:** nút "Thêm máy cũ của khách" mở W4.
-6. **Xác nhận** ⇒ in/chia sẻ phiếu (PDF 80mm/A5).
+1. Mở đơn → **Hủy đơn**: lý do ≥ 10 ký tự + nhập lại mật khẩu. Chỉ trong [`sales.void_window_hours`] giờ kể từ lúc ghi (mặc định 24) ⇒ quá hạn `WF-SALE-VOID-EXPIRED`.
+2. `fn_void_sale`: đơn `voided`; chiếc về `in_stock`; bảo hành `voided`; báo bán CTV đã xác nhận (nếu đơn do CTV bán) `voided`; doanh thu của đơn biến mất khỏi báo cáo. Chào hàng CTV **không** tự mở lại (giao lại nếu muốn).
 
-**Hiệu ứng** (`fn_confirm_sale`, một transaction): khóa chiếc/linh kiện theo thứ tự → kiểm trạng thái → `sold`/trừ kho → chốt giá vốn → ghi thanh toán → bảo hành theo tình trạng → audit → `sale.confirmed`. Bấm đúp/mất mạng gửi lại ⇒ cùng `Idempotency-Key` ⇒ một kết quả (BR-GEN-09).
+## W4. Giao đồng hồ cho cộng tác viên (nhiều CTV cùng bán một chiếc)
 
-**Ngoại lệ:** chiếc vừa bị người khác bán/giữ ⇒ lỗi `WF-SALE-UNIT-UNAVAILABLE` kèm gợi ý, các dòng khác giữ nguyên để sửa lại; mất mạng khi gõ ⇒ nháp tự lưu cục bộ và đồng bộ lại khi có mạng.
+**Ai:** chủ (`collab.manage`). **Màn hình:** `/cong-tac-vien` → **Giao hàng** (BR-COL-12).
 
-**Sau bán:** *Thu thêm tiền* (W9), *bảo hành* (W6), *hủy trong cửa sổ* (BR-SALE-10), *in lại*.
+1. **Tạo CTV:** chủ tạo tài khoản, gán vai trò `collaborator` (là đủ để được giao hàng); hồ sơ (SĐT, khu vực) là tùy chọn, **tắt hồ sơ** = ngừng giao thêm cho người đó. Không có giá thu, không có % hoa hồng.
+2. **Giao:** chọn **một hoặc nhiều chiếc** `in_stock` × **một hoặc nhiều CTV** ⇒ `fn_offer_units`: mỗi cặp (chiếc, CTV) có một **chào hàng** `active`. Chiếc **vẫn ở kho** và cửa hàng vẫn bán trực tiếp được. Giao lại cho cùng CTV không nhân đôi.
+3. **Thu hồi:** theo từng CTV hoặc tất cả (`fn_withdraw_offer`) — không thu hồi được khi đang có báo bán chờ xử lý (`WF-COL-CLAIM-PENDING`).
+4. **Tự đóng:** chiếc rời `in_stock` bằng bất kỳ đường nào (bán, ghi mất, đưa đi kiểm tra…) ⇒ mọi chào hàng của nó tự đóng (BR-COL-16).
 
-## W4. Thu cũ đổi mới (trong phiếu bán)
+## W5. CTV báo "đã bán" → chủ xác nhận
 
-1. Ở bước 5 của W3: nhập thông tin máy cũ như W2 (ảnh, giấy tờ người bán, giá thu).
-2. Hệ thống hiển thị: **Tổng phải trả** `− Giá thu` `= Khách còn phải trả` (giá thu ≤ tổng phiếu).
-3. Khi xác nhận phiếu bán, trong **cùng transaction**: tạo & xác nhận phiếu nhập `trade_in`, ghi `sale_trade_ins`, chiếc thu về vào kho (`inspecting`/`in_stock`).
+**Ai:** CTV (`collab.view_own`), chủ/nhân viên bán hàng xác nhận (`sale.confirm`). **Màn hình:** CTV `/ctv`; chủ `/cong-tac-vien/bao-ban`.
 
-Doanh thu bán vẫn theo giá đầy đủ. Khách chỉ trả phần còn lại.
+1. **CTV** xem "Hàng của tôi" (ảnh, thông số, **giá niêm yết tham khảo**; không giá vốn/doanh thu/đơn/khách) — chiếc mà CTV khác đã báo hiện "CTV khác đã báo bán".
+2. Khi bán được: bấm **Đã bán** + **tên và SĐT khách** + ghi chú (**không nhập giá** — BR-COL-13). Mỗi chiếc chỉ có **một** báo bán đang chờ; **ai báo trước được giữ** (CT-14); người sau nhận `WF-COL-CLAIMED`. CTV rút lại được khi còn chờ.
+3. **Chủ/nhân viên** nhận thông báo (chuông + đẩy) và thấy ở "Báo bán chờ xác nhận". **Xác nhận** (BR-COL-14): giá mặc định = giá niêm yết hiện hành, sửa được; ngày; bảo hành ⇒ `fn_confirm_claim` tạo đơn bán `confirmed` có gắn CTV (khách dùng lại theo SĐT), chiếc `sold`, chào hàng của CTV thắng `won`, các CTV còn lại `lost` (+ thông báo cho họ).
+4. **Từ chối** (BR-COL-15): lý do ≥ 10 ký tự ⇒ báo bán `rejected`, chiếc mở lại cho CTV khác.
+5. **Doanh thu cửa hàng = giá chủ xác nhận.** CTV bán giá nào cho khách, và CTV lời/lỗ bao nhiêu, nằm ngoài hệ thống (CF-12).
+6. **Thống kê:** chủ xem số chiếc + doanh thu CTV mang về theo CTV và theo ngày/tháng/quý/năm (BR-COL-18); CTV chỉ xem **số chiếc** của mình (BR-COL-17).
 
-## W5. Giữ hàng / đặt cọc
+**Ngoại lệ:** báo bán chờ quá 1 ngày ⇒ nhắc người xác nhận (job hằng ngày); hủy đơn CTV: W3.
 
-**Ai:** nhân viên bán hàng (`reservation.manage`). **Màn hình:** `/giu-hang`.
+## W6. Sửa chữa cho khách (chỉ chủ)
 
-1. Chọn khách + chiếc `in_stock`; hạn giữ (mặc định 7 ngày); thu cọc ≥ mức tối thiểu (tiền mặt/chuyển khoản).
-2. `fn_create_reservation`: chiếc → `reserved`; ghi cọc (thanh toán `deposit_receipt`); in **phiếu giữ hàng** (biên nhận cọc).
-3. Khi khách quay lại: nút **Chuyển thành phiếu bán** ⇒ mở W3 với chiếc đã điền, cọc đã trừ (BR-RSV-04).
-4. Nếu không mua: **Hoàn cọc** hoặc **Tịch thu cọc** (cần quyền + lý do) ⇒ chiếc về `in_stock` (BR-RSV-05).
-5. Job hằng ngày đánh dấu `expired` và nhắc người phụ trách; **không** tự xử lý.
+**Ai:** chủ (`repair.create`, `repair.update`, `repair.deliver`). **Màn hình:** `/sua-chua`. Quy tắc: BR-REP-17.
 
-## W6. Bảo hành (thay cho đổi trả — CF-02)
+1. **Nhận máy** (1 trang): khách (tên + **SĐT bắt buộc**; nhập ngay, cùng SĐT dùng lại khách cũ), máy (hãng/loại/serial hoặc chọn máy đã lưu của khách), tình trạng ban đầu, lỗi khách mô tả, ngày hẹn trả, ảnh (tùy chọn). Nếu máy còn **bảo hành** (chọn từ bảo hành còn hạn của khách) ⇒ phiếu `warranty_free`, **doanh thu 0**. In **phiếu nhận**.
+2. **Tiến độ:** đang kiểm tra → đang sửa → chờ linh kiện (nếu cần).
+3. **Khoản tiền:** thêm *dịch vụ* (giá mặc định theo loại việc; đổi giá cần `repair.price.edit`) hoặc *khoản khác* (nội dung + tiền). Không linh kiện, không cọc, không thu tiền (CF-16).
+4. **Sửa xong** (`fn_complete_repair`): khóa các khoản, chốt tổng. **Giao máy** (`fn_deliver_repair`): ghi doanh thu = tổng khoản (phiếu tính phí) hoặc 0 (bảo hành); bảo hành sau sửa [`warranty.repair_days`]; in **phiếu giao trả**.
+5. **Hủy** (trước khi sửa xong): lý do ≥ 10 ký tự. **Làm lại:** `completed → repairing` kèm lý do. Máy xong quá [`repair.pickup_alert_days`] ngày chưa lấy ⇒ nhắc.
 
-**Ai:** chủ nhận máy (chỉ chủ sửa — CF-04/05); nhân viên bán hàng có thể ghi nhận yêu cầu. **Màn hình:** `/bao-hanh` (tra cứu) → `/sua-chua/moi?bao-hanh=…`.
+Không có màn tra cứu bảo hành riêng: hạn bảo hành nằm trên đơn bán và phiếu in; khi nhận máy sửa, chủ chọn bảo hành còn hạn của khách ở bước 1 (BR-SALE-21).
 
-1. Tìm bảo hành: theo mã phiếu bán, tên/SĐT khách, mã nội bộ hoặc serial. Hệ thống hiện chiếc, ngày mua, **hạn bảo hành** và trạng thái (còn hạn / hết hạn).
-2. Còn hạn: nút **Nhận máy bảo hành** ⇒ tạo phiếu sửa `warranty_free` liên kết `warranty_id` (thông tin khách và máy điền sẵn). Hết hạn: vẫn nhận máy nhưng phiếu là `paid` (BR-WAR-02).
-3. Xử lý như W7 (kiểm tra, linh kiện thay, hoàn thành, giao) — **không thu tiền, không doanh thu**; chi phí linh kiện vào chi phí bảo hành (BR-WAR-03).
-4. Khách không muốn sửa mà muốn trả hàng/hoàn tiền: **không có trong hệ thống** (CF-02); chủ xử lý ngoài và, nếu hàng thực sự về kho, nhập lại bằng phiếu nhập `customer_buyback` (BR-PUR-10 dùng lại đúng chiếc).
+## W7. Xem báo cáo
 
-## W7. Sửa chữa cho khách (`customer`)
+**Ai:** chủ (mọi báo cáo), bán hàng (doanh thu, số lượng), kho (số lượng đồng hồ). Quy tắc: BR-RPT-01.
 
-**Ai:** chủ (`repair.create`, `repair.update`, `repair.deliver`; có thể cấp cho vai trò khác). **Màn hình:** `/sua-chua`.
+1. **Tổng quan** (trang chủ): thẻ số theo quyền — doanh thu, số chiếc bán, kho, CTV chờ xác nhận, máy sửa đang làm; biểu đồ doanh thu; việc cần xử lý.
+2. **Báo cáo** (3 báo cáo, theo ngày/tháng/quý/năm): *Doanh thu* (cửa hàng / CTV / sửa chữa, số đơn, số chiếc), *Số lượng đồng hồ* (đã bán theo hãng & kênh, đang có theo hãng), *Cộng tác viên* (số chiếc + doanh thu theo CTV; chỉ chủ).
+3. Xuất Excel (`report.export`, tối đa 5 lần/giờ, ghi audit) và in — cùng dữ liệu và cùng lớp quyền (PT-05).
 
-1. **Nhận máy**: khách (tên + SĐT); thương hiệu/model (chọn danh mục hoặc gõ tự do), serial; **tình trạng ban đầu**; lỗi khách mô tả; cọc (tùy chọn). **Ảnh hiện trạng tùy chọn** (chụp bằng camera nếu muốn). In **phiếu nhận** (mã SC, ngày hẹn dự kiến, điều khoản).
-2. **Ghi trạng thái** qua các bước (`inspecting` → `repairing` → `waiting_parts` nếu cần…): ghi nhận xét kiểm tra; thêm dòng **dịch vụ** (tiền sửa, giá thu khách) và **linh kiện** (tùy chọn; giá bán mặc định); hệ thống hiện **tổng tạm tính**. [Nếu bật `repair.require_quote_approval`: ghi "khách đã đồng ý" trước khi `repairing`.]
-3. Khi dùng linh kiện: bấm **Xác nhận dùng** từng dòng (trừ kho ngay, không âm).
-4. **Hoàn thành** (`completed`): khóa dòng; tổng cuối.
-5. **Giao** (`delivered`): thu tiền (trừ cọc), hoặc ghi nợ (cần `repair.deliver`); in **phiếu giao trả** + bảo hành [`warranty.repair_days`]. Ghi doanh thu và bảo hành sau sửa.
-
-**Ngoại lệ:** khách không đồng ý ⇒ `cancelled` (hoàn cọc; có thể thu phí kiểm tra bằng một dòng dịch vụ trước khi hủy); làm lại ⇒ `completed → repairing` (lý do); máy hoàn thành quá [`repair.pickup_alert_days`] ngày ⇒ nhắc.
-
-## W8. Sửa chữa nội bộ (chuẩn bị bán)
-
-Giống W7 nhưng: loại `internal`, chọn **chiếc** của cửa hàng (không cần khách); không cọc/giao/thu tiền. Tạo phiếu ⇒ chiếc → `in_repair`. `completed` ⇒ chiếc về `in_stock`/`inspecting`, **linh kiện đã dùng + chi phí khác vốn hóa** vào giá vốn (BR-COST-04); sự kiện `repair.completed`. Chiếc đổi `condition` thành `refurbished` nếu chọn.
-
-## W9. Thu thêm tiền trên phiếu (thay "Thu nợ" — CF-06)
-
-**Ai:** `payment.create` (chủ, nhân viên bán hàng). **Màn hình:** chi tiết phiếu bán/phiếu sửa; lọc "Còn nợ" ở danh sách.
-
-1. Ở danh sách phiếu bán chọn bộ lọc **Còn nợ** (hoặc mở hồ sơ khách xem phiếu còn nợ, cũ trước).
-2. Mở phiếu → **Thu thêm**: nhập số tiền (≤ còn nợ), cách thanh toán, ngày.
-3. Lưu ⇒ một thanh toán gắn đúng phiếu đó (BR-PAY-04). Trả vượt ⇒ `WF-PAY-OVERPAY`. Khách trả nhiều phiếu một lần ⇒ ghi từng phiếu.
-
-## W10. Kiểm kê
-
-**Ai:** quản lý kho (`stocktake.manage`). **Màn hình:** `/kiem-ke`.
-
-1. Tạo đợt: phạm vi (tất cả đồng hồ trong kho / một vị trí / linh kiện). Chiếc đang ở CTV không nằm trong phạm vi (BR-INV-01).
-2. **Đếm**: đồng hồ — quét QR từng chiếc, đánh dấu "có mặt"; linh kiện — nhập số đếm. Sai vị trí ⇒ gợi ý cập nhật vị trí.
-3. **Đối chiếu**: hệ thống liệt kê chênh lệch (thiếu/thừa) với số hệ thống **lúc đối chiếu**; mỗi dòng chọn lý do (mất, hỏng, nhập sai, đếm sai, tìm lại…).
-4. **Chốt**: chiếc thiếu ⇒ `written_off`; chiếc "tìm lại" ⇒ `fn_restore_unit`; linh kiện lệch ⇒ movement `stocktake`. Hao hụt = giá vốn; sinh báo cáo hao hụt.
-
-## W11. Cộng tác viên (CTV): giao hàng → bán → quyết toán (CF-03)
-
-**Ai:** chủ (`collab.manage`), nhân viên bán hàng xác nhận đơn (`sale.confirm`), CTV. **Màn hình:** `/cong-tac-vien` (chủ), `/ctv/*` (CTV).
-
-1. **Tạo CTV**: chủ tạo tài khoản, gán vai trò `collaborator`, ghi chú (SĐT, khu vực…). Không có % hoa hồng.
-2. **Giao hàng** (`fn_confirm_assignment`): chủ chọn CTV, chọn các chiếc `in_stock`, nhập **giá thu giao CTV** từng chiếc (UI cảnh báo nếu thấp hơn giá vốn) ⇒ xác nhận: chiếc → `with_collaborator`; in/chia sẻ **phiếu giao CTV** (danh sách chiếc + giá thu).
-3. **CTV bán** (điện thoại): thấy "Hàng đang giữ" (ảnh, thông số, **giá thu**; không giá vốn). Khi có người mua: tạo **đơn bán nháp** — chọn chiếc, nhập **giá bán thực**, thông tin khách (tên + SĐT). CTV tự thu tiền khách. Nhập giá thấp hơn giá thu ⇒ cảnh báo "bạn sẽ lỗ" nhưng cho phép.
-4. **Xác nhận** (chủ/nhân viên): kiểm tra đơn, bấm xác nhận ⇒ `fn_confirm_sale` (đơn CTV): chiếc → `sold`; chốt giá thu, giá vốn; tạo bảo hành cho khách; **doanh thu cửa hàng = giá thu** (BR-COL-04). In phiếu bán/bảo hành cho khách (CTV đưa).
-5. **Quyết toán**: CTV nộp giá thu cho chủ; chủ vào CTV → **Quyết toán**, chọn các chiếc đã bán chưa nộp, nhập cách nộp/ngày ⇒ một thanh toán `collab_settlement` = Σ giá thu (BR-COL-06). Nhầm ⇒ hủy quyết toán (owner + lý do).
-6. **Thu hồi**: CTV không bán được ⇒ chủ **Thu hồi** chiếc (chọn vị trí kho, lý do) ⇒ `in_stock` (BR-COL-07). Chiếc mất/hỏng ở CTV ⇒ **Ghi mất** (chủ + lý do), xử lý bồi thường ngoài hệ thống.
-7. **Thống kê**: chủ xem theo CTV, tháng/quý/năm (BR-COL-10); CTV xem của mình. Cảnh báo chiếc ở CTV quá [`collab.hold_alert_days`] ngày.
-
-**Ngoại lệ:** hai CTV/hai người cùng giao một chiếc ⇒ chỉ một thành công (CT-06); hủy đơn bán CTV khi dòng đã quyết toán ⇒ phải hủy quyết toán trước (BR-COL-08).
-
-## W12. Xem tiền thu cuối ngày (thay "Chốt ngày & chốt kỳ" — CF-07)
-
-**Ai:** chủ. **Màn hình:** Báo cáo → Tiền thu (R8) hoặc thẻ trên Tổng quan.
-
-1. Chọn ngày (mặc định hôm nay): hệ thống liệt kê thanh toán theo cách thanh toán, cọc nhận/hoàn, CTV nộp, tổng **thực thu**.
-2. Đối chiếu tay với tiền mặt trong két / sao kê ngân hàng (ngoài hệ thống). Lệch không điều chỉnh trong app — ghi chú ở nhật ký nếu cần.
-Không có khóa kỳ, không điều chỉnh quỹ. Chứng từ đã xác nhận vẫn bất biến (BR-GEN-02).
-
-## W13. Quản trị người dùng & quyền
+## W8. Quản trị người dùng & quyền
 
 1. Chủ tạo người dùng (mật khẩu tạm, buộc đổi lần đầu), gán vai trò, hồ sơ CTV.
-2. Chủ tùy chỉnh vai trò (bật/tắt quyền; hạn mức giảm giá); thay đổi có audit.
-3. Quên mật khẩu: chủ đặt lại mật khẩu tạm (tùy chọn email sau). Khóa tạm tự động khi sai nhiều lần.
+2. Chủ tùy chỉnh vai trò (bật/tắt quyền); thay đổi có audit. Mục của tính năng đã bỏ bị ẩn khỏi Cài đặt/Vai trò.
+3. Quên mật khẩu: chủ đặt lại mật khẩu tạm. Khóa tạm tự động khi sai nhiều lần.
 
-## W14. Sao lưu & khôi phục (vận hành)
+## W9. Sao lưu & khôi phục (vận hành)
 
-Xem `05-operations/backup-restore`. Chủ chỉ cần: thấy trạng thái "Sao lưu gần nhất" ở **Quản trị → Hệ thống**, nhận cảnh báo khi quá hạn.
+Xem `05-operations/backup-restore`. Chủ chỉ cần thấy trạng thái "Sao lưu gần nhất" ở **Quản trị → Hệ thống** và nhận cảnh báo khi quá hạn.
 
-## W15. Nhập Excel hàng loạt (khách, đồng hồ tồn đầu kỳ, linh kiện)
+## W10. Nhập Excel hàng loạt (khách, đồng hồ)
 
-1. Vào **Nhập từ Excel** (hoặc nút **Nhập Excel** ở Khách hàng / Đồng hồ / Linh kiện), chọn loại, **tải tệp mẫu** (.xlsx: sheet Dữ liệu, Hướng dẫn, Danh mục), điền, chọn tệp (.xlsx/.csv, ≤ 300 dòng).
-2. Trình duyệt đọc tệp (nhận tên cột có/không dấu, đồng nghĩa) và gửi các dòng; hệ thống **xem trước** từng dòng: hợp lệ / cảnh báo / lỗi (kèm lý do) / trùng — chưa ghi gì (BR-IMP-02).
-3. Người dùng sửa tệp rồi chọn lại nếu cần, tích chọn dòng muốn nhập (dòng trùng mặc định bỏ qua, dòng lỗi không nhập được) rồi **Nhập**.
-4. Khách: tạo từng dòng (CCCD mã hóa). Đồng hồ/linh kiện: **một phiếu `opening`** được lập và xác nhận ngay (giá vốn = giá thu trong tệp; hàng cũ vào "Chờ kiểm tra"). Kết quả liệt kê từng dòng có liên kết + mã phiếu.
+1. Vào **Nhập từ Excel** (Menu) hoặc nút **Nhập Excel** ở Khách hàng / Đồng hồ; chọn loại, **tải tệp mẫu** (.xlsx: sheet Dữ liệu, Hướng dẫn, Danh mục), điền, chọn tệp (.xlsx/.csv, ≤ 300 dòng).
+2. Trình duyệt đọc tệp (nhận tên cột có/không dấu) và gửi các dòng; hệ thống **xem trước** từng dòng: hợp lệ / cảnh báo / lỗi (kèm lý do) / trùng — chưa ghi gì (BR-IMP-02).
+3. Người dùng tích chọn dòng muốn nhập (dòng trùng mặc định bỏ qua, dòng lỗi không nhập được) rồi **Nhập**.
+4. Khách: tên, SĐT, địa chỉ, ghi chú. Đồng hồ: **một phiếu `opening`** lập và xác nhận ngay (hàng cũ vào "Chờ kiểm tra"; giá nhập 0 vì không còn theo dõi giá vốn). Kết quả liệt kê từng dòng + mã phiếu (BR-IMP-07).

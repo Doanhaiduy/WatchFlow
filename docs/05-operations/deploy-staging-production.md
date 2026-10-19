@@ -54,7 +54,7 @@ Kỳ vọng: toàn ✔ và dòng "Nối DB (staging) thành công" kèm `BYPASSR
 ```bash
 pnpm db:deploy:staging -- --seed --owner-email <email-của-bạn> --owner-name "Họ tên"
 ```
-- `--seed`: nạp dữ liệu demo **đầy đủ để thử mọi luồng** — 5 tài khoản (chủ/bán hàng/kho/2 CTV), 17 chiếc đồng hồ + linh kiện (tồn đầu kỳ và một phiếu nhập mua vào có phân bổ phí vận chuyển), khách mẫu, 4 phiếu bán (tiền mặt, nợ có hẹn trả, 2 đơn CTV), 1 phiếu giữ hàng có cọc, 2 phiếu giao CTV (1 đơn đã quyết toán, 1 chờ quyết toán), 3 phiếu sửa (đã giao, chờ báo giá, bảo hành miễn phí). Tất cả đi qua hàm nghiệp vụ thật nên tiền/kho/giá vốn nhất quán. Chạy riêng: `pnpm db:seed:staging`.
+- `--seed`: nạp dữ liệu demo **đầy đủ để thử mọi luồng** — 5 tài khoản (chủ/bán hàng/kho/2 CTV), 17 chiếc đồng hồ (tồn đầu kỳ và một phiếu thêm 8 chiếc), khách mẫu, 3 đơn bán (2 đơn cửa hàng, 1 đơn CTV đã xác nhận), chào hàng cho 2 CTV (một chiếc giao cho cả hai; 1 báo bán đã xác nhận, 1 báo bán đang **chờ xác nhận** để thử), 3 phiếu sửa (đã giao, đang kiểm tra, bảo hành miễn phí). Tất cả đi qua hàm nghiệp vụ thật nên tiền/kho/giá vốn nhất quán. Chạy riêng: `pnpm db:seed:staging`.
 - `--owner-email/--owner-name`: tạo chủ cửa hàng; **mật khẩu tạm hiện MỘT lần** ở cuối bước 7 của lệnh — chép ngay. Lần đầu đăng nhập: đổi mật khẩu → bật TOTP → lưu mã khôi phục. (Nếu đã `--seed`, DB đã có chủ demo nên bước tạo chủ sẽ báo "đã có chủ" — bình thường.)
 - Chạy lại bao nhiêu lần cũng được (idempotent). Mỗi lần có migration mới, chỉ cần chạy lại **không kèm** `--seed`.
 
@@ -229,7 +229,7 @@ Ghi chuỗi kết nối `wf_backup` vào `backup/backup-db-url-staging.txt` (git
 ### 5.7 Smoke test (làm đủ, ghi kết quả)
 - [ ] `GET /api/health` ⇒ 200 có `version: 0.14.1`; `GET /api/health?deep=1` ⇒ migration đủ, DB nối được.
 - [ ] Đăng nhập chủ ⇒ đổi mật khẩu ⇒ TOTP ⇒ vào Tổng quan. Đăng xuất/đăng nhập lại.
-- [ ] Quản trị → Cài đặt: điền thông tin cửa hàng, **Thanh toán** (ngân hàng, STK, tên chủ TK) ⇒ ở POS chọn "Chuyển khoản" thấy mã VietQR.
+- [ ] Quản trị → Cài đặt: điền thông tin cửa hàng (tên, địa chỉ, SĐT, chân phiếu, điều khoản bảo hành/sửa chữa) ⇒ hiện đúng trên phiếu bán/phiếu sửa in ra.
 - [ ] Tạo người dùng bán hàng/kho/CTV; kiểm menu theo quyền.
 - [ ] Thêm thương hiệu/loại, một chiếc **có ảnh** ⇒ ảnh hiện; trên Supabase Storage thấy tệp trong bucket riêng tư.
 - [ ] Bán thử một phiếu, in phiếu, tải PDF; hủy phiếu (lý do ≥ 10 ký tự).

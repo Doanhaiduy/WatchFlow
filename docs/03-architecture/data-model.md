@@ -1,6 +1,7 @@
 # Mô hình dữ liệu
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Đây là **thiết kế**; DDL thật nằm ở `db/migrations/` và là nguồn sự thật cuối cùng cho kiểu cột (từ điển cột sinh tự động ở M9: `scripts/docs/gen-data-dictionary.mjs`). Mâu thuẫn giữa file này và migration ⇒ sửa file này trong cùng PR.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-02`: thêm `collaborator_offers`, `collaborator_claims`; nhiều bảng/cột **đóng băng** — đọc ghi chú ở đầu §6–§12) · Đây là **thiết kế**; DDL thật nằm ở `db/migrations/` và là nguồn sự thật cuối cùng cho kiểu cột (từ điển cột sinh tự động ở M9: `scripts/docs/gen-data-dictionary.mjs`). Mâu thuẫn giữa file này và migration ⇒ sửa file này trong cùng PR.
+> **Đóng băng (customer-feedback-02):** bảng/cột/hàm của giữ hàng, thanh toán, thu cũ đổi mới, linh kiện, kiểm kê, quyết toán CTV, giá thu CTV, giá vốn/lãi **vẫn còn trong DB** (không migration nào xóa — expand/contract, dữ liệu cũ phải đọc được), nhưng **không còn API/giao diện nào ghi hoặc đọc** chúng. Ngoại lệ có chủ đích: `unit_cost_entries` và `sale_line_costs` vẫn được ghi nội bộ khi nhập/bán để bất biến I8 và dữ liệu cũ nhất quán — không API nào trả ra. Có thể bật lại theo `extensibility` §7.
 > Bảng đã hoãn (`suppliers`, `cash_accounts`, `ledger_entries`, `payment_allocations`, `account_transfers`, `expense_categories`, `financial_periods`, `account_reconciliations`, `returns*`, `sale_commissions`, `technician_*`, `repair_tech_pay`): thiết kế ở `docs/99-archive/2026-10-16-full-scope/03-architecture/data-model.md`.
 
 ## 1. Quy ước
@@ -49,6 +50,9 @@ erDiagram
     sale_trade_ins }o--|| purchase_receipts : "phiếu trade_in"
     sale_lines ||--o{ warranties : "bảo hành"
     users ||--o| collaborator_profiles : "là CTV"
+    watch_units ||--o{ collaborator_offers : "được giao cho nhiều CTV"
+    collaborator_offers ||--o{ collaborator_claims : "CTV báo đã bán"
+    collaborator_claims }o--o| sales : "xác nhận ⇒ đơn bán"
     collaborator_profiles ||--o{ collaborator_assignments : "nhận hàng"
     collaborator_assignments ||--|{ collaborator_assignment_lines : "chiếc + giá thu"
     collaborator_assignment_lines }o--|| watch_units : ""
@@ -161,15 +165,19 @@ RLS: `purchase.view` (giá/tổng chỉ cho người có quyền này). Không c
 | `sale_trade_ins` | `sale_id`, `purchase_receipt_id`, `credit_vnd` | C credit>0; U(purchase_receipt_id) |
 | `warranties` | `code U`, `kind` (`sale\|repair`), `unit_id NULL`, `customer_watch_id NULL`, `sale_line_id NULL`, `repair_order_id NULL`, `customer_id NULL`, `start_date`, `end_date`, `terms`, `status` (`active\|expired\|voided`) | ix(end_date) WHERE status='active'; ix(unit_id) |
 
-### 9.1 Cộng tác viên (module `sales` — phần CTV)
+### 9.1 Cộng tác viên (module `sales` — phần CTV, từ `customer-feedback-02`)
 
 | Bảng | Cột chính | Ràng buộc / index | RLS |
 |---|---|---|---|
-| `collaborator_assignments` | `code U` (GC-…), `collaborator_id→collaborator_profiles`, `doc_date`, `status` (`draft\|confirmed\|closed\|voided`), `note`, `created_by`, `confirmed_at/by`, `voided_at/by`, `void_reason`, `version` | ix(collaborator_id), ix(status) | `collab.view`/`collab.manage`; CTV đọc phiếu của mình |
-| `collaborator_assignment_lines` | `assignment_id`, `line_no`, `unit_id`, `base_price_vnd` (giá thu giao CTV, ≥ 0), `status` (`active\|sold\|returned\|written_off`), `closed_at` | U(assignment_id, line_no); **U(unit_id) WHERE status='active'**; ix(unit_id) | idem; `base_price_vnd` chỉ chủ + CTV được giao |
-| `collaborator_settlements` | `code U` (QT-…), `collaborator_id`, `doc_date`, `status` (`confirmed\|voided`), `total_vnd` (Σ giá thu các dòng), `method` (`cash\|bank_transfer`), `note`, `created_by`, `voided_at/by`, `void_reason` | ix(collaborator_id, doc_date) | `collab.view`/`collab.manage`; CTV đọc của mình |
+| `collaborator_offers` | `unit_id→watch_units`, `collaborator_id→users`, `status` (`active\|won\|lost\|withdrawn`), `note`, `offered_at`, `offered_by`, `closed_at`, `close_reason` | **U(unit_id, collaborator_id) WHERE status='active'** (giao lại không nhân đôi); C `(status='active') = (closed_at IS NULL)`; ix(unit_id), ix(collaborator_id, status), ix(offered_by) | `collab.view` đọc tất cả; CTV (`collab.view_own`) chỉ dòng của mình; ghi chỉ qua `fn_offer_units`/`fn_withdraw_offer`/trigger |
+| `collaborator_claims` | `offer_id→collaborator_offers`, `unit_id`, `collaborator_id`, `customer_name`, `customer_phone` (CTV nhập; **che trong audit**), `note`, `status` (`pending\|confirmed\|rejected\|cancelled\|voided`), `sale_id→sales NULL`, `reject_reason`, `created_at`, `decided_at`, `decided_by` | **U(unit_id) WHERE status='pending'** ("ai báo trước được giữ"); ix(offer_id), ix(unit_id), ix(collaborator_id, status), ix(sale_id), ix(decided_by) | `collab.view`/`sale.confirm` đọc tất cả; CTV chỉ của mình; ghi chỉ qua `fn_collab_claim`/`fn_confirm_claim`/`fn_reject_claim`/`fn_cancel_claim` |
 
-`sale_lines.settlement_id` trỏ tới quyết toán; một dòng chỉ trỏ một quyết toán (đặt NULL khi hủy quyết toán). Thanh toán `collab_settlement` gắn `collaborator_settlements` (`payments`).
+- Chiếc đang giao **vẫn `in_stock`**; không còn `held_by_collaborator_id` được ghi (cột cũ để nguyên).
+- Đơn do CTV bán = `sales.collaborator_id` đặt lúc `fn_confirm_claim`; `sale_lines.shop_revenue_vnd` = giá chủ xác nhận (`base_price_vnd`, `settlement_id` không còn dùng).
+- CTV **không** có quyền `SELECT` bảng `sales`, `sale_lines`, `customers`, `watch_units`, `warranties`, `sale_line_costs`, `unit_cost_entries`; đọc qua hàm `fn_my_offers()`, `fn_my_claims(n)`, `fn_my_collab_stats(from,to,period)` (cột an toàn; giá niêm yết là tiền duy nhất; thống kê chỉ `period_start, units_sold`). Kiểm bởi PT-14.
+- Bất biến I13 (chào hàng `active` ⇒ chiếc `in_stock`), I14 (báo bán `pending` ⇒ chiếc `in_stock` + chào hàng `active`), I15 (báo bán `confirmed` ⇒ có đơn bán).
+
+**Đóng băng (đường cũ):** `collaborator_assignments`, `collaborator_assignment_lines` (phiếu giao kèm giá thu), `collaborator_settlements` (quyết toán), cột `sale_lines.base_price_vnd/settlement_id`, `watch_units.held_by_collaborator_id` — dữ liệu cũ còn đọc được, hàm cũ (`fn_confirm_assignment`, `fn_settle_collaborator`…) còn nhưng không ai gọi.
 
 ## 10. Repairs — sửa chữa
 
@@ -211,11 +219,12 @@ Tất cả `SECURITY DEFINER`, `SET search_path = public, app, pg_temp`, owner `
 | parts | `fn_adjust_part_stock` | BR-PART-05 |
 | purchasing | `fn_confirm_purchase`, `fn_void_purchase`, `fn_adjust_unit_cost`, `fn_audit_import` (0019: audit tổng hợp một lần nhập Excel; **không thêm bảng** — dữ liệu đi qua `customers` và phiếu `opening`) | BR-PUR-*, BR-COST-05, BR-IMP-* |
 | payments | `fn_record_payment`, `fn_void_payment`; view `v_doc_balances` | BR-PAY-* |
-| sales | `fn_create_reservation`, `fn_cancel_reservation`, `fn_confirm_sale`, `fn_void_sale`, `fn_create_warranty` (nội bộ) | BR-SALE/RSV/TRD/WAR |
-| sales (CTV) | `fn_confirm_assignment`, `fn_void_assignment`, `fn_return_from_collaborator`, `fn_settle_collaborator`, `fn_void_settlement` | BR-COL-* |
+| sales | **`fn_record_sale`** (ghi đơn gọn, 1–20 chiếc), **`fn_void_sale`** (hủy trong hạn; đơn cũ → `fn_void_sale_v1`), `fn_mark_sale_printed`, `mk_sale_warranty` (nội bộ) | BR-SALE-20…24 |
+| sales (CTV) | **`fn_offer_units`**, **`fn_withdraw_offer`**, **`fn_collab_claim`**, **`fn_cancel_claim`**, **`fn_reject_claim`**, **`fn_confirm_claim`**; đọc cho CTV: `fn_my_offers`, `fn_my_claims`, `fn_my_collab_stats` | BR-COL-12…18 |
+| *(đóng băng)* | `fn_create_reservation`, `fn_cancel_reservation`, `fn_confirm_sale`, `fn_confirm_assignment`, `fn_void_assignment`, `fn_return_from_collaborator`, `fn_settle_collaborator`, `fn_void_settlement` | BR-RSV/TRD/COL-01…11 (cũ) |
 | repairs | `fn_create_repair`, `fn_set_repair_status`, `fn_use_repair_part`, `fn_complete_repair`, `fn_deliver_repair`, `fn_cancel_repair` | BR-REP-* |
 | inventory | `fn_reconcile_stocktake`, `fn_cancel_stocktake` | BR-INV-* |
-| reports | `rpt_dashboard`, `rpt_revenue`, `rpt_profit`, `rpt_stock_value`, `rpt_aging`, `rpt_open_balances`, `rpt_repair`, `rpt_collections`, `rpt_collaborator`, `rpt_shrinkage` | `reports-and-dashboard` |
+| reports | `rpt_dashboard`, `rpt_revenue`, `rpt_units`, `rpt_collab_sales`; ngày: `fn_daily_alerts`; bất biến: `fn_consistency_check` (I1–I15) — (đóng băng: `rpt_profit`, `rpt_stock_value`, `rpt_aging`, `rpt_open_balances`, `rpt_repair`, `rpt_collections`, `rpt_collaborator`, `rpt_shrinkage`) | `reports-and-dashboard` |
 
 Ghi chú: (1) **Chiếc đồng hồ chỉ được tạo qua `fn_confirm_purchase`** (để giá vốn luôn có nguồn). Nút "Thêm đồng hồ" trên giao diện = **Nhập nhanh một chiếc** (phiếu nhập 1 dòng, loại `purchase`/`customer_buyback`/`opening`). (2) Tạo/sửa **nháp** (chưa xác nhận) và danh mục đơn giản (brands, loại, vị trí, nhóm khách, loại linh kiện…) dùng `INSERT/UPDATE` với policy RLS trực tiếp; thông tin phi tài chính của chiếc (ảnh, mô tả, phụ kiện, thông số) sửa qua `UPDATE` có GRANT theo cột. Mọi thao tác **đổi trạng thái hoặc ảnh hưởng tiền/kho/giá** đi qua `fn_*`.
 
@@ -242,4 +251,4 @@ Ghi chú: (1) **Chiếc đồng hồ chỉ được tạo qua `fn_confirm_purcha
 
 ## 16. Sự kiện (`domain_events.type`)
 
-`unit.created`, `unit.status_changed`, `purchase.confirmed`, `purchase.voided`, `reservation.created`, `reservation.settled`, `reservation.expired`, `sale.confirmed`, `sale.voided`, `assignment.confirmed`, `assignment.returned`, `settlement.confirmed`, `settlement.voided`, `repair.received`, `repair.completed`, `repair.delivered`, `repair.cancelled`, `payment.posted`, `payment.voided`, `stocktake.reconciled`, `part.low_stock`, `warranty.expiring`. Payload nhỏ gọn (id + trường cần thiết, **không PII**).
+`unit.created`, `unit.status_changed`, `purchase.confirmed`, `purchase.voided`, `sale.confirmed`, `sale.voided`, `collab.claimed`, `repair.received`, `repair.completed`, `repair.delivered`, `repair.cancelled` (đóng băng, còn trong dữ liệu cũ: `reservation.*`, `assignment.*`, `settlement.*`, `payment.*`, `stocktake.reconciled`, `part.low_stock`, `warranty.expiring`). Payload nhỏ gọn (id + trường cần thiết, **không PII**).

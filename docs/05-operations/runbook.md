@@ -26,10 +26,10 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 
 | Tần suất | Ai | Việc |
 |---|---|---|
-| Hằng ngày | Chủ | Xem báo cáo **Tiền thu** (đối chiếu tay với tiền mặt/sao kê — ngoài hệ thống); xem "Việc cần xử lý" trên tổng quan: đơn CTV chờ xác nhận, giữ hàng quá hạn, hàng ở CTV |
+| Hằng ngày | Chủ | Xem **Tổng quan** (doanh thu hôm nay); xem "Báo bán chờ xác nhận" của CTV và xử lý (xác nhận/từ chối); máy sửa quá hẹn/xong chưa lấy |
 | Hằng ngày | Hệ thống | Cron sáng/tối; sao lưu đêm; kiểm bất biến (`fn_consistency_check`) |
-| Hằng tuần | Chủ | Xem phiếu còn nợ quá hạn, hàng tồn lâu, giữ hàng quá hạn, **CTV chưa nộp giá thu**; kiểm "Sao lưu gần nhất" |
-| Hằng tháng | Chủ | Xem **Thống kê CTV** (tháng/quý), báo cáo lãi gộp; kiểm kê linh kiện nhanh; **quyết toán** với từng CTV |
+| Hằng tuần | Chủ | Xem hàng đang giao CTV lâu chưa bán (thu hồi nếu cần); kiểm "Sao lưu gần nhất" |
+| Hằng tháng | Chủ | Xem báo cáo **Doanh thu** và **Cộng tác viên** (tháng/quý); đối chiếu tiền với từng CTV **ngoài hệ thống** |
 | Hằng quý | Kỹ thuật + chủ | **Diễn tập khôi phục** vào DB tạm (có biên bản); rà quyền người dùng (ai còn cần?); cập nhật phụ thuộc |
 | 6–12 tháng | Kỹ thuật | Xoay khóa (mục 5); rà tài khoản không dùng; xem lại chi phí hạ tầng |
 | Khi nhân sự đổi | Chủ | Khóa tài khoản người nghỉ **ngay**; thu hồi phiên; đổi mật khẩu dùng chung (nếu có) |
@@ -49,7 +49,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 | "Không bán được chiếc này" | Trạng thái chiếc (đang giữ/đã bán/chờ kiểm tra/đang sửa)? Xem lịch sử trạng thái chiếc |
 | Tiền mặt/ngân hàng không khớp báo cáo Tiền thu | Ứng dụng không giữ quỹ nên lệch nằm **ngoài hệ thống** (đếm lại, đối chiếu sao kê, phiếu còn nợ, cọc, CTV chưa nộp); nếu `fn_consistency_check` báo lệch ⇒ **dừng ghi thanh toán**, liên hệ kỹ thuật (không sửa tay SQL) |
 | Cảnh báo vi phạm bất biến (`fn_consistency_check`: chiếc có 2 dòng bán, `with_collaborator` mất `held_by`, thanh toán vượt phải thu…) | **Sự cố nghiêm trọng**: khóa tạm module liên quan (cờ `ui.disabled_modules`), sao lưu ngay, xem danh sách vi phạm (id) và dữ liệu liên quan; khôi phục từ bản sao lưu gần nhất nếu bị can thiệp |
-| CTV báo không thấy hàng / thấy sai giá thu | Kiểm phiếu giao `confirmed` và `held_by_collaborator_id`; giá thu không sửa được sau xác nhận — thu hồi rồi giao lại |
+| CTV báo không thấy hàng được giao | Kiểm chào hàng `active` của CTV và chiếc còn `in_stock` (`Cộng tác viên → Hàng đang giao`); chiếc đã bán/ghi mất thì chào hàng tự đóng — giao lại nếu cần; CTV phải có hồ sơ **đang hoạt động** |
 | Ảnh không hiện | Bucket/chính sách Storage, URL ký hết hạn, `SUPABASE_*` đúng chưa? |
 | Cron "đỏ" trong Vercel | Quản trị → Hệ thống xem bước lỗi; thiếu `CRON_SECRET` ⇒ 503; chạy lại bước |
 | Sao lưu không chạy | Repo sao lưu: workflow đỏ? Secret hết hạn? Repo bị chuyển công khai (workflow tự dừng)? Xem `backup-restore` |
@@ -90,7 +90,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 ☐ Tài khoản Vercel, Supabase, GitHub (2 repo), tên miền, UptimeRobot **đứng tên chủ cửa hàng/pháp nhân**; người phát triển chỉ được mời (quyền tối thiểu).
 ☐ Danh sách bí mật và nơi cất (trình quản lý mật khẩu của chủ) — kiểm tra truy cập được.
 ☐ ≥ 2 người có khả năng khôi phục (đã đọc `backup-restore`, đã diễn tập).
-☐ Chủ nắm: đăng nhập MFA, giao hàng/quyết toán CTV, nhận máy bảo hành, đọc báo cáo (Tiền thu, Thống kê CTV), nơi xem sao lưu, ai gọi khi sự cố.
+☐ Chủ nắm: đăng nhập MFA, ghi đơn bán, giao hàng cho CTV và xác nhận báo bán, nhận máy sửa/bảo hành, đọc báo cáo (Doanh thu, Số lượng, Cộng tác viên), nơi xem sao lưu, ai gọi khi sự cố.
 ☐ Mã nguồn (repo) + docs + `changelog` + hướng dẫn sử dụng; giấy phép/quyền sở hữu mã nguồn ghi rõ bằng văn bản.
 ☐ Dữ liệu xuất được: Excel từng báo cáo + `pnpm db:backup` (dump) — chủ biết cách yêu cầu.
 ☐ Buổi đào tạo theo vai trò (bán hàng, kho, CTV, chủ) + tài liệu `07-user-guide`; danh sách người đã đào tạo (ngày, người) ghi tại đây.
@@ -106,7 +106,7 @@ Thành phần: Vercel (Pro; Functions `sin1`; Cron), Supabase (PostgreSQL + Stor
 - [ ] Đăng ký/trỏ tên miền; đặt `NEXT_PUBLIC_APP_URL`.
 - [ ] Bật GitHub secret scanning + push protection; branch protection.
 - [ ] Tạo chủ cửa hàng đầu tiên + bật TOTP; cất mã khôi phục.
-- [ ] Nhập thương hiệu/loại/loại việc/loại linh kiện ban đầu, vai trò/hạn mức giảm giá, hồ sơ CTV, thông tin cửa hàng in phiếu, cài đặt bảo hành; **tồn đầu kỳ** bằng phiếu `opening`.
+- [ ] Nhập thương hiệu/loại/loại việc ban đầu, vai trò, hồ sơ CTV, thông tin cửa hàng in phiếu, hạn bảo hành mặc định; **tồn đầu kỳ** bằng Nhập từ Excel (đồng hồ).
 - [ ] Xác nhận với kế toán: hóa đơn điện tử/thuế (`vision-scope` Q1).
 - [ ] Chạy UAT, ký nghiệm thu, đào tạo.
 - [ ] ⏭ **PWA (cloud):** kiểm trên HTTPS thật: service worker đăng ký, trang offline hiện khi tắt mạng, nút "Cài ứng dụng", dải cảnh báo khi mở link trong Zalo (Android + iOS).

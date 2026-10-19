@@ -1,7 +1,25 @@
-# Tiền & thanh toán (tối giản)
+# Tiền & thanh toán
 
-> Cập nhật lần cuối: 2026-10-16 · Trạng thái: Duyệt · Thay thế `money-and-ledger` (đã hoãn cùng module Thu chi & quỹ — CF-07). Quy tắc gốc: BR-PAY-*, BR-SALE-05/06, BR-RSV-*, BR-TRD-*, BR-COL-*.
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (**§0 là hiện hành** theo `customer-feedback-02`; §1–§6 là thiết kế thanh toán tối giản vòng 1, **đóng băng** — chỉ còn giá trị tham khảo). Thay thế `money-and-ledger` (đã hoãn — CF-07). Quy tắc gốc hiện hành: BR-SALE-20…24, BR-COL-14, BR-REP-17, BR-PAY-02.
 > Bản đầy đủ có quỹ, sổ quỹ chuỗi băm, bù trừ, khóa kỳ: `docs/99-archive/2026-10-16-full-scope/02-domain/money-and-ledger.md`.
+
+## 0. Hiện hành (bản gọn — vòng 2)
+
+Hệ thống **không theo dõi dòng tiền**. Nó chỉ lưu **giá trị chứng từ** để làm báo cáo doanh thu:
+
+1. **Tiền = số nguyên VND** (`bigint` ở DB, `number` ở JS, < 2^53), không float (`src/lib/money.ts`).
+2. **Đơn bán** ghi *giá bán từng chiếc*; tổng đơn = Σ giá. Không thanh toán, không còn nợ, không tiền thừa, không QR chuyển khoản, không giảm giá theo hạn mức, không thu cũ đổi mới, không cọc/giữ hàng (BR-SALE-24). "Giá niêm yết − giá bán" chỉ để hiển thị.
+3. **Doanh thu tính từ chứng từ, không từ thanh toán** (BR-PAY-02): đơn bán `confirmed` (ngày đơn) + phiếu sửa `delivered` (ngày giao). Đơn/phiếu `voided` không tính.
+4. **Đơn do CTV bán:** doanh thu cửa hàng = **giá chủ xác nhận** khi duyệt báo bán (mặc định giá niêm yết hiện hành, sửa được — BR-COL-14). Giá CTV bán cho khách, tiền khách trả CTV, phần CTV được hưởng đều **ngoài hệ thống** (CF-12); CTV không bao giờ thấy doanh thu (BR-COL-17).
+5. **Sửa chữa:** doanh thu = tổng các khoản tiền **lúc giao máy** (BR-REP-07, BR-REP-17); phiếu bảo hành miễn phí = 0. Khách trả bao nhiêu, bằng gì — ghi tay ngoài hệ thống.
+6. **Giá vốn / lãi gộp:** đã bỏ khỏi sản phẩm (CF-14). Giá nhập vẫn được ghi **nội bộ** khi thêm đồng hồ và chốt vào dòng bán (`unit_cost_entries`, `sale_line_costs`) để bất biến I8 và dữ liệu cũ nhất quán; **không API nào trả ra**.
+7. **Làm tròn:** không còn phép chia tiền (không phân bổ chi phí/giảm giá) nên không có quy tắc làm tròn mới; dữ liệu cũ theo `costing-and-profit` §Làm tròn.
+
+Ví dụ: đơn A 8.200.000 + B 2.500.000 (cửa hàng bán) và CTV bán C niêm yết 1.800.000 (xác nhận mặc định), máy sửa giao thu 140.000 trong cùng ngày ⇒ doanh thu ngày = 10.700.000 + 1.800.000 + 140.000 = **12.640.000**; số đơn bán 2, số chiếc 3 (1 do CTV).
+
+---
+
+## Phần đóng băng (thiết kế vòng 1 — không còn giao diện/API)
 
 ## 1. Nguyên lý (đọc kỹ — mọi thứ khác suy ra từ đây)
 

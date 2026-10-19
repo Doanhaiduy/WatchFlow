@@ -3,17 +3,17 @@
 Luật làm việc cho mọi phiên (AI hoặc người). **Đọc kỹ mục "Quy tắc sắt" trước khi động tới DB, tiền, kho, biến môi trường hay deploy.** Mẫu tham khảo: dự án Lưu Xá (`D:\THCode\tools\luu_xa_phanxico`) — copy cái đã kiểm thử, đừng viết lại.
 
 ## Dự án
-WatchFlow: web app quản lý cửa hàng đồng hồ — nhập hàng, kho theo từng chiếc (serial), bán/tính tiền (giá thu – giá bán), giữ hàng/cọc, thu cũ đổi mới, bảo hành, sửa chữa (chỉ chủ) + linh kiện, giá vốn & lãi gộp, **cộng tác viên (nhận hàng – giá thu – hưởng chênh lệch)**, báo cáo, phân quyền (chủ, bán hàng, kho, cộng tác viên), sao lưu.
+WatchFlow: web app cho **chủ cửa hàng đồng hồ** làm đúng **sáu việc** (chốt ở `docs/01-product/customer-feedback-02.md`, thắng `feedback-01` nếu mâu thuẫn): (1) quản lý đồng hồ đang có (kho, từng chiếc/serial, giá niêm yết, vị trí, tem QR); (2) **ghi đơn bán** khi khách mua — chỉ *chiếc + khách + giá + ngày* (+ hạn bảo hành) để tra cứu sau; (3) **giao đồng hồ cho cộng tác viên (CTV) bán — một chiếc giao được nhiều CTV, CTV nào báo "đã bán" trước được giữ, chủ xác nhận**; (4) quản lý **đơn sửa chữa của khách** (chỉ chủ); (5) báo cáo doanh thu / số lượng đồng hồ / CTV mang về theo ngày-tháng-quý-năm; (6) CTV dùng web ở mức giới hạn, **không thấy doanh thu**. Phân quyền (chủ, bán hàng, kho, CTV), sao lưu, nhập Excel (khách, đồng hồ).
 
-**Phạm vi hiện tại (sau phản hồi khách vòng 1, `docs/01-product/customer-feedback-01.md`) — KHÔNG xây:** Thu chi & quỹ (sổ quỹ, phiếu chi, khóa kỳ), Nhà cung cấp & công nợ NCC, Đổi trả/hoàn tiền, vai trò Thợ/phân công/tiền công, hoa hồng % cho CTV. Thiết kế đầy đủ của chúng nằm ở `docs/99-archive/` (chỉ đọc; bật lại theo `extensibility` §7). Nếu một yêu cầu/đoạn code dường như cần những thứ này ⇒ dừng, báo người dùng.
+**Phạm vi hiện tại — KHÔNG xây (đã bỏ khỏi giao diện/API; hàm & dữ liệu DB cũ để nguyên, đóng băng):** thanh toán/công nợ/QR chuyển khoản trên đơn bán, giảm giá/thu cũ đổi mới, giữ hàng & đặt cọc, nhập hàng nhiều dòng & chi phí nhập, linh kiện (tồn kho), kiểm kê, giá vốn & lãi gộp, giá thu/quyết toán/hưởng chênh lệch của CTV, cọc & thu tiền & linh kiện & sửa nội bộ trong sửa chữa, màn tra cứu bảo hành riêng; cùng (từ vòng 1) Thu chi & quỹ, Nhà cung cấp & công nợ NCC, Đổi trả/hoàn tiền, vai trò Thợ/tiền công, hoa hồng % cho CTV. Thiết kế đầy đủ nằm ở `docs/99-archive/` và lịch sử git (≤ v0.15.0). Nếu một yêu cầu/đoạn code dường như cần những thứ này ⇒ dừng, báo người dùng.
 Next.js (App Router) + TypeScript (strict) + Tailwind · PostgreSQL (Supabase) với **Row-Level Security** · Vercel · giao diện **Glass** (mẫu khách chọn: `design/ui-preview/v6-glass.html`). **Giao diện/tài liệu/thông báo lỗi: tiếng Việt. Tên trong code (bảng, cột, hàm, biến): tiếng Anh** (bảng đối chiếu: `docs/02-domain/glossary.md`).
 
 ## Đọc gì trước
 1. `docs/README.md` — bản đồ tài liệu.
-2. Việc liên quan tiền/kho → `docs/02-domain/{business-rules,money-and-payments,costing-and-profit,state-machines}.md`.
+2. Việc liên quan tiền/kho/CTV → `docs/02-domain/{business-rules,money-and-payments,state-machines,workflows}.md` (nhóm **LEAN** trong business-rules là luật hiện hành; `costing-and-profit` chỉ còn tham khảo).
    **Việc giao diện →** `docs/03-architecture/ui-design-system.md` (token, bố cục, thành phần, bản đồ màn hình mẫu→ứng dụng, cách dùng Lucian) + `docs/01-product/ux-and-navigation.md` + mở xem `design/ui-preview/v6-glass.html`.
 3. Việc DB → `docs/03-architecture/{data-model,integrity-and-concurrency,security-model}.md` + `docs/04-engineering/migrations.md`.
-4. Việc mới theo kế hoạch → `docs/04-engineering/build-plan.md` (mốc M0…M9, mỗi mốc có "Định nghĩa hoàn thành").
+4. Việc mới theo kế hoạch → `docs/04-engineering/build-plan.md` (mốc M0…M10, mỗi mốc có "Định nghĩa hoàn thành"; M10 = đợt rút gọn vòng 2).
 5. **Code và docs mâu thuẫn ⇒ DỪNG, báo người dùng.** Không tự chọn bên nào. Sửa xong thì cập nhật docs cùng lúc.
 
 ## Môi trường (QUAN TRỌNG)
@@ -40,20 +40,20 @@ Next.js (App Router) + TypeScript (strict) + Tailwind · PostgreSQL (Supabase) v
 ### Tiền
 - Tiền = **số nguyên VND** (`bigint` ở DB, `number` ở JS, mọi giá trị < 2^53). **Không float.** Linh kiện có giá vốn bình quân `numeric(14,4)`, khi chốt vào dòng thì làm tròn nửa lên về đồng. Phân bổ chi phí/giảm giá theo `docs/02-domain/costing-and-profit.md` §Làm tròn. Hàm dùng chung: `src/lib/money.ts` (+ test).
 - **Doanh thu KHÔNG BAO GIỜ tính từ thanh toán.** Doanh thu tính từ chứng từ (phiếu bán đã xác nhận, phiếu sửa đã giao). Thanh toán chỉ nói khách đã trả bao nhiêu cho phiếu nào; **không có quỹ/số dư**. (BR-PAY-02)
-- **Đơn của CTV:** doanh thu cửa hàng = **giá thu giao CTV**; phần CTV hưởng (giá bán − giá thu) **không** là doanh thu/lãi cửa hàng (BR-COL-04). Giá thu giao CTV **không phải** giá vốn (BR-COST-07).
+- **Đơn do CTV bán:** doanh thu cửa hàng = **giá chủ xác nhận khi duyệt báo bán** (mặc định giá niêm yết hiện hành, sửa được — BR-COL-14). CTV bán giá nào cho khách **không được ghi** và không ảnh hưởng doanh thu. CTV **không bao giờ** thấy doanh thu/giá vốn (BR-COL-17).
 - Thời gian lưu UTC (`timestamptz`); ngày chứng từ là **ngày giờ Việt Nam** (`Asia/Ho_Chi_Minh`) kiểu `date`. Không dùng `new Date("YYYY-MM-DD")` để cộng trừ ngày.
 
 ### Ghi dữ liệu
-- Mọi thao tác nhiều bước (xác nhận phiếu nhập/bán, giữ hàng, giao/thu hồi/quyết toán CTV, ghi thanh toán, hoàn thành sửa, kiểm kê…) = **một hàm DB `app.fn_*`** chạy trong **một transaction**: kho + thanh toán + giá vốn + audit + sự kiện cùng thành công hoặc cùng thất bại (BR-GEN-02, III.6). API chỉ kiểm quyền sớm rồi gọi hàm.
+- Mọi thao tác nhiều bước (ghi đơn bán, hủy đơn, giao/thu hồi hàng cho CTV, CTV báo bán, xác nhận/từ chối báo bán, thêm đồng hồ vào kho, giao/hoàn thành sửa chữa…) = **một hàm DB `app.fn_*`** chạy trong **một transaction**: kho + thanh toán + giá vốn + audit + sự kiện cùng thành công hoặc cùng thất bại (BR-GEN-02, III.6). API chỉ kiểm quyền sớm rồi gọi hàm.
 - Chứng từ: `draft → confirmed → voided`. **Đã xác nhận = bất biến.** Sửa sai = hủy/điều chỉnh có lý do ≥ 10 ký tự (không có đổi trả — dùng bảo hành). Không `DELETE` dữ liệu đã xác nhận. Audit, lịch sử trạng thái/giá, bút toán giá vốn, movements linh kiện = append-only (trigger chặn UPDATE/DELETE/TRUNCATE); thanh toán bất biến (sai ⇒ hủy + ghi lại).
-- Trạng thái chiếc đồng hồ (kể cả `with_collaborator`/`held_by_collaborator_id`) chỉ đổi qua hàm nghiệp vụ theo ma trận (`docs/02-domain/state-machines.md`); app role **không** có quyền `UPDATE status`.
-- Khóa theo thứ tự cố định để tránh deadlock: **chiếc (id tăng) → linh kiện (id tăng) → giữ hàng → chứng từ → ghi thanh toán** (`docs/03-architecture/integrity-and-concurrency.md`).
+- Trạng thái chiếc đồng hồ chỉ đổi qua hàm nghiệp vụ theo ma trận (`docs/02-domain/state-machines.md`); app role **không** có quyền `UPDATE status`.
+- Khóa theo thứ tự cố định để tránh deadlock: **chiếc (id tăng) → chào hàng/báo bán CTV → chứng từ (đơn bán, phiếu sửa)** (các nhánh cũ: linh kiện → giữ hàng → ghi thanh toán) (`docs/03-architecture/integrity-and-concurrency.md`).
 - Thao tác POST quan trọng nhận header `Idempotency-Key`; bấm đúp không được tạo hai chứng từ.
 
 ### Phân quyền & dữ liệu nhạy cảm
 - Kiểm theo **permission** (`useSession().can("cost.view")`, `app.has_permission(...)`), **không bao giờ theo tên vai trò**. Thêm quyền ⇒ migration + `src/lib/permissions.ts` + ma trận ở `docs/03-architecture/security-model.md`.
-- **Giá vốn (= giá thu của cửa hàng) / lợi nhuận / giá thu giao CTV** nằm ở bảng riêng có RLS theo quyền (`unit_cost_entries`, `sale_line_costs`, `part_costs`, `repair_line_costs`…). Chỉ ẩn trên UI là **chưa đủ**. Báo cáo/xuất Excel/PDF/in cũng đi qua cùng lớp quyền.
-- PII (CCCD người bán, SĐT phụ…) mã hóa AES-256-GCM ở tầng ứng dụng; xem đầy đủ phải nêu lý do + ghi audit. **Không log PII, không đưa PII vào URL, không gửi cho AI.**
+- **Giá vốn / lợi nhuận** (đã bỏ khỏi giao diện nhưng dữ liệu cũ còn) nằm ở bảng riêng có RLS (`unit_cost_entries`, `sale_line_costs`, …) và **không có API nào trả ra**. **Dữ liệu CTV:** vai trò CTV chỉ có `collab.view_own`; CTV đọc qua hàm DB an toàn `fn_my_offers/fn_my_claims/fn_my_collab_stats` (chỉ cột không-tiền, trừ giá niêm yết), không có quyền đọc bảng đơn/khách/chiếc. Chỉ ẩn trên UI là **chưa đủ**. Báo cáo/xuất Excel/PDF/in cũng đi qua cùng lớp quyền.
+- PII (CCCD cũ, nếu còn trong DB) mã hóa AES-256-GCM ở tầng ứng dụng và không có API đọc; tên/SĐT khách do CTV nhập không vào nhật ký (che trong `tg_audit`). **Không log PII, không đưa PII vào URL, không gửi cho AI.**
 - Khóa/mật khẩu/chuỗi kết nối **không bao giờ** vào mã, commit, docs, CLAUDE.md, memory hay ảnh chụp. Repo GitHub hiện **public** (theo yêu cầu chủ dự án, 2026-10-16) ⇒ repo chỉ chứa mã + docs + dữ liệu giả, **không bao giờ** dữ liệu khách thật/ảnh giấy tờ/`.env*`; chuyển **private** trước khi có dữ liệu thật; bật secret scanning ngay. Chuỗi kết nối từng lọt vào git ở dự án mẫu — đừng lặp lại.
 
 ### Bảng mới / migration

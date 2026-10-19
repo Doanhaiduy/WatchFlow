@@ -38,7 +38,7 @@
 
 1. Dựng tiền đề bằng helper (ngày cố định, giá cố định).
 2. Thực hiện từng bước qua API như người dùng.
-3. Sau **mỗi bước** khẳng định: trạng thái chiếc, tồn linh kiện, thanh toán/còn nợ, giá vốn, doanh thu/lãi và thống kê CTV từ `rpt_*`.
+3. Sau **mỗi bước** khẳng định: trạng thái chiếc, chào hàng/báo bán CTV, hạn bảo hành, doanh thu và thống kê CTV từ `rpt_*`; cuối bộ test `fn_consistency_check()` sạch.
 4. Cuối cùng khẳng định hằng đẳng thức chính (SC-13: Doanh thu − Thực thu = Khách nợ + CTV chưa nộp − Cọc giữ − Cọc tịch thu − Nhận trước sửa) và `consistency()`.
 Số mong đợi lấy từ `golden-scenarios` (copy nguyên, ghi ID trong tên test).
 
@@ -70,7 +70,7 @@ Mỗi PR/push: cài đặt → `typecheck` → `lint` → `vitest` → dựng Po
 
 ## 8. Dữ liệu thử
 
-- **Seed demo** (`db/seed/`): 4 tài khoản (owner, sales, warehouse, collaborator), ~12 loại đồng hồ/20 chiếc nhiều trạng thái (gồm vài chiếc "Đang ở CTV"), 30 linh kiện, 10 khách, vài phiếu bán/nhập/sửa/giữ hàng — đủ để thử tay và chụp màn hình; **khớp** các tiền đề của kịch bản vàng khi có thể.
+- **Seed demo** (`db/seed/`): 4 tài khoản (owner, sales, warehouse, collaborator), ~12 loại đồng hồ/20 chiếc nhiều trạng thái (gồm vài chiếc đang giao CTV), 10 khách, vài đơn bán/phiếu sửa/báo bán CTV — đủ để thử tay và chụp màn hình; **khớp** các tiền đề của kịch bản vàng khi có thể.
 - **Không bao giờ** seed demo lên production; kiểm trong `seed.mjs` (từ chối nếu `--env production`).
 - Go-live: dữ liệu thật nhập bằng quy trình thật (phiếu nhập `opening`), có biên bản đối chiếu với kiểm kê vật lý.
 

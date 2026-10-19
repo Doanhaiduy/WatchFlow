@@ -137,7 +137,7 @@ Chi tiết biến môi trường: `04-engineering/dev-setup`.
 
 | Lịch (giờ VN) | Đường dẫn | Việc |
 |---|---|---|
-| 07:00 hằng ngày | `/api/cron/daily?slot=morning` | Đánh dấu giữ hàng quá hạn; nhắc nợ đến hạn; bảo hành sắp hết/hết hạn; máy sửa xong chưa lấy; chiếc ở CTV quá hạn; cảnh báo linh kiện thấp & hàng tồn lâu (tạo `notifications`) |
+| 07:00 hằng ngày | `/api/cron/daily?slot=morning` | Đánh dấu bảo hành hết hạn; nhắc máy sửa xong chưa lấy; nhắc báo bán CTV chờ xác nhận quá 1 ngày (tạo `notifications`); dọn tệp/nhật ký hết hạn |
 | 19:00 hằng ngày | `/api/cron/daily?slot=evening` | Bộ kiểm bất biến (`fn_consistency_check`); dọn `idempotency_keys`/`rate_limit_hits`/phiên hết hạn; đo dung lượng; kiểm nhịp tim sao lưu |
 | mỗi 10 phút | `/api/cron/events` | Xử lý `domain_events` còn tồn (bổ sung cho xử lý nền ngay sau mỗi thao tác ghi) |
 

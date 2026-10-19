@@ -1,81 +1,82 @@
 # Báo cáo & tổng quan (dashboard)
 
-> Cập nhật lần cuối: 2026-10-17 · Trạng thái: Duyệt (đã cập nhật theo `customer-feedback-01`) · Định nghĩa tiền: `glossary` §2, `money-and-payments`, `costing-and-profit`
+> Cập nhật lần cuối: 2026-10-18 · Trạng thái: Duyệt (viết lại theo `customer-feedback-02`: chỉ còn **3 báo cáo**, không giá vốn/lãi/nợ/thực thu) · Định nghĩa tiền: `glossary` §2, `money-and-payments`
+> Các báo cáo cũ (lợi nhuận gộp, nhập–xuất, tồn kho theo giá vốn, tồn lâu, phiếu còn nợ, tiền thu, hao hụt kiểm kê, bảo hành sắp hết, doanh thu sửa chữa riêng) **đã bỏ** — hàm `rpt_*` tương ứng còn ở DB (đóng băng) nhưng không có API/giao diện gọi. Thiết kế cũ: `99-archive/2026-10-16-full-scope/02-domain/reports-and-dashboard.md`.
 
 ## 1. Nguyên tắc
 
 1. **Mỗi con số có một định nghĩa duy nhất** ở bảng dưới; dashboard và báo cáo dùng **cùng hàm SQL** (`app.rpt_*`), không tính lại ở client.
-2. **Tách theo trục ngày đúng nghĩa**: doanh thu bán theo *ngày phiếu*, doanh thu sửa theo *ngày giao*, thực thu theo *ngày thanh toán*, tồn kho theo *thời điểm xem*.
-3. **Quyền**: hàm báo cáo `SECURITY DEFINER` kiểm quyền trong thân; thiếu quyền ⇒ 403 (không trả 0). Xuất Excel/PDF dùng đúng hàm đó (BR-SEC-02).
-4. **Múi giờ**: mọi lọc ngày theo giờ VN; khoảng `[từ, đến]` gồm cả hai đầu.
-5. **Chứng từ `voided` luôn bị loại**; `draft` không tính.
-6. Mọi báo cáo: lọc khoảng thời gian, xuất Excel (`write-excel-file`) và PDF (`pdfmake`), hiển thị "Dữ liệu đến lúc hh:mm".
+2. **Trục ngày đúng nghĩa:** doanh thu bán theo *ngày đơn* (`sales.doc_date`), doanh thu sửa theo *ngày giao máy* (`repair_orders.delivered_date`), tồn kho theo *thời điểm xem*. Doanh thu **không bao giờ** tính từ thanh toán (BR-PAY-02) — bản gọn không có thanh toán.
+3. **Quyền:** hàm báo cáo `SECURITY DEFINER` kiểm quyền trong thân; thiếu quyền ⇒ 403 (không trả 0). Xuất Excel dùng đúng hàm đó (BR-SEC-02, PT-05).
+4. **Múi giờ:** mọi lọc ngày theo giờ VN; khoảng `[từ, đến]` gồm cả hai đầu.
+5. **Chứng từ `voided` luôn bị loại.**
+6. Nhóm kỳ: **ngày / tháng / quý / năm** (`app.rpt_bucket`).
+7. **Không có giá vốn, lãi gộp, công nợ, cọc, thực thu, số dư quỹ ở bất kỳ báo cáo nào** (CF-14). CTV không có báo cáo (BR-COL-17).
 
 ## 2. Số liệu gốc (định nghĩa)
 
 | Chỉ số | Công thức | Trục ngày | Quyền |
 |---|---|---|---|
-| Doanh thu bán hàng (cửa hàng) | Σ `line_total` các dòng do **cửa hàng** bán + Σ `base_price_snapshot` các dòng do **CTV** bán (phiếu `confirmed`) | ngày phiếu | `report.sales` |
-| Doanh thu sửa chữa | Σ tổng phải thu phiếu `customer`, `paid`, `delivered` | ngày giao | `report.sales` |
-| **Doanh thu** | Bán hàng + sửa chữa | | `report.sales` |
-| Giá vốn hàng bán | Σ `sale_line_costs.cost` (cả dòng CTV) | ngày phiếu | `profit.view` |
-| Lãi gộp bán hàng | Doanh thu bán hàng − Giá vốn hàng bán | | `profit.view` |
-| Lãi gộp sửa chữa | Doanh thu sửa − giá vốn linh kiện (phiếu tính phí) − chi phí bảo hành (linh kiện phiếu `warranty_free`) | ngày giao | `profit.view` |
-| **Lãi gộp** | Bán + sửa | | `profit.view` |
-| Thực thu | Σ thanh toán `in` − Σ `out` (`posted`) | ngày thanh toán | `report.sales` |
-| Số đồng hồ tồn kho | Đếm chiếc ∈ {in_stock, reserved, with_collaborator, in_repair, inspecting} | thời điểm xem | `report.inventory` |
-| Số đồng hồ có thể bán (cửa hàng) | Đếm `in_stock` | thời điểm xem | `catalog.view` |
-| Số đồng hồ đang ở CTV | Đếm `with_collaborator` | thời điểm xem | `report.inventory` |
-| Số đồng hồ đã bán | Đếm dòng bán đồng hồ hiệu lực (phiếu `confirmed`, gồm đơn CTV) | ngày phiếu | `report.sales` |
-| Giá trị tồn theo giá vốn | Σ giá vốn chu kỳ hiện hành của chiếc tồn kho + Σ `qty × avg` linh kiện (hiện riêng phần "ở CTV") | thời điểm xem | `cost.view` |
-| Khách còn nợ | `money-and-payments` §3 | thời điểm xem | `debt.view` |
-| CTV chưa nộp | Σ `base_price_snapshot` dòng CTV chưa quyết toán | thời điểm xem | `collab.view` |
-| Tồn lâu | `in_stock` & `hôm nay − stock_since > aging_days` | thời điểm xem | `report.inventory` |
+| Doanh thu bán tại cửa hàng | Σ `sale_lines.shop_revenue_vnd` của đơn `confirmed` **không** có `collaborator_id` | ngày đơn | `report.sales` |
+| Doanh thu CTV bán | Σ `shop_revenue_vnd` của đơn `confirmed` có `collaborator_id` (= giá chủ xác nhận — BR-COL-14) | ngày đơn | `report.sales` |
+| Doanh thu sửa chữa | Σ `revenue_vnd` phiếu `customer`, `delivered` (bảo hành miễn phí = 0) | ngày giao | `report.sales` |
+| **Doanh thu** | Cửa hàng + CTV + sửa chữa | | `report.sales` |
+| Số đơn bán | Đếm đơn `confirmed` | ngày đơn | `report.sales` |
+| Số chiếc đã bán (và "trong đó CTV") | Đếm dòng đồng hồ của đơn `confirmed` | ngày đơn | `report.sales` / `report.inventory` |
+| Số máy sửa đã giao | Đếm phiếu `delivered` | ngày giao | `report.sales` |
+| Tồn kho: sẵn sàng bán / chờ kiểm tra | Đếm chiếc `in_stock` / `inspecting` | thời điểm xem | `report.inventory`/`catalog.view` |
+| Đang giao CTV | Đếm chiếc có ≥ 1 chào hàng `active` | thời điểm xem | `report.inventory`/`catalog.view` |
+| CTV mang về | Số chiếc + Σ giá xác nhận của đơn có `collaborator_id`, theo CTV và theo kỳ | ngày đơn | `collab.view` |
+| Báo bán chờ xác nhận | Đếm `collaborator_claims.status='pending'` | thời điểm xem | `collab.view` / `sale.confirm` |
 
-## 3. Danh mục báo cáo (FR-RPT-*)
+## 3. Danh mục báo cáo (FR-RPT-13, BR-RPT-01)
 
-| # | Báo cáo | Bộ lọc | Nội dung chính | Quyền |
-|---|---|---|---|---|
-| R1 | **Doanh thu** (FR-RPT-01) | Khoảng ngày, nhóm theo ngày/tháng/năm, người bán, CTV, khách | Doanh thu bán / sửa / tổng; số phiếu; trung bình/phiếu | `report.sales` |
-| R2 | **Lợi nhuận gộp** (FR-RPT-02) | Khoảng ngày, nhóm theo ngày/tháng/thương hiệu/phiếu/sản phẩm | Doanh thu, giá vốn, lãi gộp, biên lãi %, từng phiếu/từng chiếc | `profit.view` |
-| R3 | **Nhập & xuất hàng** (FR-RPT-03) | Khoảng ngày, loại phiếu nhập | Nhập: số phiếu, số chiếc, linh kiện, giá trị theo nguồn hàng; Xuất: bán, giao CTV/thu hồi, linh kiện dùng cho sửa chữa, hao hụt | `report.inventory` (+ `cost.view` để thấy giá trị) |
-| R4 | **Tồn kho theo giá vốn** (FR-RPT-04) | Thương hiệu, vị trí, tình trạng, trạng thái | Danh sách chiếc: mã, loại, serial, trạng thái, vị trí, **giá vốn (giá thu)**, giá bán, lãi dự kiến; linh kiện: SL × bình quân | `cost.view` |
-| R5 | **Hàng tồn lâu ngày** (FR-RPT-05) | Ngưỡng ngày (mặc định `inventory.aging_days`) | Chiếc/linh kiện tồn quá ngưỡng, số ngày, giá vốn | `report.inventory` |
-| R6 | **Phiếu còn nợ** (FR-RPT-06) | Tính đến ngày, khách | Phiếu bán/sửa còn nợ: khách, số tiền, hạn trả, quá hạn; cọc đang giữ (thay cho "công nợ KH & NCC" — CF-06) | `debt.view` |
-| R7 | **Doanh thu sửa chữa** (FR-RPT-07) | Khoảng ngày | Phiếu giao: doanh thu dịch vụ/linh kiện, giá vốn linh kiện, chi phí bảo hành, lãi gộp sửa (không tiền công thợ — CF-04) | `report.sales` + `profit.view` (lãi) |
-| R8 | **Tiền thu** (FR-RPT-08) | Khoảng ngày | Thực thu theo cách thanh toán (tiền mặt/chuyển khoản) và theo mục đích (bán, sửa, cọc nhận/hoàn, CTV nộp); thu nhập khác (cọc tịch thu). Không có số dư quỹ (CF-07) | `report.sales` |
-| R9 | **Thống kê CTV** (FR-COL-09, CF-08) | Tháng/quý/năm, CTV, trạng thái quyết toán | Mỗi CTV: số chiếc bán, doanh thu bán ra (Σ giá bán), phải nộp (Σ giá thu), phần CTV hưởng, đã/chưa quyết toán; tab "Hàng đang giữ" (chiếc, giá thu, số ngày) | `collab.view`; CTV: `collab.view_own` |
-| R10 | **Hao hụt kiểm kê** | Đợt kiểm kê / khoảng ngày | Chiếc & linh kiện thiếu/thừa, lý do, giá trị | `report.inventory` + `cost.view` |
-| R11 | **Bảo hành sắp hết hạn** | Số ngày tới | Phiếu/chiếc, khách, ngày hết hạn | `report.sales` |
-| R12 | **Nhật ký hoạt động** | Người, hành động, thực thể, ngày | Từ `audit_logs` | `audit.view` |
+| # | Mã API | Báo cáo | Bộ lọc | Nội dung chính | Quyền |
+|---|---|---|---|---|---|
+| R1 | `revenue` | **Doanh thu** | Khoảng ngày; nhóm ngày/tháng/quý/năm | Mỗi kỳ: doanh thu cửa hàng / CTV / sửa chữa / tổng, số đơn, số chiếc (trong đó CTV), số máy sửa, trung bình/đơn | `report.sales` |
+| R2 | `units` | **Số lượng đồng hồ** | Khoảng ngày | Đã bán trong kỳ (tổng, tại cửa hàng, CTV bán; theo hãng); đang có: sẵn sàng bán, chờ kiểm tra, đang giao CTV; tồn theo hãng | `report.sales` hoặc `report.inventory` |
+| R3 | `collab` | **Cộng tác viên** | Khoảng ngày; nhóm ngày/tháng/quý/năm | Theo kỳ (số chiếc, doanh thu, số CTV có đơn) · theo từng CTV · chi tiết kỳ × CTV | `collab.view` (chỉ chủ) |
 
-Chi tiết mỗi báo cáo (cột, thứ tự, tổng cuối) sẽ nằm trong mã (`src/server/modules/reports.ts`) kèm test đối chiếu số liệu vàng; tài liệu này chỉ cố định **định nghĩa**. Đã bỏ: *Công nợ NCC*, *Thu chi & số dư tiền*, *Tiền công thợ*, *Hoa hồng CTV* (hoãn/thay thế).
+API: `GET /api/v1/reports/{revenue|units|collab}?from=&to=&group=&format=json|xlsx`; `GET /api/v1/reports/collaborators` (trang Cộng tác viên → Thống kê, cùng hàm `rpt_collab_sales`). Xuất Excel cần `report.export`, tối đa 5 lần/giờ/người, ghi audit `report.exported` (cùng `request_id` với nhật ký hoạt động), mỗi sheet có tiêu đề + "Dữ liệu đến lúc".
+
+Giao diện `/bao-cao`: ba thẻ chọn báo cáo → bộ chọn khoảng ngày + nhóm kỳ → thẻ tổng + biểu đồ + bảng → nút **Xuất Excel**, **In**. Chi tiết cột nằm trong `src/server/reports.ts` (`REPORTS`) kèm test đối chiếu số vàng (SC-10).
 
 ## 4. Dashboard (trang chủ) theo vai trò
 
-### Chủ cửa hàng (đủ quyền) — FR-DASH-01…10
-Hàng thẻ số (chọn ngày/tháng/năm): **Doanh thu** · **Lãi gộp** · **Thực thu** · **Đồng hồ tồn kho** (kèm "ở CTV") · **Giá trị tồn (giá vốn)** · **Đã bán**. Dưới: biểu đồ doanh thu & lãi gộp theo ngày/tháng; **Việc cần xử lý** (giữ hàng quá hạn, khách hẹn trả hôm nay, máy sửa xong chưa giao, linh kiện sắp hết, hàng tồn lâu, bảo hành sắp hết, chiếc ở CTV quá hạn); **Đơn hàng mới nhất**; **Đang sửa chữa**.
+`GET /api/v1/reports/dashboard?period=today|7d|month|quarter|year` (hoặc `from`/`to`) → `rpt_dashboard` chỉ trả **đúng những khóa người dùng được phép** (FR-DASH-11). Widget thiếu quyền không render và không gọi dữ liệu.
 
-### Nhân viên bán hàng
-Ô tìm kiếm lớn + nút **Bán nhanh**, **Quét QR**; doanh thu hôm nay (chỉ tổng doanh thu, không lãi); giữ hàng sắp hết hạn; đơn nháp của CTV chờ xác nhận; khách hẹn trả tiền hôm nay.
+### Chủ cửa hàng (đủ quyền)
+Thẻ số: **Doanh thu** (kèm ▲/▼ so với kỳ trước) · **Số chiếc bán** · **Đồng hồ trong kho** (sẵn sàng bán / chờ kiểm tra / đang giao CTV) · **Báo bán CTV chờ xác nhận** · **Máy đang sửa / máy xong chờ giao**. Biểu đồ doanh thu (cửa hàng/CTV/sửa chữa) theo ngày hoặc tháng. Dưới: **Báo bán chờ xác nhận** (xác nhận ngay), **Đơn bán gần đây**, **Đang sửa chữa**, tồn theo hãng.
+
+### Nhân viên bán hàng (`sale.confirm`, `report.sales`)
+Nút **Ghi đơn bán** + tìm kiếm; doanh thu và số chiếc bán; báo bán CTV chờ xác nhận; đơn gần đây. Không có thẻ sửa chữa.
 
 ### Quản lý kho
-Phiếu nhập gần đây; hàng chờ kiểm tra (`inspecting`); linh kiện sắp hết; hàng tồn lâu; đợt kiểm kê đang mở.
+Số chiếc trong kho (sẵn sàng / chờ kiểm tra / đang giao CTV), tồn theo hãng, nút **Thêm đồng hồ**. Không thẻ tiền.
 
 ### Cộng tác viên
-**Hàng đang giữ** (lưới ảnh + giá thu), đơn nháp của tôi, thống kê của tôi (số chiếc bán, phần tôi hưởng, đã/chưa nộp).
+Không thẻ số cửa hàng (PT-14). Trang chủ dẫn tới **Hàng của tôi** (`/ctv`): lưới ảnh chiếc được giao + giá niêm yết + nút **Đã bán**; **Báo bán của tôi** (chờ / đã xác nhận / bị từ chối); **Thống kê của tôi** (chỉ số chiếc theo ngày/tháng/quý/năm, không tiền).
 
-Quy tắc hiển thị: widget thiếu quyền **không render và không gọi API** (FR-DASH-11); mọi thẻ số gọi `GET /api/v1/reports/dashboard` trả đúng những khóa người dùng được phép.
+**Dữ liệu trả thêm cho giao diện:**
+- `prev` — các khóa số (`revenue`, `salesRevenue`, `repairRevenue`, `invoiceCount`, `unitsSold`) của **kỳ liền trước**; UI tính "▲/▼ x% so với kỳ trước" (`src/lib/series.ts` · `deltaPct`).
+- `series.revenue` — chuỗi theo ngày (hôm nay: 7 ngày gần nhất) hoặc theo tháng (quý/năm), **đã điền kỳ không phát sinh bằng 0** (`fillSeries`); mỗi dòng có `shopRevenue`/`collabRevenue`/`repairRevenue`.
+- `recentSales`, `pendingClaims`, `openRepairs` — danh sách ngắn theo quyền; `stockByBrand` — số chiếc tồn theo hãng (chỉ cần `catalog.view`, không giá).
 
-**Dữ liệu trả thêm cho giao diện (2026-10-17):**
-- `prev` — các khóa số (`revenue`, `salesRevenue`, `repairRevenue`, `grossProfit`, `collections`, `invoiceCount`, `unitsSold`) của **kỳ liền trước** (hôm nay → hôm qua; 7 ngày → 7 ngày trước đó; tháng/quý/năm → cùng khoảng của kỳ trước; khoảng tùy chọn → khoảng liền trước cùng số ngày), chỉ khóa mà hàm DB trả cho người gọi. UI tính "▲/▼ x% so với kỳ trước" từ `kpis` và `prev` (`src/lib/series.ts` · `deltaPct`).
-- `series.revenue` / `series.profit` — chuỗi theo ngày (hôm nay: 7 ngày gần nhất) hoặc theo tháng (quý/năm), **đã điền kỳ không phát sinh bằng 0** (`fillSeries`) để biểu đồ luôn đủ điểm; mỗi dòng doanh thu có `salesRevenue`/`repairRevenue` để vẽ cột bán hàng vs sửa chữa.
-- `stockByBrand` — số chiếc tồn theo hãng (chỉ cần `catalog.view`, không chứa giá vốn).
+## 5. Việc cần xử lý & huy hiệu
 
-Bố cục Tổng quan: hero doanh thu (kèm so sánh kỳ trước) → thẻ KPI có biểu tượng/xu hướng → biểu đồ doanh thu & lãi gộp (tab Doanh thu / Lãi gộp / Cả hai) → bán hàng vs sửa chữa, tồn kho theo trạng thái, tồn theo hãng, thực thu theo hình thức → bán gần đây; cột phải: việc cần xử lý, làm nhanh, đang sửa. Điện thoại xếp một cột và đưa "Việc cần xử lý" lên ngay sau thẻ KPI.
+Huy hiệu số trên điều hướng (`GET /api/v1/me/badges`, làm mới 60 giây) — chỉ số lượng, không tiền; **đỏ** khi quá hạn, **vàng** khi chỉ đang chờ:
 
-## 5. Hiệu năng & caching
+| Khóa | Điều hướng | Điều kiện | Quyền | Đỏ khi |
+|---|---|---|---|---|
+| `claim_pending` | Cộng tác viên | Báo bán CTV chờ xác nhận | `sale.confirm` | chờ > 1 ngày |
+| `repair_new` | Sửa chữa | Máy mới nhận (`received`) | `repair.view` | — |
+| `repair_late` | Sửa chữa | Quá ngày hẹn trả, chưa xong | `repair.view` | luôn đỏ |
+| `repair_pickup` | Sửa chữa | Máy xong chưa lấy | `repair.view` | quá [`repair.pickup_alert_days`] ngày |
 
-- Quy mô nhỏ: hàm SQL trực tiếp trên bảng, có index theo ngày (`doc_date`, `delivered_at`, `paid_at`).
-- Dashboard cache ngắn (30–60 giây) theo `(người dùng, khoảng ngày)` bằng cache của framework/`Runtime Cache`; vô hiệu khi có `domain_events` liên quan nếu cần dữ liệu sát thời gian thực.
+Job hằng ngày (`fn_daily_alerts`): đánh dấu bảo hành hết hạn (chỉ đổi trạng thái, không thông báo), nhắc "Máy chưa lấy" và "CTV báo bán chờ xác nhận quá 1 ngày". Kiểm bất biến I1–I15 mỗi tối (`fn_consistency_check`).
+
+## 6. Hiệu năng & caching
+
+- Quy mô nhỏ: hàm SQL trực tiếp trên bảng, có index theo ngày (`doc_date`, `delivered_date`).
+- Dashboard gọi 2 lần `rpt_dashboard` (kỳ này + kỳ trước) và 1 lần `rpt_revenue` cho biểu đồ; cache ngắn phía trình duyệt (SWR 30–60 giây).
 - Vật chất hóa (materialized view) **chưa dùng**; chỉ thêm khi đo thấy chậm (> 1 giây) và có test đối chiếu với hàm gốc.
